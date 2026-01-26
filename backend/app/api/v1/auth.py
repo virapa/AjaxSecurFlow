@@ -22,9 +22,6 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 
 @router.post("/token")
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    # Verify against bootstrap admin (for Phase 2 testing before DB is ready)
-    # In Phase 3, this will replace with: user = await authenticate_user(db, form_data.username, form_data.password)
-    
     if (form_data.username == settings.FIRST_SUPERUSER and 
         form_data.password == settings.FIRST_SUPERUSER_PASSWORD):
          pass

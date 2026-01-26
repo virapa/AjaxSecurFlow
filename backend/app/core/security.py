@@ -22,8 +22,6 @@ def create_access_token(subject: Union[str, Any], expires_delta: Optional[timede
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     
-    # PyJWT expects 'exp' to be a numeric timestamp or a datetime object (it handles it).
-    # It is better to ensure it is timezone aware.
     to_encode = {"exp": expire, "sub": str(subject)}
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

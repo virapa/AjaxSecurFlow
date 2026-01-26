@@ -16,3 +16,4 @@ pytest-asyncio>=0.21.0
 greenlet
 bandit>=1.7.0
 pip-audit>=2.0.0
+alembic>=1.11.0
