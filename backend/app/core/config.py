@@ -18,17 +18,21 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_db_connection(cls, v: Optional[str], values) -> Any:
-        if isinstance(v, str):
+        # Pydantic V2 validation logic
+        if isinstance(v, str) and v:
             return v
         
-        # We need to construct it from parts if not provided directly
-        # Accessing validated values from the ValidationInfo (Pydantic V2) or using values dict (Pydantic V1 compat)
-        # In Pydantic V2 'values' argument in field_validator is different.
-        # Let's rely on computed field or just construct it if missing in a post-init or use basic env var.
-        # For simplicity and robustness, let's just prefer DATABASE_URL if set, else build it.
-        # Since we use BaseSettings, it reads from env. We will assume DATABASE_URL is constructed in docker-compose
-        # or we explicitly define it here.
+        # If we are here, we might need to construct it, but accessing 'values' logic in V2 is complex via BeforeValidator.
+        # Simple fix: Assume defaults or return default string if needed.
+        # But for strictly required fields, we should ensure env vars are present.
         return v
+    
+    # We can use a property to force construction if the DSN is None
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        if self.DATABASE_URL:
+            return str(self.DATABASE_URL)
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     # Redis (Rate Limit & Cache)
     REDIS_URL: RedisDsn
@@ -38,6 +42,15 @@ class Settings(BaseSettings):
     AJAX_API_KEY: SecretStr
     AJAX_LOGIN: str
     AJAX_PASSWORD: SecretStr
+    
+    # Stripe (SaaS Billing)
+    STRIPE_SECRET_KEY: Optional[SecretStr] = None
+    STRIPE_PUBLIC_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[SecretStr] = None
+    
+    # Celery (Task Queue)
+    CELERY_BROKER_URL: Optional[str] = None # Defaults to Redis
+    CELERY_RESULT_BACKEND: Optional[str] = None
 
     # Security
     SECRET_KEY: SecretStr

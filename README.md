@@ -9,10 +9,13 @@ El proyecto utiliza tecnologías modernas y robustas, siguiendo los estándares 
 - **Lenguaje**: Python 3.14+ (Totalmente Asíncrono)
 - **Framework API**: FastAPI (Alto rendimiento, validación automática)
 - **Base de Datos**: PostgreSQL 15+ (con SQLAlchemy 2.0 Async para ORM)
-- **Caché y Mensajería**: Redis (Gestión de sesiones, Rate Limiting)
+- **Caché y Mensajería**: Redis (Gestión de sesiones, Rate Limiting, Celery Broker)
+- **Tareas Background**: Celery (Sincronización de datos, procesamiento de webhooks)
+- **Monitoreo**: Flower (Panel de control para tareas de Celery)
+- **Pagos y SaaS**: Stripe SDK (Gestión de suscripciones y webhooks)
 - **Gestión de Configuración**: Pydantic Settings (Validación estricta de variables de entorno)
 - **Infraestructura**: Docker & Docker Compose (Contenerización completa)
-- **Testing**: Pytest (Unitario e Integración)
+- **Testing y Calidad**: Pytest, Bandit (Seguridad), pip-audit (Vulnerabilidades)
 
 ## 3. Instalación y Ejecución
 
@@ -68,6 +71,8 @@ El proyecto sigue una **Clean Architecture** (Arquitectura Cebolla) estricta:
 
 ## 5. Funcionalidades Principales (Fase 1)
 - **Gestión de Sesiones Ajax**: Login automático, caché de tokens en Redis y renovación automática en caso de expiración (401).
-- **Rate Limiting Inteligente**: Protección contra abuso mediante algoritmo Token Bucket/Fixed Window respaldado por Redis.
+- **Rate Limiting Inteligente**: Protección contra abuso mediante algoritmo Token Bucket en Redis (100 req/min).
+- **Monetización SaaS (Stripe)**: Flujo completo de suscripciones con verificación de estado antes de permitir el acceso al Proxy.
+- **Procesamiento Asíncrono**: Worker dedicado de Celery para tareas pesadas y persistencia de estados vía Webhooks.
 - **Arquitectura Resiliente**: Implementación de *Exponential Backoff* para reintentos de conexión.
-- **Auditoría**: Modelado de logs de auditoría para trazabilidad de acciones.
+- **Seguridad**: Escaneo continuo de vulnerabilidades y cumplimiento de estándares de seguridad en el código.

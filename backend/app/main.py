@@ -14,10 +14,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-from backend.app.api.v1 import auth, proxy
+from backend.app.api.v1 import auth, proxy, users, billing
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(proxy.router, prefix="/api/v1/ajax", tags=["ajax"])
+app.include_router(billing.router, prefix="/api/v1/billing", tags=["billing"])
 
 @app.get("/health")
 async def health_check():

@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Boolean, Integer, DateTime
+from sqlalchemy import String, Boolean, Integer, DateTime, JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -22,6 +22,9 @@ class User(Base):
     
     # Stripe integration for SaaS monetization
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True, index=True)
+    subscription_id: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
+    subscription_status: Mapped[Optional[str]] = mapped_column(String, nullable=True) # active, past_due, etc.
+    subscription_plan: Mapped[str] = mapped_column(String, default="free")
     
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -36,6 +39,8 @@ class AuditLog(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=True) # Check if we want FK or loose coupling
     endpoint: Mapped[str] = mapped_column(String, nullable=False)
-    method: Mapped[str] = mapped_column(String, nullable=False) # Added HTTP method
+    method: Mapped[str] = mapped_column(String, nullable=True) # Added HTTP method, optional if action covers it
+    action: Mapped[str] = mapped_column(String, nullable=False)
+    payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     status_code: Mapped[int] = mapped_column(Integer, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
