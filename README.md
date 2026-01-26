@@ -43,6 +43,14 @@ Para iniciar todos los servicios (API, Base de Datos, Redis):
 docker-compose up -d --build
 ```
 
+### Inicialización de Base de Datos
+Una vez que los contenedores estén corriendo, es necesario aplicar las migraciones para crear las tablas:
+
+```bash
+# Ejecutar migraciones
+docker-compose run --rm app alembic upgrade head
+```
+
 La API estará disponible en `http://localhost:8000/docs`.
 
 ### Ejecución de Tests
@@ -69,10 +77,32 @@ El proyecto sigue una **Clean Architecture** (Arquitectura Cebolla) estricta:
 └── docker-compose.yml      # Orquestación de Contenedores
 ```
 
-## 5. Funcionalidades Principales (Fase 1)
-- **Gestión de Sesiones Ajax**: Login automático, caché de tokens en Redis y renovación automática en caso de expiración (401).
-- **Rate Limiting Inteligente**: Protección contra abuso mediante algoritmo Token Bucket en Redis (100 req/min).
-- **Monetización SaaS (Stripe)**: Flujo completo de suscripciones con verificación de estado antes de permitir el acceso al Proxy.
-- **Procesamiento Asíncrono**: Worker dedicado de Celery para tareas pesadas y persistencia de estados vía Webhooks.
-- **Arquitectura Resiliente**: Implementación de *Exponential Backoff* para reintentos de conexión.
-- **Seguridad**: Escaneo continuo de vulnerabilidades y cumplimiento de estándares de seguridad en el código.
+## 5. Arquitectura del Sistema
+El sistema opera bajo un modelo de **Event-Driven Architecture** parcial para procesos críticos:
+
+1.  **API Síncrona (FastAPI)**: Maneja peticiones de alto rendimiento (Proxy, Auth).
+2.  **Worker Asíncrono (Celery)**: Procesa tareas pesadas (Sincronización de datos) y críticas/bloqueantes (Webhooks de Stripe).
+3.  **Broker & Caché (Redis)**: Actúa como bus de mensajes para Celery y almacén de alta velocidad para Rate Limiting y Sesiones.
+
+### Flujo SaaS (Billing)
+1.  El usuario se registra y recibe un `status: free` (acceso limitado o nulo).
+2.  Inicia una sesión de pago (`/api/v1/billing/create-checkout-session`) que redirige a Stripe.
+3.  Al completar el pago, Stripe envía un webhook (`channel: customer.subscription.created`).
+4.  **Celery** procesa el webhook y actualiza la BBDD del usuario a `status: active`.
+5.  **Middleware de Seguridad**: Intercepta peticiones al Proxy, verifica el `status`, y permite o deniega el acceso.
+
+## 6. Aseguramiento de Calidad (QA) & Seguridad
+Este proyecto implementa controles de calidad de grado militar:
+
+-   **Integrity Tests**: Verificación automática de la salud del entorno (`test_system_integrity.py`), validando versiones de librerías y presencia de herramientas de seguridad.
+-   **Security Scanning**:
+    -   `bandit`: Análisis estático para detectar vulnerabilidades en el código Python.
+    -   `pip-audit`: Escaneo de dependencias con vulnerabilidades conocidas (CVEs).
+-   **Rotación de Secretos**: Las credenciales de Ajax nunca se almacenan en texto plano en la BD, residen en memoria/entorno y se rotan automáticamente vía el cliente proxy.
+
+## 7. Funcionalidades Principales (Fase 1 - Completada)
+-   ✅ **Proxy Seguro**: Túnel autenticado hacia Ajax Systems.
+-   ✅ **Rate Limiting**: 100 req/min por usuario (Token Bucket en Redis).
+-   ✅ **SaaS Engine**: Integración profunda con Stripe (Checkout & Webhooks).
+-   ✅ **Background Workers**: Procesamiento de tareas fuera del ciclo de petición-respuesta.
+-   ✅ **Auditoría**: Registro inmutable de transacciones (`action`, `payload`, `timestamp`).
