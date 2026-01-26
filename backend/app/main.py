@@ -14,6 +14,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+from backend.app.api.v1 import auth, proxy
+
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(proxy.router, prefix="/api/v1/ajax", tags=["ajax"])
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "project": settings.PROJECT_NAME}
