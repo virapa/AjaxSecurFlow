@@ -1,0 +1,41 @@
+from datetime import datetime
+from typing import Optional
+from sqlalchemy import String, Boolean, Integer, DateTime
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.sql import func
+
+# Clean Architecture: Domain components should have 0 external dependencies besides standard lib and ORM/Data definitions.
+# We are using SQLAlchemy as our data mapper.
+
+class Base(DeclarativeBase):
+    pass
+
+class User(Base):
+    """
+    Represents a registered user in the SaaS platform.
+    """
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    
+    # Stripe integration for SaaS monetization
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True, index=True)
+    
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+class AuditLog(Base):
+    """
+    Immutable log of core system actions for security auditing.
+    """
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=True) # Check if we want FK or loose coupling
+    endpoint: Mapped[str] = mapped_column(String, nullable=False)
+    method: Mapped[str] = mapped_column(String, nullable=False) # Added HTTP method
+    status_code: Mapped[int] = mapped_column(Integer, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
