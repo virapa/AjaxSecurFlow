@@ -152,3 +152,31 @@ async def read_hub_logs(
         return await client.get_hub_logs(hub_id, limit=limit, offset=offset)
     except Exception as e:
         handle_ajax_error(e)
+
+@router.post("/hubs/{hub_id}/arm-state", response_model=schemas.CommandResponse)
+async def set_hub_arm_state(
+    hub_id: str,
+    command: schemas.HubCommandRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Set the arming state (Arm, Disarm, Night) for a specific hub or group.
+
+    Args:
+        hub_id: Unique identifier of the hub.
+        command: Request body with armState and optional groupId.
+    """
+    if not is_subscription_active(current_user):
+        raise HTTPException(status_code=403, detail="Active subscription required")
+
+    try:
+        client = AjaxClient()
+        response = await client.set_arm_state(
+            hub_id=hub_id, 
+            arm_state=command.arm_state, 
+            group_id=command.group_id
+        )
+        return response
+    except Exception as e:
+        handle_ajax_error(e)

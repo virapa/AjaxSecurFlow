@@ -267,3 +267,38 @@ class AjaxClient:
         """
         user_id = await self._ensure_user_id()
         return await self.request("GET", f"/user/{user_id}/hubs/{hub_id}/devices?enrich=true")
+
+    async def set_arm_state(self, hub_id: str, arm_state: int, group_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Send an arming or disarming command to a hub or specific group.
+
+        Args:
+            hub_id: Unique identifier of the hub.
+            arm_state: Target state (1: ARM, 0: DISARM, 2: NIGHT).
+            group_id: Optional group/partition ID.
+
+        Returns:
+            Dict[str, Any]: Response from the API.
+        """
+        user_id = await self._ensure_user_id()
+        payload = {"armState": arm_state}
+        if group_id:
+            payload["groupId"] = group_id
+            
+        return await self.request(
+            "POST", 
+            f"/user/{user_id}/hubs/{hub_id}/commands/set-arm-state", 
+            json=payload
+        )
+
+    async def arm(self, hub_id: str, group_id: Optional[str] = None) -> Dict[str, Any]:
+        """Convenience method for Full Arming (Armado Total)."""
+        return await self.set_arm_state(hub_id, 1, group_id)
+
+    async def disarm(self, hub_id: str, group_id: Optional[str] = None) -> Dict[str, Any]:
+        """Convenience method for Disarming (Desarmado)."""
+        return await self.set_arm_state(hub_id, 0, group_id)
+
+    async def night_mode(self, hub_id: str) -> Dict[str, Any]:
+        """Convenience method for Night Mode (Armado Parcial)."""
+        return await self.set_arm_state(hub_id, 2)

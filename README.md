@@ -52,7 +52,10 @@ Una vez que los contenedores estén corriendo, es necesario aplicar las migracio
 docker-compose run --rm app alembic upgrade head
 ```
 
-La API estará disponible en `http://localhost:8000/docs`.
+### Documentación de la API
+Una vez iniciados los servicios, la documentación interactiva y técnica está disponible en:
+- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs) (Para pruebas interactivas)
+- **Redoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc) (Para referencia técnica detallada)
 
 ### Ejecución de Tests
 Para ejecutar la suite de pruebas:
@@ -93,6 +96,15 @@ El `AjaxClient` implementa un patrón Singleton con persistencia en Redis para:
 - Realizar login automático usando **SHA256** solo cuando el token expira.
 - Re-inyección automática de credenciales en rutas `/user/{userId}/...`.
 
+### Control de Seguridad (Armado/Desarmado)
+El proxy expone una interfaz unificada para el control de estados:
+- **Endpoint**: `POST /api/v1/ajax/hubs/{hub_id}/arm-state`
+- **Modos Soportados**: 
+    - `0`: Desarmado.
+    - `1`: Armado Total.
+    - `2`: Modo Noche (Parcial).
+- **Acción por Grupo**: Soporta el parámetro opcional `groupId` para actuar sobre particiones específicas.
+
 ## 6. Aseguramiento de Calidad (QA) & Seguridad
 Este proyecto implementa controles de calidad de grado militar:
 
@@ -106,6 +118,7 @@ Este proyecto implementa controles de calidad de grado militar:
 ## 7. Roadmap y Estado del Proyecto
 ### Fase 1: Core Backend (✅ Completada)
 - ✅ Proxy Seguro con Auth SHA256.
+- ✅ Comandos de Armado/Desarmado/Noche por Hub o Grupo.
 - ✅ Rate Limiting por usuario en Redis.
 - ✅ Motor de Suscripciones con Stripe.
 - ✅ Suite de Tests Unitarios (100% Pass).

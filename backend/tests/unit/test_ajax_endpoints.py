@@ -67,3 +67,20 @@ async def test_get_hub_logs_success(async_client: AsyncClient, mock_user_subscri
         data = response.json()
         assert len(data["logs"]) == 1
         assert data["total_count"] == 1
+
+@pytest.mark.asyncio
+async def test_set_arm_state_success(async_client: AsyncClient, mock_user_subscription):
+    """
+    Test setting arm state successfully.
+    """
+    with patch("backend.app.api.v1.endpoints.ajax.AjaxClient") as MockClient:
+        instance = MockClient.return_value
+        instance.set_arm_state = AsyncMock(return_value={"success": True, "message": "Command sent"})
+        
+        payload = {"armState": 1}
+        response = await async_client.post("/api/v1/ajax/hubs/000000/arm-state", json=payload)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        instance.set_arm_state.assert_called_with(hub_id="000000", arm_state=1, group_id=None)

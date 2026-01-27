@@ -64,3 +64,24 @@ class EventLogList(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     logs: List[EventLog]
     total_count: int
+
+from enum import IntEnum
+
+# --- Commands ---
+class ArmState(IntEnum):
+    """Possible arm states for a hub or group."""
+    DISARMED = 0
+    ARMED = 1
+    NIGHT_MODE = 2  # Partial arming/Stay mode
+
+class HubCommandRequest(BaseModel):
+    """Schema for sending an arm/disarm command."""
+    model_config = ConfigDict(populate_by_name=True)
+    arm_state: ArmState = Field(..., alias="armState")
+    group_id: Optional[str] = Field(None, alias="groupId") # Optional if arming the whole hub
+
+class CommandResponse(BaseModel):
+    """Response from a command execution."""
+    model_config = ConfigDict(populate_by_name=True)
+    success: bool
+    message: Optional[str] = None

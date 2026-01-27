@@ -124,3 +124,53 @@ async def test_request_auto_reauth(ajax_client):
              assert result == {"data": "success"}
              assert mock_request.call_count == 2
              mock_post.assert_called()
+
+@pytest.mark.asyncio
+async def test_set_arm_state_command(ajax_client):
+    """
+    Test that set_arm_state sends the correct payload and path.
+    """
+    mock_redis = ajax_client.redis
+    mock_redis.get.side_effect = ["ajax_user_123", "cached_token"]
+    
+    mock_success = MagicMock()
+    mock_success.status_code = 200
+    mock_success.json.return_value = {"success": True}
+    
+    with patch.object(ajax_client, '_get_redis', new_callable=AsyncMock) as mock_get_redis, \
+         patch.object(ajax_client.client, 'request', new_callable=AsyncMock) as mock_request:
+             
+             mock_get_redis.return_value = mock_redis
+             mock_request.return_value = mock_success
+             
+             # ARM the whole system (armState=1)
+             await ajax_client.set_arm_state("hub_007", arm_state=1)
+             
+             args, kwargs = mock_request.call_args
+             assert args[0] == "POST"
+             assert "/user/ajax_user_123/hubs/hub_007/commands/set-arm-state" in args[1]
+             assert kwargs["json"] == {"armState": 1}
+
+@pytest.mark.asyncio
+async def test_set_arm_state_with_group(ajax_client):
+    """
+    Test set_arm_state with a specific group ID.
+    """
+    mock_redis = ajax_client.redis
+    mock_redis.get.side_effect = ["ajax_user_123", "cached_token"]
+    
+    mock_success = MagicMock()
+    mock_success.status_code = 200
+    mock_success.json.return_value = {"success": True}
+    
+    with patch.object(ajax_client, '_get_redis', new_callable=AsyncMock) as mock_get_redis, \
+         patch.object(ajax_client.client, 'request', new_callable=AsyncMock) as mock_request:
+             
+             mock_get_redis.return_value = mock_redis
+             mock_request.return_value = mock_success
+             
+             # DISARM specific group (armState=0, group_id="g1")
+             await ajax_client.set_arm_state("hub_007", arm_state=0, group_id="g1")
+             
+             _, kwargs = mock_request.call_args
+             assert kwargs["json"] == {"armState": 0, "groupId": "g1"}
