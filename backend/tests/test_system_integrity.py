@@ -60,7 +60,16 @@ def test_no_vulnerabilities():
             return # No vulnerabilities
             
         data = json.loads(result.stdout)
-        vulnerabilities = [item for item in data if item.get("vulnerabilities")]
+        # pip-audit returns a list of dependencies OR a dict with a 'dependencies' key
+        dependencies = data.get("dependencies", []) if isinstance(data, dict) else data
+        
+        vulnerabilities = []
+        for item in dependencies:
+            # Check for vulnerabilities in different format versions
+            vulns = item.get("vulnerabilities") or item.get("vulns")
+            if vulns:
+                vulnerabilities.append({"package": item.get("name"), "vulns": vulns})
+                
         assert not vulnerabilities, f"Security vulnerabilities found: {vulnerabilities}"
     except (FileNotFoundError, json.JSONDecodeError):
         pytest.skip("pip-audit not working as module in this environment")
@@ -74,7 +83,6 @@ def test_deprecated_libraries():
     
     # List of libraries we want to flag as 'warning' or 'error'
     deprecated_list = {
-        "passlib": "Consider using 'pwdlib' or 'bcrypt' directly (passlib is poorly maintained)",
         "multipart": "Ensure you are using 'python-multipart', not the legacy 'multipart' package",
     }
     

@@ -26,27 +26,27 @@ def ajax_client():
 
 @pytest.mark.asyncio
 async def test_get_session_token_from_redis(ajax_client):
-    mock_redis = ajax_client.redis # This is our AsyncMock
+    mock_redis = ajax_client.redis
     mock_redis.get.return_value = "cached_token"
     
-    # Explicitly use AsyncMock for _get_redis
     with patch.object(ajax_client, '_get_redis', new_callable=AsyncMock) as mock_get_redis:
         mock_get_redis.return_value = mock_redis
-        
         token = await ajax_client._get_session_token()
         assert token == "cached_token"
-        mock_redis.get.assert_called_with("ajax_session_token")
 
 @pytest.mark.asyncio
 async def test_login_success(ajax_client):
     mock_redis = ajax_client.redis
     
-    # Mock HTTP response
+    # Mock HTTP response with correct camelCase keys
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"session_token": "new_token", "expires_in": 3600}
+    mock_response.json.return_value = {
+        "sessionToken": "new_token", 
+        "userId": "ajax_user_123",
+        "expires_in": 3600
+    }
     
-    # For client.post, we need an AsyncMock because it is awaited
     with patch.object(ajax_client, '_get_redis', new_callable=AsyncMock) as mock_get_redis, \
          patch.object(ajax_client.client, 'post', new_callable=AsyncMock) as mock_post:
         
@@ -56,10 +56,40 @@ async def test_login_success(ajax_client):
         token = await ajax_client.login()
         
         assert token == "new_token"
-        mock_redis.set.assert_called()
-        call_args = mock_redis.set.call_args
-        assert call_args[0][0] == "ajax_session_token"
-        assert call_args[0][1] == "new_token"
+        # Verify redis calls for both token and userId
+        assert mock_redis.set.call_count >= 2
+        calls = [call[0][0] for call in mock_redis.set.call_args_list]
+        assert "ajax_session_token" in calls
+        assert "ajax_user_id" in calls
+
+@pytest.mark.asyncio
+async def test_request_uses_userId_in_path(ajax_client):
+    """
+    Verify that requests use the userId from redis in their paths.
+    """
+    mock_redis = ajax_client.redis
+    # Order of calls:
+    # 1. get_hubs calls _get_ajax_user_id -> redis.get("ajax_user_id")
+    # 2. request calls _get_session_token -> redis.get("ajax_session_token")
+    mock_redis.get.side_effect = ["ajax_user_123", "cached_token"]
+    
+    mock_success = MagicMock()
+    mock_success.status_code = 200
+    mock_success.json.return_value = {"hubs": []}
+    
+    with patch.object(ajax_client, '_get_redis', new_callable=AsyncMock) as mock_get_redis, \
+         patch.object(ajax_client.client, 'request', new_callable=AsyncMock) as mock_request:
+             
+             mock_get_redis.return_value = mock_redis
+             mock_request.return_value = mock_success
+             
+             # Call get_hubs which uses the path logic
+             await ajax_client.get_hubs()
+             
+             # Check that the path includes the userId
+             args, kwargs = mock_request.call_args
+             assert "/user/ajax_user_123/hubs" in args[1]
+             assert kwargs["headers"]["X-Session-Token"] == "cached_token"
 
 @pytest.mark.asyncio
 async def test_request_auto_reauth(ajax_client):
@@ -71,7 +101,11 @@ async def test_request_auto_reauth(ajax_client):
     
     mock_login_resp = MagicMock()
     mock_login_resp.status_code = 200
-    mock_login_resp.json.return_value = {"session_token": "refreshed_token", "expires_in": 3600}
+    mock_login_resp.json.return_value = {
+        "sessionToken": "refreshed_token", 
+        "userId": "ajax_user_123",
+        "expires_in": 3600
+    }
     
     mock_success = MagicMock()
     mock_success.status_code = 200

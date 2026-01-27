@@ -28,7 +28,7 @@ Este proyecto debe reflejar la excelencia técnica aprendida durante todo el cur
     *   **Docker:** Contenerización de todos los servicios.
 
 ## 3. Stack Tecnológico
-*   **Lenguaje:** Python 3.14+ (Moderno y Asíncrono).
+*   **Lenguaje:** Python 3.11+ (Moderno y Asíncrono).
 *   **Framework API:** FastAPI.
 *   **Base de Datos:** PostgreSQL (con SQLAlchemy 2.0 Async).
 *   **Cola de Tareas & Caché:** Redis + Celery (para manejo de Rate Limits y tareas en background).

@@ -9,7 +9,7 @@ tenacity>=8.2.0
 python-multipart
 # Auth
 PyJWT>=2.8.0
-passlib[bcrypt]
+bcrypt>=4.0.0
 # Testing & Security
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
@@ -22,3 +22,4 @@ celery>=5.3.0
 flower>=2.0.0
 
 alembic>=1.11.0
+email-validator>=2.0.0
