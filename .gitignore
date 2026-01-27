@@ -16,7 +16,12 @@ build/
 .idea/
 
 # Logs and temp files
-*.txt
+# Ignore specific test result patterns but keep requirements.txt safe
+*_results.txt
+*_logs.txt
+test_out.txt
+test_debug.txt
+current_logs.txt
 !requirements.txt
 *.py_backup
 ajax_client_container.py
