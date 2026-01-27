@@ -1,4 +1,3 @@
-
 # Environment Variables
 .env
 .venv
@@ -15,3 +14,9 @@ build/
 .DS_Store
 .vscode/
 .idea/
+
+# Logs and temp files
+*.txt
+!requirements.txt
+*.py_backup
+ajax_client_container.py
