@@ -68,9 +68,11 @@ async def test_set_arm_state_success(async_client: AsyncClient, mock_user_subscr
     """
     Test setting arm state successfully.
     """
-    with patch("backend.app.api.v1.endpoints.ajax.AjaxClient") as MockClient:
+    with patch("backend.app.api.v1.endpoints.ajax.AjaxClient") as MockClient, \
+         patch("backend.app.api.v1.endpoints.ajax.audit_service.log_request_action") as mock_audit:
         instance = MockClient.return_value
         instance.set_arm_state = AsyncMock(return_value={"success": True, "message": "Command sent"})
+        mock_audit.return_value = None
         
         payload = {"armState": 1}
         response = await async_client.post("/api/v1/ajax/hubs/000000/arm-state", json=payload)
@@ -78,7 +80,6 @@ async def test_set_arm_state_success(async_client: AsyncClient, mock_user_subscr
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        # Updated assertion to expect user_email
         instance.set_arm_state.assert_called_with(
             user_email=mock_user_subscription.email,
             hub_id="000000", 

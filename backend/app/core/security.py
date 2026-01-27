@@ -24,12 +24,25 @@ def get_password_hash(password: str) -> str:
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
-def create_access_token(subject: Union[str, Any], expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    subject: Union[str, Any], 
+    expires_delta: Optional[timedelta] = None,
+    jti: Optional[str] = None,
+    uah: Optional[str] = None,
+    uip: Optional[str] = None
+) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode = {"exp": expire, "sub": str(subject)}
+    if jti:
+        to_encode["jti"] = jti
+    if uah:
+        to_encode["uah"] = uah
+    if uip:
+        to_encode["uip"] = uip
+        
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
