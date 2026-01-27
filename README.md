@@ -120,6 +120,7 @@ Este proyecto implementa controles de calidad de grado militar:
 El sistema implementa capas de defensa activa para proteger las sesiones de usuario:
 - **JWT Fingerprinting (UA Hash)**: El token está vinculado al `User-Agent` del cliente que inició sesión. Si el token es robado y usado desde otro navegador, es rechazado inmediatamente.
 - **Revocación por JTI + Redis**: Cada login genera un ID único (`jti`). Al hacer **Logout**, el token es invalidado instantáneamente en el lado del servidor mediante una lista negra en Redis.
+- **Protección Brute-Force (Fail2Ban)**: Bloqueo automático de IP tras 5 intentos fallidos de login durante 15 minutos, gestionado globalmente en Redis para alta disponibilidad.
 - **Auditoría VIP**: Registro inmutable que incluye IP, navegador y nivel de severidad (INFO, WARNING, CRITICAL) para cada acción.
 - **Detección de IP Shift**: El sistema detecta y registra cambios de dirección IP durante una sesión activa (útil para dispositivos móviles), permitiendo el acceso pero alertando a la auditoría.
 

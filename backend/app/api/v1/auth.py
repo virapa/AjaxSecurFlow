@@ -11,7 +11,7 @@ from backend.app.core.db import get_db
 from backend.app.core import crud_user
 from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
-from backend.app.services import audit_service
+from backend.app.services import audit_service, security_service
 
 router = APIRouter()
 
@@ -98,17 +98,33 @@ async def login_for_access_token(
 ):
     """
     Unified login: Verify email/password against Ajax Systems.
-    Generates a secure JWT with JTI, IP and Client Fingerprinting.
+    Includes Brute-Force Protection (Fail2Ban) and Session Fingerprinting.
     """
+    # 0. Extract Client IP (Proxy-Aware)
+    forwarded = request.headers.get("x-forwarded-for")
+    client_ip = forwarded.split(",")[0].strip() if forwarded else (request.headers.get("x-real-ip") or (request.client.host if request.client else None))
+
+    # 1. Check if IP is locked out
+    if await security_service.check_ip_lockout(client_ip):
+        await audit_service.log_request_action(
+            db=db, request=request, user_id=None,
+            action="SECURITY_ALERT_LOGIN_LOCKED", status_code=403, 
+            severity="CRITICAL", payload={"ip": client_ip, "email": form_data.username}
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your IP is temporarily locked due to multiple failed login attempts. Try again in 15 minutes."
+        )
+
     ajax = AjaxClient()
     try:
-        # 1. Verify credentials directly with Ajax API
+        # 2. Verify credentials directly with Ajax API
         ajax_data = await ajax.login_with_credentials(
             email=form_data.username, 
             password_raw=form_data.password
         )
         
-        # 2. Get or create user in local database
+        # 3. Get or create user in local database
         user = await crud_user.get_user_by_email(db, email=form_data.username)
         if not user:
             # Auto-provision user if they exist in Ajax but not in our DB
@@ -120,14 +136,13 @@ async def login_for_access_token(
             )
             user = await crud_user.create_user(db, user_in=user_in)
         
-        # 3. Generate Security Context (JTI, UAH, UIP)
+        # 4. Success Tasks
+        await security_service.reset_login_failures(client_ip)
+        
+        # Generate Security Context (JTI, UAH, UIP)
         jti = str(uuid.uuid4())
         user_agent = request.headers.get("user-agent", "")
         uah = hashlib.sha256(user_agent.encode()).hexdigest()
-        
-        # Proxy-Aware IP extraction
-        forwarded = request.headers.get("x-forwarded-for")
-        uip = forwarded.split(",")[0].strip() if forwarded else (request.headers.get("x-real-ip") or (request.client.host if request.client else None))
 
         # Audit: Successful Login
         await audit_service.log_request_action(
@@ -135,16 +150,19 @@ async def login_for_access_token(
             action="LOGIN_SUCCESS", status_code=200, severity="INFO"
         )
         
-        # 4. Generate our system's Access Token
+        # 5. Generate our system's Access Token
         access_token = create_access_token(
             subject=user.email,
             jti=jti,
             uah=uah,
-            uip=uip
+            uip=client_ip
         )
         return {"access_token": access_token, "token_type": "bearer"}
 
     except AjaxAuthError:
+        # 6. Failure Tracking (Fail2Ban logic)
+        await security_service.track_login_failure(client_ip)
+        
         # Audit: Failed Login
         await audit_service.log_request_action(
             db=db, request=request, user_id=None,

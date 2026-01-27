@@ -15,7 +15,9 @@ async def log_action(
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
     severity: str = "INFO",
-    resource_id: Optional[str] = None
+    resource_id: Optional[str] = None,
+    latency_ms: Optional[int] = None,
+    correlation_id: Optional[str] = None
 ):
     """
     Creates an enriched audit log entry.
@@ -31,6 +33,8 @@ async def log_action(
         user_agent=user_agent,
         severity=severity,
         resource_id=resource_id,
+        latency_ms=latency_ms,
+        correlation_id=correlation_id,
         timestamp=datetime.now(timezone.utc)
     )
     db.add(log_entry)
@@ -44,7 +48,9 @@ async def log_request_action(
     status_code: int,
     severity: str = "INFO",
     resource_id: Optional[str] = None,
-    payload: Optional[dict] = None
+    payload: Optional[dict] = None,
+    latency_ms: Optional[int] = None,
+    correlation_id: Optional[str] = None
 ):
     """
     Helper to log actions using data extracted from a FastAPI Request object.
@@ -69,5 +75,7 @@ async def log_request_action(
         ip_address=client_ip,
         user_agent=request.headers.get("user-agent"),
         severity=severity,
-        resource_id=resource_id
+        resource_id=resource_id,
+        latency_ms=latency_ms,
+        correlation_id=correlation_id
     )

@@ -42,14 +42,20 @@ def mock_rate_limiter():
 async def test_auth_login(client, mock_db):
     """Test login with unified identity (Ajax)."""
     with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax, \
-         patch("backend.app.api.v1.auth.crud_user.get_user_by_email") as mock_get_user:
+         patch("backend.app.api.v1.auth.crud_user.get_user_by_email") as mock_get_user, \
+         patch("backend.app.api.v1.auth.security_service") as mock_sec:
         
         # 1. Mock Ajax success
         mock_ajax_instance = MockAjax.return_value
         mock_ajax_instance.login_with_credentials = AsyncMock(return_value={"userId": "123", "sessionToken": "t"})
         
-        # 2. Mock DB user
+        # 2. Mock Security Service
+        mock_sec.check_ip_lockout = AsyncMock(return_value=False)
+        mock_sec.reset_login_failures = AsyncMock()
+        
+        # 3. Mock DB user
         mock_user = AsyncMock()
+        mock_user.id = 1
         mock_user.email = "admin@example.com"
         mock_get_user.return_value = mock_user
         
@@ -60,20 +66,27 @@ async def test_auth_login(client, mock_db):
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
+        mock_sec.check_ip_lockout.assert_called_once()
+        mock_sec.reset_login_failures.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_auth_login_invalid(client, mock_db):
     """Test login failure with unified identity."""
     from backend.app.services.ajax_client import AjaxAuthError
-    with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax:
+    with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax, \
+         patch("backend.app.api.v1.auth.security_service") as mock_sec:
+        
         mock_ajax_instance = MockAjax.return_value
         mock_ajax_instance.login_with_credentials = AsyncMock(side_effect=AjaxAuthError("Invalid"))
+        mock_sec.check_ip_lockout = AsyncMock(return_value=False)
+        mock_sec.track_login_failure = AsyncMock()
         
         response = await client.post(
             "/api/v1/auth/token", 
             data={"username": "wrong", "password": "wrong"}
         )
         assert response.status_code == 401
+        mock_sec.track_login_failure.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_proxy_endpoint_protected(client, mock_rate_limiter):
@@ -91,6 +104,7 @@ async def test_proxy_endpoint_success(client, mock_ajax_client, mock_rate_limite
     # Updated mocks to use unified identity logic
     with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax, \
          patch("backend.app.api.v1.auth.crud_user.get_user_by_email") as mock_get_user, \
+         patch("backend.app.api.v1.auth.security_service") as mock_sec, \
          patch("backend.app.api.v1.proxy.audit_service.log_action") as mock_log, \
          patch("backend.app.api.v1.proxy.billing_service.is_subscription_active") as mock_sub:
         
@@ -100,6 +114,8 @@ async def test_proxy_endpoint_success(client, mock_ajax_client, mock_rate_limite
         mock_get_user.return_value = mock_user
         mock_sub.return_value = True
         mock_log.return_value = None
+        mock_sec.check_ip_lockout = AsyncMock(return_value=False)
+        mock_sec.reset_login_failures = AsyncMock()
         
         # 2. Setup Proxy Mock (the actual request method)
         # Note: mock_ajax_client is a patch on backend.app.api.v1.proxy.AjaxClient

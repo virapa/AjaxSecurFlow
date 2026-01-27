@@ -50,4 +50,8 @@ class AuditLog(Base):
     severity: Mapped[str] = mapped_column(String, default="INFO", index=True) # INFO, WARNING, CRITICAL
     resource_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True) # E.g., hub_id
     
+    # performance & tracking
+    latency_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    correlation_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
