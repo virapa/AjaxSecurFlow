@@ -59,32 +59,35 @@ class AjaxClient:
         return await redis_client.get(f"ajax_user:{user_email}:id")
 
     async def _get_session_token(self, user_email: str) -> Optional[str]:
-        """
-        Retrieve the cached Ajax session token for a specific user.
-
-        Args:
-            user_email: The email of the user as unique identifier.
-
-        Returns:
-            Optional[str]: The session token if found in cache.
-        """
+        """Retrieve cached session token."""
         redis_client = await self._get_redis()
         return await redis_client.get(f"ajax_user:{user_email}:token")
 
-    async def _save_session_data(self, user_email: str, token: str, user_id: str, expires_in: int = 3600) -> None:
-        """
-        Save session token and userId to Redis for a specific user.
+    async def _get_refresh_token(self, user_email: str) -> Optional[str]:
+        """Retrieve cached refresh token."""
+        redis_client = await self._get_redis()
+        return await redis_client.get(f"ajax_user:{user_email}:refresh")
 
-        Args:
-            user_email: The user's email.
-            token: The Ajax session token.
-            user_id: The Ajax user ID.
-            expires_in: TTL for the cache (in seconds).
+    async def _save_session_data(
+        self, 
+        user_email: str, 
+        token: str, 
+        user_id: str, 
+        refresh_token: Optional[str] = None,
+        expires_in: int = 3600
+    ) -> None:
+        """
+        Save session token, userId and refreshToken to Redis.
         """
         redis_client = await self._get_redis()
-        # Safety buffer of 60 seconds
+        # Session token expires in 15min typically, Refresh in 7 days
+        # Buffer of 60 seconds for safety
         await redis_client.set(f"ajax_user:{user_email}:token", token, ex=expires_in - 60)
-        await redis_client.set(f"ajax_user:{user_email}:id", user_id, ex=expires_in - 60)
+        await redis_client.set(f"ajax_user:{user_email}:id", user_id) # ID doesn't need to expire quickly
+        
+        if refresh_token:
+            # 7 days = 604800 seconds
+            await redis_client.set(f"ajax_user:{user_email}:refresh", refresh_token, ex=604800)
 
     async def login_with_credentials(self, email: str, password_raw: str) -> Dict[str, Any]:
         """
@@ -127,12 +130,14 @@ class AjaxClient:
             
             token = data.get("sessionToken")
             user_id = data.get("userId")
+            refresh_token = data.get("refreshToken")
             
             if not token or not user_id:
                 raise AjaxAuthError("Login successful but missing session data.")
                 
-            expires_in = data.get("expires_in", 3600) 
-            await self._save_session_data(email, token, user_id, int(expires_in))
+            # Swagger says 15 mins (900s), default to 3600 if totally missing
+            expires_in = data.get("expires_in", 900) 
+            await self._save_session_data(email, token, user_id, refresh_token, int(expires_in))
             return data
             
         except httpx.HTTPStatusError as e:
@@ -140,6 +145,52 @@ class AjaxClient:
             raise AjaxAuthError("Invalid Ajax credentials.")
         except Exception as e:
             logger.error(f"Error during Ajax credential validation: {e}")
+            raise
+
+    async def refresh_session(self, user_email: str) -> str:
+        """
+        Obtain a new session token using the cached refresh token.
+        
+        Returns:
+            str: The new session token.
+        """
+        refresh_token = await self._get_refresh_token(user_email)
+        user_id = await self._get_ajax_user_id(user_email)
+        
+        if not refresh_token or not user_id:
+            raise AjaxAuthError("No refresh token available. Re-login required.")
+            
+        payload = {
+            "userId": user_id,
+            "refreshToken": refresh_token
+        }
+        
+        headers = {
+            "X-Api-Key": settings.AJAX_API_KEY.get_secret_value(),
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            logger.info(f"Refreshing Ajax session for {user_email}")
+            response = await self.client.post("/refresh", json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            new_token = data.get("sessionToken")
+            new_refresh = data.get("refreshToken")
+            
+            if not new_token:
+                raise AjaxAuthError("Refresh successful but missing new session token.")
+                
+            expires_in = data.get("expires_in", 900)
+            await self._save_session_data(user_email, new_token, user_id, new_refresh, int(expires_in))
+            return new_token
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Refresh failed for {user_email}: {e.response.text}")
+            raise AjaxAuthError("Ajax session refresh failed. Please log in again.")
+        except Exception as e:
+            logger.error(f"Unexpected error during refresh: {e}")
             raise
 
     async def request(self, user_email: str, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
@@ -161,16 +212,29 @@ class AjaxClient:
         token = await self._get_session_token(user_email)
         
         if not token:
-            raise AjaxAuthError("Session expired. Please log in again.")
+            try:
+                # Attempt to refresh if token is not in cache (could have just expired)
+                token = await self.refresh_session(user_email)
+            except AjaxAuthError:
+                raise AjaxAuthError("Session expired. Please log in again.")
 
-        headers = kwargs.get("headers", {})
-        headers["X-Api-Key"] = settings.AJAX_API_KEY.get_secret_value()
-        headers["X-Session-Token"] = token
-        headers["accept"] = "application/json"
-        kwargs["headers"] = headers
+        async def _do_req(current_token: str):
+            headers = kwargs.get("headers", {}).copy()
+            headers["X-Api-Key"] = settings.AJAX_API_KEY.get_secret_value()
+            headers["X-Session-Token"] = current_token
+            headers["accept"] = "application/json"
+            req_kwargs = kwargs.copy()
+            req_kwargs["headers"] = headers
+            return await self.client.request(method, endpoint, **req_kwargs)
 
         try:
-            response = await self.client.request(method, endpoint, **kwargs)
+            response = await _do_req(token)
+            
+            if response.status_code == 401:
+                # Token might have expired just now. Attempt ONE refresh.
+                logger.info(f"Session expired (401) for {user_email}, attempting refresh...")
+                new_token = await self.refresh_session(user_email)
+                response = await _do_req(new_token)
             
             if response.status_code == 401:
                 raise AjaxAuthError("Ajax session expired.")
