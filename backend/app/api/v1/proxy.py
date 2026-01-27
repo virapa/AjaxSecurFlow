@@ -44,6 +44,16 @@ async def proxy_ajax_request(
     try:
         endpoint = f"/{path}"
         
+        # Determine resource_id from path (e.g., /hubs/123/...)
+        resource_id = None
+        path_parts = path.strip("/").split("/")
+        if len(path_parts) >= 2 and path_parts[0] == "hubs":
+            resource_id = path_parts[1]
+
+        # Determine severity based on method
+        # Mutations (POST, PUT, DELETE) are more sensitive
+        severity = "WARNING" if request.method in ["POST", "PUT", "DELETE", "PATCH"] else "INFO"
+
         # Updated to include user_email for multitenant support
         response_data = await client.request(
             user_email=current_user.email,
@@ -52,26 +62,29 @@ async def proxy_ajax_request(
             json=body if isinstance(body, dict) else None,
         )
         
-        # Log successful proxy action
-        await audit_service.log_action(
+        # Log successful proxy action with enhanced context
+        await audit_service.log_request_action(
             db=db,
+            request=request,
             user_id=current_user.id,
             action=f"PROXY_{request.method}",
-            endpoint=endpoint,
             status_code=200,
+            severity=severity,
+            resource_id=resource_id,
             payload={"path": path}
         )
         
         return response_data
         
     except Exception as e:
-        # Log failed proxy action
-        await audit_service.log_action(
+        # Log failed proxy action with elevated severity
+        await audit_service.log_request_action(
             db=db,
+            request=request,
             user_id=current_user.id,
             action=f"PROXY_{request.method}_FAILED",
-            endpoint=f"/{path}",
             status_code=502,
-            payload={"error": str(e)}
+            severity="CRITICAL",
+            payload={"error": str(e), "path": path}
         )
         raise HTTPException(status_code=502, detail=f"Upstream API Error: {str(e)}")

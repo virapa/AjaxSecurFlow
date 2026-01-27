@@ -36,13 +36,21 @@ async def test_full_flow_integration(client):
     assert response.status_code == 200, f"Register failed: {response.text}"
     user_id = response.json()["id"]
     
-    # 2. Login
-    login_response = await client.post(
-        "/api/v1/auth/token",
-        data={"username": email, "password": password}
-    )
-    assert login_response.status_code == 200
-    token = login_response.json()["access_token"]
+    # 2. Login (Mocking Ajax and Security Service)
+    with patch("backend.app.api.v1.auth.AjaxClient.login_with_credentials") as mock_login, \
+         patch("backend.app.api.v1.auth.security_service.check_ip_lockout") as mock_lock, \
+         patch("backend.app.api.v1.auth.security_service.reset_login_failures") as mock_reset:
+        
+        mock_login.return_value = {"userId": "123", "sessionToken": "test_token"}
+        mock_lock.return_value = False
+        mock_reset.return_value = None
+        
+        login_response = await client.post(
+            "/api/v1/auth/token",
+            data={"username": email, "password": password}
+        )
+        assert login_response.status_code == 200, f"Login failed: {login_response.text}"
+        token = login_response.json()["access_token"]
     
     # ACTIVATE SUBSCRIPTION (Simulate Payment)
     async with async_session_factory() as session:
@@ -64,10 +72,20 @@ async def test_full_flow_integration(client):
     # 4. Verify Audit Log
     async with async_session_factory() as session:
         # User objects might be in a different session state, so we query fresh
-        stmt = select(AuditLog).where(AuditLog.user_id == user_id)
+        stmt = select(AuditLog).where(AuditLog.user_id == user_id).order_by(AuditLog.timestamp.asc())
         result = await session.execute(stmt)
         logs = result.scalars().all()
-        assert len(logs) > 0
-        # The action name in proxy.py is PROXY_<METHOD>
-        assert logs[0].action == "PROXY_GET"
-        assert logs[0].endpoint == "/test-endpoint"
+        
+        # We expect at least 2 logs: LOGIN_SUCCESS and PROXY_GET
+        assert len(logs) >= 2
+        
+        # 1st: Login
+        assert logs[0].action == "LOGIN_SUCCESS"
+        
+        # 2nd: Proxy
+        assert logs[1].action == "PROXY_GET"
+        assert logs[1].endpoint == "/api/v1/ajax/test-endpoint"
+        # Verify enriched fields (IP and UA)
+        assert logs[1].ip_address is not None
+        assert logs[1].user_agent is not None
+        assert logs[1].severity == "INFO"

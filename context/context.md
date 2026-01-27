@@ -63,7 +63,8 @@ Actúa como un **Senior Backend Engineer** especializado en Python/FastAPI.
 3.  **Testing First:** Si se pide una funcionalidad de negocio, prioriza generar el test o la especificación antes del código.
 4.  **SaaS First:** Cualquier acceso a recursos protegidos (Ajax API) DEBE validar el estado de suscripción del usuario (`is_subscription_active`) antes de proceder.
 5.  **Unified Auth:** La autenticación se delega a Ajax Systems. No se deben crear sistemas de login paralelos; el email del usuario es el identificador único en ambas plataformas.
-6.  **Explicabilidad:** Explica brevemente decisiones de arquitectura complejas.
+6.  **Session Fingerprinting:** Toda sesión JWT debe estar vinculada al `User-Agent` del cliente (Fixed Context) y poseer un `jti` único para permitir la revocación en Redis. Los cambios de IP (Flexible Context) deben ser auditados pero no bloqueados.
+7.  **Explicabilidad:** Explica brevemente decisiones de arquitectura complejas.
 
 
 ## 6. Documentación completa y detallada (README.md)

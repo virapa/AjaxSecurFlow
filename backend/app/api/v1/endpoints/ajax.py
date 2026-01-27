@@ -1,5 +1,5 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.v1.auth import get_current_user
@@ -7,6 +7,7 @@ from backend.app.core.db import get_db
 from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
 from backend.app.services.billing_service import is_subscription_active
+from backend.app.services import audit_service
 from backend.app.schemas import ajax as schemas
 
 router = APIRouter()
@@ -162,6 +163,7 @@ async def read_hub_logs(
 async def set_hub_arm_state(
     hub_id: str,
     command: schemas.HubCommandRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -171,6 +173,7 @@ async def set_hub_arm_state(
     Args:
         hub_id: Unique identifier of the hub.
         command: Request body with armState and optional groupId.
+        request: The incoming FastAPI request.
     """
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
@@ -183,6 +186,34 @@ async def set_hub_arm_state(
             arm_state=command.arm_state, 
             group_id=command.group_id
         )
+        
+        # Audit high-severity security action
+        await audit_service.log_request_action(
+            db=db,
+            request=request,
+            user_id=current_user.id,
+            action="HUB_SET_ARM_STATE",
+            status_code=200,
+            severity="WARNING", # Commands are altidude-level actions
+            resource_id=hub_id,
+            payload={
+                "hub_id": hub_id, 
+                "arm_state": command.arm_state, 
+                "group_id": command.group_id
+            }
+        )
+        
         return response
     except Exception as e:
+        # Audit failed high-severity action
+        await audit_service.log_request_action(
+            db=db,
+            request=request,
+            user_id=current_user.id,
+            action="HUB_SET_ARM_STATE_FAILED",
+            status_code=502,
+            severity="CRITICAL",
+            resource_id=hub_id,
+            payload={"error": str(e)}
+        )
         handle_ajax_error(e)
