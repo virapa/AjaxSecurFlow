@@ -40,8 +40,6 @@ class Settings(BaseSettings):
     # Ajax Systems API
     AJAX_API_BASE_URL: str = "https://api.ajax.systems/api"
     AJAX_API_KEY: SecretStr
-    AJAX_LOGIN: str
-    AJAX_PASSWORD: SecretStr
     
     # Stripe (SaaS Billing)
     STRIPE_SECRET_KEY: Optional[SecretStr] = None
@@ -56,10 +54,6 @@ class Settings(BaseSettings):
     SECRET_KEY: SecretStr
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
-    # Bootstrap Security
-    FIRST_SUPERUSER: str = "admin@example.com"
-    FIRST_SUPERUSER_PASSWORD: str = "changethis"
 
     model_config = SettingsConfigDict(
         env_file=".env", 
