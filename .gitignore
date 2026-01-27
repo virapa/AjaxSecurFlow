@@ -19,6 +19,7 @@ build/
 # Ignore specific test result patterns but keep requirements.txt safe
 *_results.txt
 *_logs.txt
+*test*.txt
 test_out.txt
 test_debug.txt
 current_logs.txt
