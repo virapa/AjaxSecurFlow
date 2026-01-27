@@ -90,11 +90,12 @@ El sistema opera bajo un modelo de **Event-Driven Architecture** parcial para pr
 2.  **Worker Asíncrono (Celery)**: Procesa tareas pesadas (Sincronización de datos) y críticas/bloqueantes (Webhooks de Stripe).
 3.  **Broker & Caché (Redis)**: Actúa como bus de mensajes para Celery y almacén de alta velocidad para Rate Limiting, Sesiones de Ajax y Caching.
 
-### Flujo de Sesión Ajax (Optimizado)
-El `AjaxClient` implementa un patrón Singleton con persistencia en Redis para:
-- Cachear el `sessionToken` y el `userId`.
-- Realizar login automático usando **SHA256** solo cuando el token expira.
-- Re-inyección automática de credenciales en rutas `/user/{userId}/...`.
+### Arquitectura de Identidad Unificada (Ajax Auth)
+El sistema utiliza a **Ajax Systems** como el proveedor de identidad principal (Identity Provider):
+- **Sincronización de Credenciales**: El email y la contraseña usados en la App oficial de Ajax son los mismos para acceder a este dashboard.
+- **Auto-Provisioning**: Al realizar el primer login exitoso contra Ajax, el sistema crea automáticamente el perfil del usuario en la base de datos local.
+- **Sesiones Multitenant**: Las sesiones de Ajax (`sessionToken` y `userId`) se gestionan de forma aislada en **Redis** usando el email del usuario como namespace (`ajax_user:{email}:token`).
+- **Seguridad Pasiva**: Nuestra base de datos no depende de contraseñas locales para la operación del proxy; la validación se delega a la API oficial de Ajax en cada inicio de sesión.
 
 ### Control de Seguridad (Armado/Desarmado)
 El proxy expone una interfaz unificada para el control de estados:

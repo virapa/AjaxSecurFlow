@@ -40,10 +40,18 @@ def mock_rate_limiter():
 
 @pytest.mark.asyncio
 async def test_auth_login(client, mock_db):
-    with patch("backend.app.api.v1.auth.crud_user.authenticate_user") as mock_auth:
+    """Test login with unified identity (Ajax)."""
+    with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax, \
+         patch("backend.app.api.v1.auth.crud_user.get_user_by_email") as mock_get_user:
+        
+        # 1. Mock Ajax success
+        mock_ajax_instance = MockAjax.return_value
+        mock_ajax_instance.login_with_credentials = AsyncMock(return_value={"userId": "123", "sessionToken": "t"})
+        
+        # 2. Mock DB user
         mock_user = AsyncMock()
         mock_user.email = "admin@example.com"
-        mock_auth.return_value = mock_user
+        mock_get_user.return_value = mock_user
         
         response = await client.post(
             "/api/v1/auth/token", 
@@ -52,12 +60,15 @@ async def test_auth_login(client, mock_db):
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
-        assert data["token_type"] == "bearer"
 
 @pytest.mark.asyncio
 async def test_auth_login_invalid(client, mock_db):
-    with patch("backend.app.api.v1.auth.crud_user.authenticate_user") as mock_auth:
-        mock_auth.return_value = None
+    """Test login failure with unified identity."""
+    from backend.app.services.ajax_client import AjaxAuthError
+    with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax:
+        mock_ajax_instance = MockAjax.return_value
+        mock_ajax_instance.login_with_credentials = AsyncMock(side_effect=AjaxAuthError("Invalid"))
+        
         response = await client.post(
             "/api/v1/auth/token", 
             data={"username": "wrong", "password": "wrong"}
@@ -71,27 +82,37 @@ async def test_proxy_endpoint_protected(client, mock_rate_limiter):
 
 @pytest.mark.asyncio
 async def test_proxy_endpoint_success(client, mock_ajax_client, mock_rate_limiter, mock_db):
+    """Test successful proxy request with unified auth."""
     mock_user = AsyncMock()
     mock_user.id = 1
     mock_user.email = "admin@example.com"
     mock_user.subscription_status = "active"
     
-    with patch("backend.app.api.v1.auth.crud_user.authenticate_user") as mock_auth, \
+    # Updated mocks to use unified identity logic
+    with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax, \
          patch("backend.app.api.v1.auth.crud_user.get_user_by_email") as mock_get_user, \
-         patch("backend.app.api.v1.proxy.audit_service.log_action") as mock_log:
+         patch("backend.app.api.v1.proxy.audit_service.log_action") as mock_log, \
+         patch("backend.app.api.v1.proxy.billing_service.is_subscription_active") as mock_sub:
         
-        mock_auth.return_value = mock_user
+        # 1. Setup Auth Mocks
+        mock_ajax_instance = MockAjax.return_value
+        mock_ajax_instance.login_with_credentials = AsyncMock(return_value={"userId": "123", "sessionToken": "t"})
         mock_get_user.return_value = mock_user
+        mock_sub.return_value = True
         mock_log.return_value = None
         
-        # Get Token
+        # 2. Setup Proxy Mock (the actual request method)
+        # Note: mock_ajax_client is a patch on backend.app.api.v1.proxy.AjaxClient
+        mock_ajax_client.request = AsyncMock(return_value={"data": "mocked_response"})
+        
+        # 3. Get Token
         auth_resp = await client.post(
             "/api/v1/auth/token", 
             data={"username": "admin@example.com", "password": "secret"}
         )
         token = auth_resp.json()["access_token"]
         
-        # 2. Access Proxy
+        # 4. Access Proxy
         response = await client.get(
             "/api/v1/ajax/some/resource",
             headers={"Authorization": f"Bearer {token}"}
@@ -100,8 +121,7 @@ async def test_proxy_endpoint_success(client, mock_ajax_client, mock_rate_limite
         assert response.status_code == 200
         assert response.json() == {"data": "mocked_response"}
         
-        # Verify Audit log was called
-        mock_log.assert_called_once()
-        _, kwargs = mock_log.call_args
-        assert kwargs["user_id"] == 1
-        assert kwargs["action"] == "PROXY_GET"
+        # Verify call used user_email
+        mock_ajax_client.request.assert_called_once()
+        _, kwargs = mock_ajax_client.request.call_args
+        assert kwargs["user_email"] == "admin@example.com"

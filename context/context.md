@@ -62,7 +62,8 @@ Actúa como un **Senior Backend Engineer** especializado en Python/FastAPI.
 2.  **No Inventar:** Usa las librerías definidas (SQLAlchemy 2.0, Pydantic V2). No introduzcas dependencias innecesarias.
 3.  **Testing First:** Si se pide una funcionalidad de negocio, prioriza generar el test o la especificación antes del código.
 4.  **SaaS First:** Cualquier acceso a recursos protegidos (Ajax API) DEBE validar el estado de suscripción del usuario (`is_subscription_active`) antes de proceder.
-5.  **Explicabilidad:** Explica brevemente decisiones de arquitectura complejas.
+5.  **Unified Auth:** La autenticación se delega a Ajax Systems. No se deben crear sistemas de login paralelos; el email del usuario es el identificador único en ambas plataformas.
+6.  **Explicabilidad:** Explica brevemente decisiones de arquitectura complejas.
 
 
 ## 6. Documentación completa y detallada (README.md)

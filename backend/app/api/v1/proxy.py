@@ -44,7 +44,9 @@ async def proxy_ajax_request(
     try:
         endpoint = f"/{path}"
         
+        # Updated to include user_email for multitenant support
         response_data = await client.request(
+            user_email=current_user.email,
             method=request.method,
             endpoint=endpoint,
             json=body if isinstance(body, dict) else None,

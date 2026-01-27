@@ -42,7 +42,7 @@ async def read_hubs(
     
     try:
         client = AjaxClient()
-        response = await client.get_hubs()
+        response = await client.get_hubs(user_email=current_user.email)
         return response.get("hubs", []) if isinstance(response, dict) else response
     except Exception as e:
         handle_ajax_error(e)
@@ -68,7 +68,7 @@ async def read_hub_detail(
         
     try:
         client = AjaxClient()
-        return await client.get_hub_details(hub_id)
+        return await client.get_hub_details(user_email=current_user.email, hub_id=hub_id)
     except Exception as e:
         handle_ajax_error(e)
 
@@ -93,7 +93,7 @@ async def read_hub_groups(
 
     try:
         client = AjaxClient()
-        response = await client.get_hub_groups(hub_id)
+        response = await client.get_hub_groups(user_email=current_user.email, hub_id=hub_id)
         return response.get("groups", []) if isinstance(response, dict) else response
     except Exception as e:
         handle_ajax_error(e)
@@ -119,7 +119,7 @@ async def read_hub_devices(
 
     try:
         client = AjaxClient()
-        response = await client.get_hub_devices(hub_id)
+        response = await client.get_hub_devices(user_email=current_user.email, hub_id=hub_id)
         return response.get("devices", []) if isinstance(response, dict) else response
     except Exception as e:
         handle_ajax_error(e)
@@ -149,7 +149,12 @@ async def read_hub_logs(
 
     try:
         client = AjaxClient()
-        return await client.get_hub_logs(hub_id, limit=limit, offset=offset)
+        return await client.get_hub_logs(
+            user_email=current_user.email, 
+            hub_id=hub_id, 
+            limit=limit, 
+            offset=offset
+        )
     except Exception as e:
         handle_ajax_error(e)
 
@@ -173,6 +178,7 @@ async def set_hub_arm_state(
     try:
         client = AjaxClient()
         response = await client.set_arm_state(
+            user_email=current_user.email,
             hub_id=hub_id, 
             arm_state=command.arm_state, 
             group_id=command.group_id

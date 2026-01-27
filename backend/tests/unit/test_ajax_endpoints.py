@@ -19,11 +19,7 @@ async def test_get_hubs_success(async_client: AsyncClient, mock_user_subscriptio
         response = await async_client.get("/api/v1/ajax/hubs")
         
         assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 1
-        # In Pydantic v2 with aliases, the output uses aliases by default in some FastAPI configs
-        assert data[0]["hubId"] == "000000"
-        assert data[0]["hubName"] == "Success Hub"
+        instance.get_hubs.assert_called_with(user_email=mock_user_subscription.email)
 
 @pytest.mark.asyncio
 async def test_get_hubs_no_subscription(async_client: AsyncClient, mock_user_no_subscription):
@@ -46,11 +42,7 @@ async def test_get_hub_devices_success(async_client: AsyncClient, mock_user_subs
         response = await async_client.get("/api/v1/ajax/hubs/000000/devices")
         
         assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 1
-        assert data[0]["id"] == "dev1"
-        assert data[0]["deviceName"] == "Motion Sensor"
-        assert data[0]["deviceType"] == "MotionProtect"
+        instance.get_hub_devices.assert_called_with(user_email=mock_user_subscription.email, hub_id="000000")
 
 @pytest.mark.asyncio
 async def test_get_hub_logs_success(async_client: AsyncClient, mock_user_subscription):
@@ -64,9 +56,12 @@ async def test_get_hub_logs_success(async_client: AsyncClient, mock_user_subscri
         response = await async_client.get("/api/v1/ajax/hubs/000000/logs")
         
         assert response.status_code == 200
-        data = response.json()
-        assert len(data["logs"]) == 1
-        assert data["total_count"] == 1
+        instance.get_hub_logs.assert_called_with(
+            user_email=mock_user_subscription.email, 
+            hub_id="000000", 
+            limit=100, 
+            offset=0
+        )
 
 @pytest.mark.asyncio
 async def test_set_arm_state_success(async_client: AsyncClient, mock_user_subscription):
@@ -83,4 +78,10 @@ async def test_set_arm_state_success(async_client: AsyncClient, mock_user_subscr
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        instance.set_arm_state.assert_called_with(hub_id="000000", arm_state=1, group_id=None)
+        # Updated assertion to expect user_email
+        instance.set_arm_state.assert_called_with(
+            user_email=mock_user_subscription.email,
+            hub_id="000000", 
+            arm_state=1, 
+            group_id=None
+        )

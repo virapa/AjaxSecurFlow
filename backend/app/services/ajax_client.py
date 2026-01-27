@@ -45,69 +45,70 @@ class AjaxClient:
             )
         return self.redis
 
-    async def _get_ajax_user_id(self) -> Optional[str]:
+    async def _get_ajax_user_id(self, user_email: str) -> Optional[str]:
         """
-        Retrieve the cached Ajax userId from Redis.
-
-        Returns:
-            Optional[str]: The userId if found, None otherwise.
-        """
-        redis_client = await self._get_redis()
-        return await redis_client.get("ajax_user_id")
-
-    async def _get_session_token(self) -> Optional[str]:
-        """
-        Retrieve the cached Ajax session token from Redis.
-
-        Returns:
-            Optional[str]: The session token if found, None otherwise.
-        """
-        redis_client = await self._get_redis()
-        return await redis_client.get("ajax_session_token")
-
-    async def _save_session_data(self, token: str, user_id: str, expires_in: int = 3600) -> None:
-        """
-        Save session token and userId to Redis with an expiration.
+        Retrieve the cached Ajax userId for a specific user.
 
         Args:
-            token: The session token to save.
-            user_id: The Ajax userId associated with the session.
-            expires_in: Expiration time in seconds (default: 3600).
-        """
-        redis_client = await self._get_redis()
-        # Subtracting 60 seconds as a safety buffer for expiration
-        await redis_client.set("ajax_session_token", token, ex=expires_in - 60)
-        await redis_client.set("ajax_user_id", user_id, ex=expires_in - 60)
-
-    @retry(
-        retry=retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException)),
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10)
-    )
-    async def login(self) -> str:
-        """
-        Authenticate with Ajax Systems to obtain a new session token.
-        Uses SHA256 hashing for the password as required by the API.
+            user_email: The email of the user as unique identifier.
 
         Returns:
-            str: The newly obtained session token.
+            Optional[str]: The Ajax userId if found in cache.
+        """
+        redis_client = await self._get_redis()
+        return await redis_client.get(f"ajax_user:{user_email}:id")
+
+    async def _get_session_token(self, user_email: str) -> Optional[str]:
+        """
+        Retrieve the cached Ajax session token for a specific user.
+
+        Args:
+            user_email: The email of the user as unique identifier.
+
+        Returns:
+            Optional[str]: The session token if found in cache.
+        """
+        redis_client = await self._get_redis()
+        return await redis_client.get(f"ajax_user:{user_email}:token")
+
+    async def _save_session_data(self, user_email: str, token: str, user_id: str, expires_in: int = 3600) -> None:
+        """
+        Save session token and userId to Redis for a specific user.
+
+        Args:
+            user_email: The user's email.
+            token: The Ajax session token.
+            user_id: The Ajax user ID.
+            expires_in: TTL for the cache (in seconds).
+        """
+        redis_client = await self._get_redis()
+        # Safety buffer of 60 seconds
+        await redis_client.set(f"ajax_user:{user_email}:token", token, ex=expires_in - 60)
+        await redis_client.set(f"ajax_user:{user_email}:id", user_id, ex=expires_in - 60)
+
+    async def login_with_credentials(self, email: str, password_raw: str) -> Dict[str, Any]:
+        """
+        Authenticate with Ajax Systems using dynamic user credentials.
+        This is the core of the Unified Login system.
+
+        Args:
+            email: User's Ajax email.
+            password_raw: User's Ajax password (plain text, will be hashed).
+
+        Returns:
+            Dict[str, Any]: The login response from Ajax Systems.
 
         Raises:
-            AjaxAuthError: If authentication fails or required data is missing.
+            AjaxAuthError: If the credentials are rejected or response is incomplete.
         """
-        logger.info("Attempting to login to Ajax Systems API...")
-        
         import hashlib
         
-        # 1. Prepare password hash
-        password_raw = settings.AJAX_PASSWORD.get_secret_value()
         sha256_hash = hashlib.sha256()
         sha256_hash.update(password_raw.encode('utf-8'))
         password_hash = sha256_hash.hexdigest()
         
-        # 2. Build payload and headers
         payload = {
-            "login": settings.AJAX_LOGIN,
+            "login": email,
             "passwordHash": password_hash,
             "userRole": "USER" 
         }
@@ -119,7 +120,7 @@ class AjaxClient:
         }
         
         try:
-            logger.info("Sending Login Request to Ajax Systems...")
+            logger.info(f"Verifying Ajax credentials for user: {email}")
             response = await self.client.post("/login", json=payload, headers=headers)
             response.raise_for_status()
             data = response.json()
@@ -128,43 +129,40 @@ class AjaxClient:
             user_id = data.get("userId")
             
             if not token or not user_id:
-                logger.error(f"Incomplete login response data: {data}")
-                raise AjaxAuthError("Login successful but sessionToken or userId is missing from response.")
+                raise AjaxAuthError("Login successful but missing session data.")
                 
             expires_in = data.get("expires_in", 3600) 
-            await self._save_session_data(token, user_id, int(expires_in))
-            logger.info(f"Successfully authenticated. Ajax User ID: {user_id}")
-            return token
+            await self._save_session_data(email, token, user_id, int(expires_in))
+            return data
             
         except httpx.HTTPStatusError as e:
-            logger.error(f"Ajax authentication failed (Status {e.response.status_code}): {e.response.text}")
-            raise AjaxAuthError(f"Authentication failed: {e.response.text}")
+            logger.error(f"Ajax validation failed for {email}: {e.response.text}")
+            raise AjaxAuthError("Invalid Ajax credentials.")
         except Exception as e:
-            logger.error(f"Unexpected error during Ajax login: {e}")
+            logger.error(f"Error during Ajax credential validation: {e}")
             raise
 
-    async def request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
+    async def request(self, user_email: str, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         """
-        Execute an authenticated HTTP request to the Ajax API.
-        Automatically handles token refresh on 401 Unauthorized errors.
+        Execute an authenticated HTTP request for a specific user using their cached session.
 
         Args:
+            user_email: Identifier for the user's session cache.
             method: HTTP method (GET, POST, etc.).
-            endpoint: API endpoint path.
-            **kwargs: Additional arguments for httpx client (json, params, headers, etc.).
+            endpoint: The API endpoint path.
+            **kwargs: Extra arguments for the HTTP client.
 
         Returns:
-            Dict[str, Any]: The parsed JSON response.
+            Dict[str, Any]: JSON response from the API.
 
         Raises:
-            httpx.HTTPStatusError: If the response indicates an error other than 401.
+            AjaxAuthError: If the session is expired or invalid.
         """
-        token = await self._get_session_token()
+        token = await self._get_session_token(user_email)
         
         if not token:
-            token = await self.login()
+            raise AjaxAuthError("Session expired. Please log in again.")
 
-        # Inject mandatory headers
         headers = kwargs.get("headers", {})
         headers["X-Api-Key"] = settings.AJAX_API_KEY.get_secret_value()
         headers["X-Session-Token"] = token
@@ -174,131 +172,64 @@ class AjaxClient:
         try:
             response = await self.client.request(method, endpoint, **kwargs)
             
-            # Handle token expiration
             if response.status_code == 401:
-                logger.warning("Session token expired or invalid (401). Retrying authentication...")
-                token = await self.login()
-                kwargs["headers"]["X-Session-Token"] = token
-                response = await self.client.request(method, endpoint, **kwargs)
+                raise AjaxAuthError("Ajax session expired.")
             
             response.raise_for_status()
             return response.json()
             
         except httpx.HTTPStatusError as e:
-            logger.error(f"API request to {endpoint} failed: {e.response.text}")
+            logger.error(f"API request failed: {e.response.text}")
             raise
 
-    async def _ensure_user_id(self) -> str:
+    async def _ensure_user_id(self, user_email: str) -> str:
         """
-        Ensure that the Ajax userId is available, performing a login if necessary.
+        Verify that a userId exists in the cache for the given user.
+
+        Args:
+            user_email: User's identifier.
 
         Returns:
-            str: The Ajax userId.
+            str: The cached userId.
+
+        Raises:
+            AjaxAuthError: If no session is found.
         """
-        user_id = await self._get_ajax_user_id()
+        user_id = await self._get_ajax_user_id(user_email)
         if not user_id:
-            await self.login()
-            user_id = await self._get_ajax_user_id()
-            if not user_id:
-                raise AjaxAuthError("Failed to obtain userId after login.")
+            raise AjaxAuthError("No active Ajax session for this user.")
         return user_id
 
-    async def get_hubs(self) -> Dict[str, Any]:
-        """
-        Fetch the list of hubs associated with the authenticated user.
+    async def get_hubs(self, user_email: str) -> Dict[str, Any]:
+        """Get hubs for user."""
+        user_id = await self._ensure_user_id(user_email)
+        return await self.request(user_email, "GET", f"/user/{user_id}/hubs")
 
-        Returns:
-            Dict[str, Any]: Response containing the list of hubs.
-        """
-        user_id = await self._ensure_user_id()
-        return await self.request("GET", f"/user/{user_id}/hubs")
+    async def get_hub_details(self, user_email: str, hub_id: str) -> Dict[str, Any]:
+        """Get hub detail."""
+        user_id = await self._ensure_user_id(user_email)
+        return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}")
 
-    async def get_hub_details(self, hub_id: str) -> Dict[str, Any]:
-        """
-        Retrieve detailed information about a specific hub.
-
-        Args:
-            hub_id: The unique identifier of the hub.
-
-        Returns:
-            Dict[str, Any]: Detailed hub information.
-        """
-        user_id = await self._ensure_user_id()
-        return await self.request("GET", f"/user/{user_id}/hubs/{hub_id}")
-
-    async def get_hub_logs(self, hub_id: str, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
-        """
-        Fetch event logs for a specific hub.
-
-        Args:
-            hub_id: The unique identifier of the hub.
-            limit: Maximum number of log entries to retrieve.
-            offset: Starting point for pagination.
-
-        Returns:
-            Dict[str, Any]: A list of event logs and pagination metadata.
-        """
-        user_id = await self._ensure_user_id()
+    async def get_hub_logs(self, user_email: str, hub_id: str, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
+        """Get hub event logs."""
+        user_id = await self._ensure_user_id(user_email)
         params = {"limit": limit, "offset": offset}
-        return await self.request("GET", f"/user/{user_id}/hubs/{hub_id}/logs", params=params)
+        return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/logs", params=params)
 
-    async def get_hub_groups(self, hub_id: str) -> Dict[str, Any]:
-        """
-        Retrieve the list of security groups configured on a hub.
+    async def get_hub_groups(self, user_email: str, hub_id: str) -> Dict[str, Any]:
+        """Get hub security groups."""
+        user_id = await self._ensure_user_id(user_email)
+        return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/groups")
 
-        Args:
-            hub_id: The unique identifier of the hub.
+    async def get_hub_devices(self, user_email: str, hub_id: str) -> Dict[str, Any]:
+        """Get hub devices with enriched state."""
+        user_id = await self._ensure_user_id(user_email)
+        return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/devices?enrich=true")
 
-        Returns:
-            Dict[str, Any]: List of groups and their statuses.
-        """
-        user_id = await self._ensure_user_id()
-        return await self.request("GET", f"/user/{user_id}/hubs/{hub_id}/groups")
-
-    async def get_hub_devices(self, hub_id: str) -> Dict[str, Any]:
-        """
-        Fetch all devices linked to a specific hub, including enriched state information.
-
-        Args:
-            hub_id: The unique identifier of the hub.
-
-        Returns:
-            Dict[str, Any]: List of devices with detailed properties.
-        """
-        user_id = await self._ensure_user_id()
-        return await self.request("GET", f"/user/{user_id}/hubs/{hub_id}/devices?enrich=true")
-
-    async def set_arm_state(self, hub_id: str, arm_state: int, group_id: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Send an arming or disarming command to a hub or specific group.
-
-        Args:
-            hub_id: Unique identifier of the hub.
-            arm_state: Target state (1: ARM, 0: DISARM, 2: NIGHT).
-            group_id: Optional group/partition ID.
-
-        Returns:
-            Dict[str, Any]: Response from the API.
-        """
-        user_id = await self._ensure_user_id()
+    async def set_arm_state(self, user_email: str, hub_id: str, arm_state: int, group_id: Optional[str] = None) -> Dict[str, Any]:
+        """Set arm state for hub or group."""
+        user_id = await self._ensure_user_id(user_email)
         payload = {"armState": arm_state}
         if group_id:
             payload["groupId"] = group_id
-            
-        return await self.request(
-            "POST", 
-            f"/user/{user_id}/hubs/{hub_id}/commands/set-arm-state", 
-            json=payload
-        )
-
-    async def arm(self, hub_id: str, group_id: Optional[str] = None) -> Dict[str, Any]:
-        """Convenience method for Full Arming (Armado Total)."""
-        return await self.set_arm_state(hub_id, 1, group_id)
-
-    async def disarm(self, hub_id: str, group_id: Optional[str] = None) -> Dict[str, Any]:
-        """Convenience method for Disarming (Desarmado)."""
-        return await self.set_arm_state(hub_id, 0, group_id)
-
-    async def night_mode(self, hub_id: str) -> Dict[str, Any]:
-        """Convenience method for Night Mode (Armado Parcial)."""
-        return await self.set_arm_state(hub_id, 2)
+        return await self.request(user_email, "POST", f"/user/{user_id}/hubs/{hub_id}/commands/set-arm-state", json=payload)
