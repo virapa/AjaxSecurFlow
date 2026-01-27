@@ -1,6 +1,7 @@
 import pytest
 import pytest_asyncio
 import httpx
+import stripe
 from httpx import AsyncClient
 from backend.app.main import app
 from unittest.mock import AsyncMock, patch, MagicMock
@@ -50,31 +51,36 @@ async def test_create_checkout_session(client, mock_current_user_billed):
         assert kwargs["customer"] == "cus_123"
 
 @pytest.mark.asyncio
-async def test_stripe_webhook_valid(client):
+async def test_stripe_webhook_valid(client, mock_db):
     # Mock settings
     with patch("backend.app.core.config.settings.STRIPE_WEBHOOK_SECRET", MagicMock(get_secret_value=lambda: "whsec_123")), \
          patch("stripe.Webhook.construct_event") as mock_construct, \
+         patch("backend.app.api.v1.billing.audit_service.log_request_action", new_callable=AsyncMock), \
          patch("backend.app.api.v1.billing.process_stripe_webhook.delay") as mock_task:
         
-        mock_construct.return_value = MagicMock(to_dict=lambda: {"type": "customer.subscription.created"})
+        mock_event = MagicMock()
+        mock_event.id = "evt_123"
+        mock_event.type = "customer.subscription.created"
+        mock_event.to_dict.return_value = {"id": "evt_123", "type": "customer.subscription.created"}
+        mock_construct.return_value = mock_event
         
         response = await client.post(
             "/api/v1/billing/webhook",
-            json={"id": "evt_123", "type": "customer.subscription.created"},
+            content=b'{"id": "evt_123"}',
             headers={"Stripe-Signature": "t=123,v1=sig"}
         )
         
         assert response.status_code == 200
-        assert response.json()["status"] == "success"
+        assert response.json()["event_id"] == "evt_123"
         mock_task.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_stripe_webhook_invalid_signature(client):
+async def test_stripe_webhook_invalid_signature(client, mock_db):
     with patch("backend.app.core.config.settings.STRIPE_WEBHOOK_SECRET", MagicMock(get_secret_value=lambda: "whsec_123")), \
-         patch("stripe.Webhook.construct_event") as mock_construct:
+         patch("stripe.Webhook.construct_event") as mock_construct, \
+         patch("backend.app.api.v1.billing.audit_service.log_request_action", new_callable=AsyncMock):
         
-        import stripe
-        mock_construct.side_effect = stripe.error.SignatureVerificationError("Invalid sig", "sig_header", "body")
+        mock_construct.side_effect = stripe.error.SignatureVerificationError("Invalid sig", "sig_header")
         
         response = await client.post(
             "/api/v1/billing/webhook",

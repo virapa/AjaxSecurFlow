@@ -5,6 +5,7 @@ from backend.app.core.config import settings
 from backend.app.core.db import get_db
 from backend.app.api.v1.auth import get_current_user
 from backend.app.domain.models import User
+from backend.app.services import audit_service
 from backend.app.worker.tasks import process_stripe_webhook
 
 router = APIRouter()
@@ -40,30 +41,53 @@ async def create_checkout_session(
 @router.post("/webhook")
 async def stripe_webhook(
     request: Request,
+    db: AsyncSession = Depends(get_db),
     stripe_signature: str = Header(None)
 ):
     """
     Endpoint to receive Stripe webhooks.
-    We offload processing to Celery to return 200 OK as fast as possible.
+    Includes Corporate Auditing and background processing.
     """
     if not settings.STRIPE_WEBHOOK_SECRET:
         raise HTTPException(status_code=501, detail="Webhook secret not configured")
 
     payload = await request.body()
+    correlation_id = getattr(request.state, "correlation_id", "internal")
     
     try:
-        # Validate webhook signature
+        # 1. Validate signature
         event = stripe.Webhook.construct_event(
             payload, stripe_signature, settings.STRIPE_WEBHOOK_SECRET.get_secret_value()
         )
         
-        # Offload to worker
-        process_stripe_webhook.delay(event.to_dict())
+        # 2. Audit Log (Receipt of Event)
+        await audit_service.log_request_action(
+            db=db,
+            request=request,
+            user_id=None, # User not identified by session, but by customer_id later
+            action="STRIPE_WEBHOOK_RECEIVED",
+            status_code=200,
+            severity="INFO",
+            resource_id=event.id,
+            correlation_id=correlation_id,
+            payload={"type": event.type}
+        )
         
-        return {"status": "success"}
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid payload")
+        # 3. Offload to worker
+        process_stripe_webhook.delay(event.to_dict(), correlation_id)
+        
+        return {"status": "success", "event_id": event.id}
     except stripe.error.SignatureVerificationError:
+        # Potential Fraud/Attack Attempt
+        await audit_service.log_request_action(
+            db=db,
+            request=request,
+            user_id=None,
+            action="STRIPE_SIGNATURE_ERROR",
+            status_code=400,
+            severity="CRITICAL",
+            correlation_id=correlation_id
+        )
         raise HTTPException(status_code=400, detail="Invalid signature")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

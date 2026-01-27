@@ -55,3 +55,10 @@ class AuditLog(Base):
     correlation_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class ProcessedStripeEvent(Base):
+    __tablename__ = "processed_stripe_events"
+    
+    id: Mapped[str] = mapped_column(String, primary_key=True) # Stripe Event ID
+    event_type: Mapped[str] = mapped_column(String, index=True)
+    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -43,7 +43,10 @@ async def test_auth_login(client, mock_db):
     """Test login with unified identity (Ajax)."""
     with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax, \
          patch("backend.app.api.v1.auth.crud_user.get_user_by_email") as mock_get_user, \
-         patch("backend.app.api.v1.auth.security_service") as mock_sec:
+         patch("backend.app.api.v1.auth.security_service") as mock_sec, \
+         patch("backend.app.services.audit_service.log_request_action") as mock_log_req:
+        
+        mock_log_req.return_value = None
         
         # 1. Mock Ajax success
         mock_ajax_instance = MockAjax.return_value
@@ -74,7 +77,10 @@ async def test_auth_login_invalid(client, mock_db):
     """Test login failure with unified identity."""
     from backend.app.services.ajax_client import AjaxAuthError
     with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax, \
-         patch("backend.app.api.v1.auth.security_service") as mock_sec:
+         patch("backend.app.api.v1.auth.security_service") as mock_sec, \
+         patch("backend.app.services.audit_service.log_request_action") as mock_log_req:
+        
+        mock_log_req.return_value = None
         
         mock_ajax_instance = MockAjax.return_value
         mock_ajax_instance.login_with_credentials = AsyncMock(side_effect=AjaxAuthError("Invalid"))
@@ -105,8 +111,16 @@ async def test_proxy_endpoint_success(client, mock_ajax_client, mock_rate_limite
     with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax, \
          patch("backend.app.api.v1.auth.crud_user.get_user_by_email") as mock_get_user, \
          patch("backend.app.api.v1.auth.security_service") as mock_sec, \
+         patch("backend.app.api.v1.auth.get_redis") as mock_get_redis, \
          patch("backend.app.api.v1.proxy.audit_service.log_action") as mock_log, \
+         patch("backend.app.services.audit_service.log_request_action") as mock_log_req, \
          patch("backend.app.api.v1.proxy.billing_service.is_subscription_active") as mock_sub:
+        
+        # 0. Setup Redis Mock
+        mock_redis = AsyncMock()
+        mock_redis.exists.return_value = False
+        mock_get_redis.return_value = mock_redis
+        mock_log_req.return_value = None
         
         # 1. Setup Auth Mocks
         mock_ajax_instance = MockAjax.return_value
