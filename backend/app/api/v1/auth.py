@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt 
 from jwt.exceptions import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.core.security import create_access_token
+from backend.app.core.security import create_access_token, create_refresh_token
 from backend.app.core.config import settings
 from backend.app.core.db import get_db
 from backend.app.core import crud_user
@@ -20,6 +20,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 import hashlib
 import uuid
 from backend.app.services.rate_limiter import get_redis
+from pydantic import BaseModel
+
+class TokenRefreshRequest(BaseModel):
+    refresh_token: str
 
 async def get_current_user(
     request: Request,
@@ -43,12 +47,13 @@ async def get_current_user(
     """
     try:
         payload = jwt.decode(token, settings.SECRET_KEY.get_secret_value(), algorithms=[settings.ALGORITHM])
+        token_type: str = payload.get("type")
         user_email: str = payload.get("sub")
         jti: str = payload.get("jti")
         uah: str = payload.get("uah")
         uip: str = payload.get("uip")
         
-        if user_email is None:
+        if user_email is None or token_type != "access":
              raise HTTPException(status_code=401, detail="Invalid credentials")
              
         # 1. Fingerprint Verification (Fixed Context)
@@ -150,14 +155,25 @@ async def login_for_access_token(
             action="LOGIN_SUCCESS", status_code=200, severity="INFO"
         )
         
-        # 5. Generate our system's Access Token
+        # 5. Generate our system's Dual Tokens
         access_token = create_access_token(
             subject=user.email,
             jti=jti,
             uah=uah,
             uip=client_ip
         )
-        return {"access_token": access_token, "token_type": "bearer"}
+        
+        refresh_jti = str(uuid.uuid4())
+        refresh_token = create_refresh_token(
+            subject=user.email,
+            jti=refresh_jti
+        )
+        
+        return {
+            "access_token": access_token, 
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
 
     except AjaxAuthError:
         # 6. Failure Tracking (Fail2Ban logic)
@@ -176,6 +192,81 @@ async def login_for_access_token(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/refresh")
+async def refresh_token(
+    request: Request,
+    body: TokenRefreshRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Refresh access token using a valid refresh token.
+    Implements Refresh Token Rotation for maximum security.
+    """
+    try:
+        payload = jwt.decode(
+            body.refresh_token, 
+            settings.SECRET_KEY.get_secret_value(), 
+            algorithms=[settings.ALGORITHM]
+        )
+        user_email: str = payload.get("sub")
+        jti: str = payload.get("jti")
+        token_type: str = payload.get("type")
+        exp = payload.get("exp")
+        
+        if user_email is None or token_type != "refresh" or jti is None:
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+            
+        # 1. Rotation Check (Revocation)
+        redis_client = await get_redis()
+        is_revoked = await redis_client.exists(f"token_blacklist:{jti}")
+        if is_revoked:
+            # SAFETY: If a refresh token is reused, potentially stolen. Logout all.
+            # (Optional: implement full session invalidation here)
+            raise HTTPException(status_code=401, detail="Refresh token has been revoked")
+            
+        # 2. Blacklist the used refresh token (Rotation)
+        now = datetime.now(timezone.utc).timestamp()
+        ttl = int(exp - now)
+        if ttl > 0:
+            await redis_client.set(f"token_blacklist:{jti}", "1", ex=ttl)
+            
+        # 3. Verify user exists
+        user = await crud_user.get_user_by_email(db, email=user_email)
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+            
+        # 4. Generate new pair
+        new_jti = str(uuid.uuid4())
+        new_refresh_jti = str(uuid.uuid4())
+        
+        # User Agent for new access token
+        user_agent = request.headers.get("user-agent", "")
+        uah = hashlib.sha256(user_agent.encode()).hexdigest()
+        
+        # Client IP
+        forwarded = request.headers.get("x-forwarded-for")
+        client_ip = forwarded.split(",")[0].strip() if forwarded else (request.headers.get("x-real-ip") or (request.client.host if request.client else None))
+
+        access_token = create_access_token(
+            subject=user.email,
+            jti=new_jti,
+            uah=uah,
+            uip=client_ip
+        )
+        refresh_token = create_refresh_token(
+            subject=user.email,
+            jti=new_refresh_jti
+        )
+        
+        return {
+            "access_token": access_token, 
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
+        
+    except PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 @router.post("/logout")
 async def logout(
