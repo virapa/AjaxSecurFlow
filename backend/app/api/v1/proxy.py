@@ -1,27 +1,36 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, HTTPException, Path
 from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.services.ajax_client import AjaxClient
 from backend.app.services.rate_limiter import RateLimiter
 from backend.app.services import audit_service, billing_service
+from backend.app.schemas.auth import ErrorMessage
 from backend.app.api.v1.auth import get_current_user
+from backend.app.api.v1.utils import handle_ajax_error
 from backend.app.domain.models import User
 from backend.app.core.db import get_db
+from urllib.parse import unquote
 
 router = APIRouter()
 rate_limiter = RateLimiter(key_prefix="ajax_proxy", limit=100, window=60)
 
-@router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+@router.get("/{path:path}", summary="Generic Ajax API Proxy (GET)")
+@router.post("/{path:path}", summary="Generic Ajax API Proxy (POST)")
+@router.put("/{path:path}", summary="Generic Ajax API Proxy (PUT)")
+@router.delete("/{path:path}", summary="Generic Ajax API Proxy (DELETE)")
+@router.patch("/{path:path}", summary="Generic Ajax API Proxy (PATCH)")
 async def proxy_ajax_request(
-    path: str, 
     request: Request,
+    path: str = Path(..., description="The sub-resource path in Ajax API (e.g., 'hubs', 'hubs/ID/devices')"), 
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     _ = Depends(rate_limiter)
 ):
     """
-    Proxy request to Ajax Systems API.
-    Only allows access if user has an active subscription.
+    Catch-all proxy route that forwards authenticated requests to the Ajax Systems API.
+    - Requires an active subscription.
+    - Implements Rate Limiting (100 req/min).
+    - Automatically manages session tokens and background refreshes.
     """
     # SaaS Enforcement: Validate Subscription
     if not billing_service.is_subscription_active(current_user):
@@ -42,7 +51,9 @@ async def proxy_ajax_request(
             body = await request.body()
     
     try:
-        endpoint = f"/{path}"
+        # Decode path in case it comes encoded (e.g. from Swagger UI)
+        decoded_path = unquote(path)
+        endpoint = f"/{decoded_path.lstrip('/')}"
         
         # Determine resource_id from path (e.g., /hubs/123/...)
         resource_id = None
@@ -78,6 +89,7 @@ async def proxy_ajax_request(
         
     except Exception as e:
         # Log failed proxy action with elevated severity
+        # IMPORTANT: We log the real error INTERNALLY for the admin
         await audit_service.log_request_action(
             db=db,
             request=request,
@@ -85,6 +97,7 @@ async def proxy_ajax_request(
             action=f"PROXY_{request.method}_FAILED",
             status_code=502,
             severity="CRITICAL",
-            payload={"error": str(e), "path": path}
+            payload={"error": str(e), "path": path} # str(e) is safe here because it's DB only
         )
-        raise HTTPException(status_code=502, detail=f"Upstream API Error: {str(e)}")
+        # We use the handle_ajax_error to return a SAFE message to the USER
+        handle_ajax_error(e)

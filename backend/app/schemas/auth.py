@@ -1,6 +1,10 @@
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 
+class LoginRequest(BaseModel):
+    username: str = Field(..., description="Your Ajax Email")
+    password: str = Field(..., description="Your Ajax Password")
+
 class Token(BaseModel):
     access_token: str = Field(..., description="JWT access token for API requests (short-lived)")
     refresh_token: str = Field(..., description="JWT refresh token to obtain new access tokens (long-lived)")

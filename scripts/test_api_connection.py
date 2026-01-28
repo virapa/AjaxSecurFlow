@@ -11,7 +11,7 @@ def test_connection():
     try:
         auth_response = httpx.post(
             f"{BASE_URL}/auth/token",
-            data={"username": USERNAME, "password": PASSWORD}
+            json={"username": USERNAME, "password": PASSWORD}
         )
         auth_response.raise_for_status()
         token = auth_response.json()["access_token"]

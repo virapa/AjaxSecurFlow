@@ -47,7 +47,7 @@ async def test_full_flow_integration(client):
         
         login_response = await client.post(
             "/api/v1/auth/token",
-            data={"username": email, "password": password}
+            json={"username": email, "password": password}
         )
         assert login_response.status_code == 200, f"Login failed: {login_response.text}"
         token = login_response.json()["access_token"]

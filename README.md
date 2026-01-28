@@ -10,11 +10,10 @@ El proyecto utiliza tecnologías modernas y robustas, siguiendo los estándares 
 - **Framework API**: FastAPI (Alto rendimiento, validación automática)
 - **Base de Datos**: PostgreSQL 15+ (con SQLAlchemy 2.0 Async para ORM)
 - **Caché y Mensajería**: Redis (Gestión de sesiones, Rate Limiting, Celery Broker)
-- **Tareas Background**: Celery (Sincronización de datos, procesamiento de webhooks)
-- **Monitoreo**: Flower (Panel de control para tareas de Celery)
+- **Tareas Background**: Celery (Sincronización de datos, procesamiento masivo)
 - **Pagos y SaaS**: Stripe SDK (Gestión de suscripciones y webhooks)
 - **Gestión de Configuración**: Pydantic V2 & Settings (Validación estricta)
-- **Seguridad**: Bcrypt (Hashing moderno), PyJWT (Tokens), SHA256 (Ajax Auth)
+- **Seguridad**: Bcrypt (Hashing moderno), PyJWT (Tokens), SHA256 (Ajax Auth), Endurecimiento de Errores (Opaque Errors)
 - **Infraestructura**: Docker & Docker Compose (Contenerización completa)
 - **Testing y Calidad**: Pytest, Bandit (Seguridad), pip-audit (Vulnerabilidades)
 
@@ -35,6 +34,12 @@ El proyecto utiliza tecnologías modernas y robustas, siguiendo los estándares 
    ```bash
    cp .env.example .env
    # Editar .env con tus credenciales de Ajax Systems y configuración local
+   ```
+
+3. **Modo Desarrollador (Bypass Stripe)**:
+   Para desarrollo local sin una cuenta de Stripe activa, puedes activar el bypass en el `.env`:
+   ```bash
+   ENABLE_DEVELOPER_MODE=True
    ```
 
 ### Ejecución
@@ -105,14 +110,30 @@ El sistema utiliza a **Ajax Systems** como el proveedor de identidad principal (
 - **Sesiones Multitenant**: Las sesiones de Ajax (`sessionToken` y `userId`) se gestionan de forma aislada en **Redis** usando el email del usuario como namespace (`ajax_user:{email}:token`).
 - **Seguridad Pasiva**: Nuestra base de datos no depende de contraseñas locales para la operación del proxy; la validación se delega a la API oficial de Ajax en cada inicio de sesión.
 
+### Información de Hubs y Dispositivos (Telemetría Enriquecida)
+El sistema expone información detallada y estructurada de todo el ecosistema Ajax:
+- **Detalle de Hub**: `GET /api/v1/ajax/hubs/{hub_id}` (Firmware, Batería, Ethernet, GSM, Jeweller).
+- **Lista de Dispositivos**: `GET /api/v1/ajax/hubs/{hub_id}/devices`
+- **Detalle de Dispositivo**: `GET /api/v1/ajax/hubs/{hub_id}/devices/{device_id}` (Temperatura, Señal, Estado de Tamper, Delay).
+
 ### Control de Seguridad (Armado/Desarmado)
 El proxy expone una interfaz unificada para el control de estados:
 - **Endpoint**: `POST /api/v1/ajax/hubs/{hub_id}/arm-state`
 - **Modos Soportados**: 
-    - `0`: Desarmado.
-    - `1`: Armado Total.
-    - `2`: Modo Noche (Parcial).
+    - `0`: **DISARMED** (Desactivar seguridad).
+    - `1`: **ARMED** (Armado Total).
+    - `2`: **NIGHT_MODE** (Modo Noche/Parcial).
 - **Acción por Grupo**: Soporta el parámetro opcional `groupId` para actuar sobre particiones específicas.
+
+### 5.3 Generic Proxy Access (Ruta Dinámica)
+El sistema incluye un proxy genérico e inteligente que permite la extensibilidad total del sistema:
+- **Endpoint**: `ANY /api/v1/ajax/{path:path}`
+- **Propósito**: Actúa como un túnel hacia la API oficial de Ajax. Permite consumir cualquier endpoint (presente o futuro) que no esté mapeado explícitamente en el backend.
+- **Inyección Automática**: El proxy gestiona e inyecta automáticamente las credenciales necesarias (`X-Api-Key` y `X-Session-Token`) recuperándolas de Redis.
+- **Control Industrial**: Todas las peticiones a través del proxy pasan por:
+    - **Validación de Suscripción**: Bloqueo automático si el usuario no tiene un plan activo en Stripe.
+    - **Rate Limiting**: Protección contra abusos (100 req/min).
+    - **Auditoría**: Registro en la base de datos de cada acción, path y resultado.
 
 ## 6. Aseguramiento de Calidad (QA) & Seguridad
 Este proyecto implementa controles de calidad de grado militar:
@@ -128,17 +149,20 @@ Este proyecto implementa controles de calidad de grado militar:
 El sistema implementa capas de defensa activa para proteger las sesiones de usuario:
 - **JWT Fingerprinting (UA Hash)**: El token está vinculado al `User-Agent` del cliente que inició sesión. Si el token es robado y usado desde otro navegador, es rechazado inmediatamente.
 - **Revocación por JTI + Redis**: Cada login genera un ID único (`jti`). Al hacer **Logout**, el token es invalidado instantáneamente en el lado del servidor mediante una lista negra en Redis.
-- **Protección Brute-Force (Fail2Ban)**: Bloqueo automático de IP tras 5 intentos fallidos de login durante 15 minutos, gestionado globalmente en Redis para alta disponibilidad.
+- **Protección Brute-Force (Fail2Ban)**: Bloqueo automático de IP tras 5 intentos fallidos de login durante 15 minutos.
 - **Auditoría VIP**: Registro inmutable que incluye IP, navegador y nivel de severidad (INFO, WARNING, CRITICAL) para cada acción.
-- **Detección de IP Shift**: El sistema detecta y registra cambios de dirección IP durante una sesión activa (útil para dispositivos móviles), permitiendo el acceso pero alertando a la auditoría.
+- **Mensajes de Error Opacos (Hardened Auth)**: Todos los fallos de autenticación devuelven un genérico "Invalid credentials", evitando fugas de información sobre la existencia de usuarios o validez de tokens a atacantes.
+- **Ofuscación de Upstream**: Los errores de la API de Ajax se filtran para eliminar URLs internas o IDs técnicos, devolviendo mensajes seguros para el cliente final.
 
 ## 7. Roadmap y Estado del Proyecto
 ### Fase 1: Core Backend (✅ Completada)
 - ✅ Proxy Seguro con Auth SHA256.
 - ✅ Comandos de Armado/Desarmado/Noche por Hub o Grupo.
+- ✅ Telemetría Enriquecida (Estados de batería, señal, hardware detalle).
+- ✅ Proxy Genérico Catch-all (Extensibilidad total).
 - ✅ Rate Limiting por usuario en Redis.
 - ✅ Motor de Suscripciones con Stripe.
-- ✅ Suite de Tests Unitarios (100% Pass).
+- ✅ Suite de Tests Unitarios e Integración (100% Pass).
 - ✅ Auditoría Inmutable de transacciones.
 
 ### Fase 2: Dashboard Frontend (⏳ En Progreso)

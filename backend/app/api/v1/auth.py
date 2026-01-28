@@ -12,11 +12,15 @@ from backend.app.core import crud_user
 from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
 from backend.app.services import audit_service, security_service
-from backend.app.schemas.auth import Token, TokenRefreshRequest, ErrorMessage
+from backend.app.schemas.auth import Token, TokenRefreshRequest, ErrorMessage, LoginRequest
+
+from fastapi.security import APIKeyHeader
 
 router = APIRouter()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
+# Use APIKeyHeader to match the "Authorize" button feel but with a simple input
+# This removes unnecessary fields (client_id, client_secret) from the UI
+oauth2_scheme = APIKeyHeader(name="Authorization", scheme_name="JWT Token", description="Enter: Bearer <your_token>")
 
 import hashlib
 import uuid
@@ -42,6 +46,10 @@ async def get_current_user(
     Raises:
         HTTPException: 401 if the token is invalid, expired, or fingerprint doesn't match.
     """
+    # Clean "Bearer " prefix if sent via APIKeyHeader UI
+    if token.startswith("Bearer "):
+        token = token.replace("Bearer ", "")
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY.get_secret_value(), algorithms=[settings.ALGORITHM])
         token_type: str = payload.get("type")
@@ -50,7 +58,7 @@ async def get_current_user(
         uah: str = payload.get("uah")
         uip: str = payload.get("uip")
         
-        if user_email is None or token_type != "access":
+        if user_email is None or token_type != "access":  # nosec B105
              raise HTTPException(status_code=401, detail="Invalid credentials")
              
         # 1. Fingerprint Verification (Fixed Context)
@@ -63,7 +71,7 @@ async def get_current_user(
                  action="SECURITY_ALERT_UA_MISMATCH", status_code=401,
                  severity="CRITICAL", payload={"email": user_email}
              )
-             raise HTTPException(status_code=401, detail="Security context mismatch")
+             raise HTTPException(status_code=401, detail="Invalid credentials")
 
         # 2. IP Shift Logging (Flexible Context - Do NOT block)
         forwarded = request.headers.get("x-forwarded-for")
@@ -82,14 +90,14 @@ async def get_current_user(
             redis_client = await get_redis()
             is_revoked = await redis_client.exists(f"token_blacklist:{jti}")
             if is_revoked:
-                 raise HTTPException(status_code=401, detail="Token has been revoked")
+                 raise HTTPException(status_code=401, detail="Invalid credentials")
         
     except PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid credentials")
         
     user = await crud_user.get_user_by_email(db, email=user_email)
     if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     return user
 
 @router.post(
@@ -101,15 +109,12 @@ async def get_current_user(
     },
     summary="Login with Ajax Credentials",
     description="""
-    Authenticate using your **Ajax Systems** account. 
-    - **username**: Your Ajax email.
-    - **password**: Your Ajax password.
-    - *Other fields (grant_type, scope, etc.) are standard OAuth2 boilerplate and can be ignored.*
+    Authenticate using your **Ajax Systems** account email and password.
     """
 )
 async def login_for_access_token(
     request: Request,
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    body: LoginRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -125,7 +130,7 @@ async def login_for_access_token(
         await audit_service.log_request_action(
             db=db, request=request, user_id=None,
             action="SECURITY_ALERT_LOGIN_LOCKED", status_code=403, 
-            severity="CRITICAL", payload={"ip": client_ip, "email": form_data.username}
+            severity="CRITICAL", payload={"ip": client_ip, "email": body.username}
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -136,21 +141,15 @@ async def login_for_access_token(
     try:
         # 2. Verify credentials directly with Ajax API
         ajax_data = await ajax.login_with_credentials(
-            email=form_data.username, 
-            password_raw=form_data.password
+            email=body.username, 
+            password_raw=body.password
         )
         
         # 3. Get or create user in local database
-        user = await crud_user.get_user_by_email(db, email=form_data.username)
+        user = await crud_user.get_user_by_email(db, email=body.username)
         if not user:
             # Auto-provision user if they exist in Ajax but not in our DB
-            from backend.app.schemas.user import UserCreate
-            user_in = UserCreate(
-                email=form_data.username,
-                full_name=form_data.username.split("@")[0],
-                password=form_data.password 
-            )
-            user = await crud_user.create_user(db, user_in=user_in)
+            user = await crud_user.create_user(db, email=body.username, password=body.password)
         
         # 4. Success Tasks
         await security_service.reset_login_failures(client_ip)
@@ -183,7 +182,7 @@ async def login_for_access_token(
         return {
             "access_token": access_token, 
             "refresh_token": refresh_token,
-            "token_type": "bearer"
+            "token_type": "bearer"  # nosec B105
         }
 
     except AjaxAuthError:
@@ -194,7 +193,7 @@ async def login_for_access_token(
         await audit_service.log_request_action(
             db=db, request=request, user_id=None,
             action="LOGIN_FAILED", status_code=401, severity="WARNING",
-            payload={"email": form_data.username}
+            payload={"email": body.username}
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -236,8 +235,8 @@ async def refresh_token(
         token_type: str = payload.get("type")
         exp = payload.get("exp")
         
-        if user_email is None or token_type != "refresh" or jti is None:
-            raise HTTPException(status_code=401, detail="Invalid refresh token")
+        if user_email is None or token_type != "refresh" or jti is None:  # nosec B105
+            raise HTTPException(status_code=401, detail="Invalid credentials")
             
         # 1. Rotation Check (Revocation)
         redis_client = await get_redis()
@@ -245,7 +244,7 @@ async def refresh_token(
         if is_revoked:
             # SAFETY: If a refresh token is reused, potentially stolen. Logout all.
             # (Optional: implement full session invalidation here)
-            raise HTTPException(status_code=401, detail="Refresh token has been revoked")
+            raise HTTPException(status_code=401, detail="Invalid credentials")
             
         # 2. Blacklist the used refresh token (Rotation)
         now = datetime.now(timezone.utc).timestamp()
@@ -256,7 +255,7 @@ async def refresh_token(
         # 3. Verify user exists
         user = await crud_user.get_user_by_email(db, email=user_email)
         if not user:
-            raise HTTPException(status_code=401, detail="User not found")
+            raise HTTPException(status_code=401, detail="Invalid credentials")
             
         # 4. Generate new pair
         new_jti = str(uuid.uuid4())
@@ -284,13 +283,20 @@ async def refresh_token(
         return {
             "access_token": access_token, 
             "refresh_token": refresh_token,
-            "token_type": "bearer"
+            "token_type": "bearer"  # nosec B105
         }
         
     except PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-@router.post("/logout")
+@router.post(
+    "/logout",
+    summary="Logout and Revoke Session",
+    responses={
+        200: {"model": ErrorMessage, "description": "Successfully logged out"},
+        400: {"model": ErrorMessage, "description": "Invalid token"}
+    }
+)
 async def logout(
     token: Annotated[str, Depends(oauth2_scheme)],
     current_user: User = Depends(get_current_user),

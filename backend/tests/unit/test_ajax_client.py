@@ -82,7 +82,7 @@ async def test_request_uses_userId_in_path(ajax_client):
              await ajax_client.get_hubs("user@example.com")
              
              args, kwargs = mock_request.call_args
-             assert "/user/ajax_user_123/hubs" in args[1]
+             assert "user/ajax_user_123/hubs" in args[1]
              assert kwargs["headers"]["X-Session-Token"] == "cached_token"
 
 @pytest.mark.asyncio
@@ -104,7 +104,7 @@ async def test_set_arm_state_command(ajax_client):
              
              args, kwargs = mock_request.call_args
              assert args[0] == "POST"
-             assert "/user/ajax_user_123/hubs/hub_007/commands/set-arm-state" in args[1]
+             assert "user/ajax_user_123/hubs/hub_007/commands/set-arm-state" in args[1]
              assert kwargs["json"] == {"armState": 1}
 
 @pytest.mark.asyncio

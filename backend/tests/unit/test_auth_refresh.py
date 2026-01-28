@@ -82,7 +82,7 @@ async def test_refresh_token_revoked_fails(client, mock_db):
         )
         
         assert response.status_code == 401
-        assert "revoked" in response.json()["detail"]
+        assert response.json()["detail"] == "Invalid credentials"
 
 @pytest.mark.asyncio
 async def test_refresh_token_invalid_type_fails(client, mock_db):
@@ -99,4 +99,4 @@ async def test_refresh_token_invalid_type_fails(client, mock_db):
     )
     
     assert response.status_code == 401
-    assert "Invalid refresh token" in response.json()["detail"]
+    assert response.json()["detail"] == "Invalid credentials"

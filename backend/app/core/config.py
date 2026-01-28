@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     # Project Identity
     PROJECT_NAME: str = "AjaxSecurFlow Proxy"
     VERSION: str = "0.1.0"
+    API_V1_STR: str = "/api/v1"
+    ENABLE_DEVELOPER_MODE: bool = False # Bypass Stripe for dev/test
     
     # Database (Postgres)
     POSTGRES_USER: str
@@ -38,7 +40,7 @@ class Settings(BaseSettings):
     REDIS_URL: RedisDsn
 
     # Ajax Systems API
-    AJAX_API_BASE_URL: str = "https://api.ajax.systems/api"
+    AJAX_API_BASE_URL: str = "https://api.ajax.systems/api/"
     AJAX_API_KEY: SecretStr
     #Solo para dev y test
     AJAX_LOGIN: Optional[str] = None

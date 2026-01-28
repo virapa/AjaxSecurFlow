@@ -40,7 +40,8 @@ async def test_create_checkout_session(client, mock_current_user_billed):
         mock_stripe_create.return_value = MagicMock(url="http://stripe.com/checkout")
         
         response = await client.post(
-            "/api/v1/billing/create-checkout-session?price_id=price_123"
+            "/api/v1/billing/create-checkout-session",
+            json={"price_id": "price_123"}
         )
         
         assert response.status_code == 200

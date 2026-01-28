@@ -5,19 +5,20 @@ import httpx
 from httpx import AsyncClient
 from unittest.mock import AsyncMock
 
-from backend.app.main import app
-
-# Set environment variables for testing
+# Set environment variables for testing BEFORE importing the app
 os.environ["POSTGRES_USER"] = "postgres"
 os.environ["POSTGRES_PASSWORD"] = "postgres"
 os.environ["POSTGRES_DB"] = "ajax_proxy"
-os.environ["POSTGRES_HOST"] = "localhost"
-os.environ["DATABASE_URL"] = "postgresql+asyncpg://postgres:postgres@localhost:5432/ajax_proxy"
-os.environ["REDIS_URL"] = "redis://localhost:6379/0"
+os.environ["POSTGRES_HOST"] = "postgres"
+os.environ["DATABASE_URL"] = "postgresql+asyncpg://postgres:postgres@postgres:5432/ajax_proxy"
+os.environ["REDIS_URL"] = "redis://redis:6379/0"
 os.environ["AJAX_API_KEY"] = "test_key"
 os.environ["AJAX_LOGIN"] = "test_login"
 os.environ["AJAX_PASSWORD"] = "test_password"
 os.environ["SECRET_KEY"] = "supersecretkeyformocking12345"
+os.environ["ENABLE_DEVELOPER_MODE"] = "False"
+
+from backend.app.main import app
 
 @pytest_asyncio.fixture
 async def async_client():

@@ -20,8 +20,7 @@ app = FastAPI(
     - **Corporate Auditing**: Comprehensive logging and tracking.
     """,
     contact={
-        "name": "Satyatec Development Team",
-        "url": "https://satyatec.es",
+        "name": "Development",
     },
     license_info={
         "name": "Proprietary",
@@ -45,7 +44,7 @@ async def audit_middleware(request: Request, call_next):
     - Logs all API requests automatically
     """
     # Only audit API routes
-    if not request.url.path.startswith("/api/v1"):
+    if not request.scope['path'].startswith(settings.API_V1_STR):
         return await call_next(request)
 
     correlation_id = str(uuid.uuid4())
@@ -73,32 +72,57 @@ async def audit_middleware(request: Request, call_next):
                 latency_ms=latency_ms,
                 correlation_id=correlation_id
             )
-    except Exception:
+    except Exception:  # nosec B110
         # Failsafe: Audit failure shouldn't crash the main request
         pass
         
     response.headers["X-Correlation-ID"] = correlation_id
     return response
+from fastapi.openapi.utils import get_openapi
+from backend.app.api.v1.api import api_router
 
-from backend.app.api.v1 import auth, proxy, users, billing
-from backend.app.api.v1.endpoints import ajax as ajax_endpoints
+# Include router normally for full test compatibility
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
-app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
-# Specific Ajax endpoints (Must be before generic proxy)
-app.include_router(ajax_endpoints.router, prefix="/api/v1/ajax", tags=["ajax-core"])
-# Generic Proxy (Catch-all)
-app.include_router(proxy.router, prefix="/api/v1/ajax", tags=["ajax-proxy"])
-app.include_router(billing.router, prefix="/api/v1/billing", tags=["billing"])
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    # Generate the base schema
+    openapi_schema = get_openapi(
+        title="Ajax Client API",
+        version="1.135.0", # Usando versión de tu imagen
+        description="General API description",
+        routes=app.routes,
+    )
+    
+    # VISUAL CLEANUP: Strip /api/v1 from the paths displayed in Swagger
+    new_paths = {}
+    for path, methods in openapi_schema["paths"].items():
+        if path.startswith(settings.API_V1_STR):
+            clean_path = path.replace(settings.API_V1_STR, "")
+            new_paths[clean_path] = methods
+        else:
+            new_paths[path] = methods
+            
+    openapi_schema["paths"] = new_paths
+    
+    # Display the Base URL exactly as in your image
+    openapi_schema["servers"] = [{"url": settings.API_V1_STR, "description": "Local server"}]
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
 
-@app.get("/health")
+app.openapi = custom_openapi
+
+@app.get("/health", tags=["System"], include_in_schema=False)
 async def health_check():
     """
     Service health check endpoint for monitoring systems.
     """
     return {"status": "ok", "project": settings.PROJECT_NAME}
 
-@app.get("/")
+@app.get("/", tags=["System"], include_in_schema=False)
 async def root():
     """
     API Root endpoint.

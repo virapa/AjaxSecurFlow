@@ -225,7 +225,10 @@ class AjaxClient:
             headers["accept"] = "application/json"
             req_kwargs = kwargs.copy()
             req_kwargs["headers"] = headers
-            return await self.client.request(method, endpoint, **req_kwargs)
+            
+            # Ensure safe URL joining: make endpoint relative to base_url if it's meant to be appended
+            safe_endpoint = endpoint.lstrip("/")
+            return await self.client.request(method, safe_endpoint, **req_kwargs)
 
         try:
             response = await _do_req(token)
@@ -289,6 +292,11 @@ class AjaxClient:
         """Get hub devices with enriched state."""
         user_id = await self._ensure_user_id(user_email)
         return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/devices?enrich=true")
+
+    async def get_device_details(self, user_email: str, hub_id: str, device_id: str) -> Dict[str, Any]:
+        """Get details for a specific device."""
+        user_id = await self._ensure_user_id(user_email)
+        return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/devices/{device_id}")
 
     async def set_arm_state(self, user_email: str, hub_id: str, arm_state: int, group_id: Optional[str] = None) -> Dict[str, Any]:
         """Set arm state for hub or group."""

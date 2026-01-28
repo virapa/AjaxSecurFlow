@@ -1,5 +1,5 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Path, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.v1.auth import get_current_user
@@ -13,13 +13,8 @@ from backend.app.schemas.auth import ErrorMessage
 
 router = APIRouter()
 
-def handle_ajax_error(e: Exception) -> None:
-    """
-    Standardize exception handling for Ajax API calls.
-    """
-    if isinstance(e, AjaxAuthError):
-        raise HTTPException(status_code=502, detail="Upstream authentication failed")
-    raise HTTPException(status_code=502, detail=str(e))
+from backend.app.api.v1.utils import handle_ajax_error
+import httpx
 
 @router.get(
     "/hubs", 
@@ -68,7 +63,7 @@ async def read_hubs(
     }
 )
 async def read_hub_detail(
-    hub_id: str,
+    hub_id: str = Path(..., description="The unique 8-character ID of the Hub", example="0004C602"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -87,13 +82,34 @@ async def read_hub_detail(
         
     try:
         client = AjaxClient()
-        return await client.get_hub_details(user_email=current_user.email, hub_id=hub_id)
+        data = await client.get_hub_details(user_email=current_user.email, hub_id=hub_id)
+        
+        # Mapping for legacy fields if they are missing at root but exist in nested objects
+        if isinstance(data, dict):
+            if "battery" in data and not data.get("battery_level"):
+                data["battery_level"] = data["battery"].get("chargeLevelPercentage")
+            if "gsm" in data and not data.get("gsm_signal"):
+                data["gsm_signal"] = data["gsm"].get("signalLevel")
+            if "firmware" in data and not data.get("firmware_version"):
+                data["firmware_version"] = data["firmware"].get("version")
+            if "ethernet" in data and not data.get("ethernet_ip"):
+                data["ethernet_ip"] = data["ethernet"].get("ip")
+                
+        return data
     except Exception as e:
         handle_ajax_error(e)
 
-@router.get("/hubs/{hub_id}/groups", response_model=List[schemas.GroupBase])
+@router.get(
+    "/hubs/{hub_id}/groups", 
+    response_model=List[schemas.GroupBase],
+    summary="List Hub Groups",
+    responses={
+        403: {"model": ErrorMessage, "description": "Subscription inactive"},
+        502: {"model": ErrorMessage, "description": "Upstream Ajax API error"}
+    }
+)
 async def read_hub_groups(
-    hub_id: str,
+    hub_id: str = Path(..., description="ID of the Hub to query groups from", example="0004C602"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -117,9 +133,17 @@ async def read_hub_groups(
     except Exception as e:
         handle_ajax_error(e)
 
-@router.get("/hubs/{hub_id}/devices", response_model=List[schemas.DeviceDetail])
+@router.get(
+    "/hubs/{hub_id}/devices", 
+    response_model=List[schemas.DeviceDetail],
+    summary="List Hub Devices",
+    responses={
+        403: {"model": ErrorMessage, "description": "Subscription inactive"},
+        502: {"model": ErrorMessage, "description": "Upstream Ajax API error"}
+    }
+)
 async def read_hub_devices(
-    hub_id: str,
+    hub_id: str = Path(..., description="ID of the Hub to query devices from", example="0004C602"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -143,11 +167,58 @@ async def read_hub_devices(
     except Exception as e:
         handle_ajax_error(e)
 
-@router.get("/hubs/{hub_id}/logs", response_model=schemas.EventLogList)
+@router.get(
+    "/hubs/{hub_id}/devices/{device_id}", 
+    response_model=schemas.DeviceDetail,
+    summary="Get Device Detail",
+    responses={
+        404: {"model": ErrorMessage, "description": "Device not found"},
+        502: {"model": ErrorMessage, "description": "Upstream Ajax API error"}
+    }
+)
+async def read_device_detail(
+    hub_id: str = Path(..., description="ID of the Hub where the device is registered", example="0004C602"),
+    device_id: str = Path(..., description="The unique 8-character ID of the Device", example="3056A52F"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get all technical and telemetry data for a specific device.
+    """
+    if not is_subscription_active(current_user):
+        raise HTTPException(status_code=403, detail="Active subscription required")
+        
+    try:
+        client = AjaxClient()
+        data = await client.get_device_details(
+            user_email=current_user.email, 
+            hub_id=hub_id, 
+            device_id=device_id
+        )
+        
+        # Enrichment & Legacy Mapping
+        if isinstance(data, dict):
+            # Map legacy fields for easier frontend use
+            data["battery_level"] = data.get("batteryChargeLevelPercentage")
+            data["signal_strength"] = data.get("signalLevel")
+            
+        return data
+    except Exception as e:
+        handle_ajax_error(e)
+
+@router.get(
+    "/hubs/{hub_id}/logs", 
+    response_model=schemas.EventLogList,
+    summary="Get Hub Event Logs",
+    responses={
+        403: {"model": ErrorMessage, "description": "Subscription inactive"},
+        502: {"model": ErrorMessage, "description": "Upstream Ajax API error"}
+    }
+)
 async def read_hub_logs(
-    hub_id: str,
-    limit: int = 100,
-    offset: int = 0,
+    hub_id: str = Path(..., description="ID of the Hub to query logs from", example="0004C602"),
+    limit: int = Query(100, description="Max number of logs to return (Page size)"),
+    offset: int = Query(0, description="Number of logs to skip (Pagination)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -187,19 +258,22 @@ async def read_hub_logs(
     }
 )
 async def set_hub_arm_state(
-    hub_id: str,
-    command: schemas.HubCommandRequest,
     request: Request,
+    hub_id: str = Path(..., description="ID of the Hub to control", example="0004C602"),
+    command: schemas.HubCommandRequest = Body(..., description="Arming command details"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Set the arming state (Arm, Disarm, Night) for a specific hub or group.
+    Set the arming state for a specific hub or security group.
 
-    Args:
-        hub_id: Unique identifier of the hub.
-        command: Request body with armState and optional groupId.
-        request: The incoming FastAPI request.
+    This command supports the following **arming states**:
+    - `0`: **DISARMED** - Deactivate security.
+    - `1`: **ARMED** - Fully activate security.
+    - `2`: **NIGHT_MODE** - Activate partial/stay mode.
+
+    If `groupId` is provided in the request body, the command will only affect that specific partition. 
+    Otherwise, the command applies to the entire Hub.
     """
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")

@@ -64,13 +64,55 @@ async def test_auth_login(client, mock_db):
         
         response = await client.post(
             "/api/v1/auth/token", 
-            data={"username": "admin@example.com", "password": "secret"}
+            json={"username": "admin@example.com", "password": "secret"}
         )
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
         mock_sec.check_ip_lockout.assert_called_once()
         mock_sec.reset_login_failures.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_auth_login_new_user_provisioning(client, mock_db):
+    """Test login with new user that needs auto-provisioning (the 500 error fix)."""
+    with patch("backend.app.api.v1.auth.AjaxClient") as MockAjax, \
+         patch("backend.app.api.v1.auth.crud_user.get_user_by_email") as mock_get_user, \
+         patch("backend.app.api.v1.auth.crud_user.create_user") as mock_create_user, \
+         patch("backend.app.api.v1.auth.security_service") as mock_sec, \
+         patch("backend.app.services.audit_service.log_request_action") as mock_log_req:
+        
+        mock_log_req.return_value = None
+        
+        # 1. Mock Ajax success
+        mock_ajax_instance = MockAjax.return_value
+        mock_ajax_instance.login_with_credentials = AsyncMock(return_value={"userId": "123", "sessionToken": "t"})
+        
+        # 2. Mock DB user NOT found initially
+        mock_get_user.return_value = None
+        
+        # 3. Mock DB user creation success
+        mock_new_user = AsyncMock()
+        mock_new_user.id = 99
+        mock_new_user.email = "new@example.com"
+        mock_create_user.return_value = mock_new_user
+        
+        # 4. Mock Security Service
+        mock_sec.check_ip_lockout = AsyncMock(return_value=False)
+        mock_sec.reset_login_failures = AsyncMock()
+        
+        response = await client.post(
+            "/api/v1/auth/token", 
+            json={"username": "new@example.com", "password": "password123"}
+        )
+        
+        # Verify
+        assert response.status_code == 200
+        assert "access_token" in response.json()
+        mock_create_user.assert_called_once()
+        # Verify correct args passed to create_user (fixed from user_in to email/password)
+        _, kwargs = mock_create_user.call_args
+        assert kwargs["email"] == "new@example.com"
+        assert kwargs["password"] == "password123"
 
 @pytest.mark.asyncio
 async def test_auth_login_invalid(client, mock_db):
@@ -89,7 +131,7 @@ async def test_auth_login_invalid(client, mock_db):
         
         response = await client.post(
             "/api/v1/auth/token", 
-            data={"username": "wrong", "password": "wrong"}
+            json={"username": "wrong", "password": "wrong"}
         )
         assert response.status_code == 401
         mock_sec.track_login_failure.assert_called_once()
@@ -138,7 +180,7 @@ async def test_proxy_endpoint_success(client, mock_ajax_client, mock_rate_limite
         # 3. Get Token
         auth_resp = await client.post(
             "/api/v1/auth/token", 
-            data={"username": "admin@example.com", "password": "secret"}
+            json={"username": "admin@example.com", "password": "secret"}
         )
         token = auth_resp.json()["access_token"]
         

@@ -19,5 +19,9 @@ def is_subscription_active(user: User) -> bool:
     """
     Business logic to determine if a user can access the Proxy.
     """
-    # Allow active and trialing subscriptions
+    # 1. Developer Mode: Bypass subscription check
+    if settings.ENABLE_DEVELOPER_MODE:
+        return True
+
+    # 2. Production: Allow active and trialing subscriptions
     return user.subscription_status in ["active", "trialing"]
