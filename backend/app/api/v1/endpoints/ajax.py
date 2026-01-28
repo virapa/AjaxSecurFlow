@@ -9,6 +9,7 @@ from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
 from backend.app.services.billing_service import is_subscription_active
 from backend.app.services import audit_service
 from backend.app.schemas import ajax as schemas
+from backend.app.schemas.auth import ErrorMessage
 
 router = APIRouter()
 
@@ -20,7 +21,16 @@ def handle_ajax_error(e: Exception) -> None:
         raise HTTPException(status_code=502, detail="Upstream authentication failed")
     raise HTTPException(status_code=502, detail=str(e))
 
-@router.get("/hubs", response_model=List[schemas.HubDetail])
+@router.get(
+    "/hubs", 
+    response_model=List[schemas.HubDetail],
+    summary="List User Hubs",
+    responses={
+        401: {"model": ErrorMessage, "description": "Bearer token invalid or missing"},
+        403: {"model": ErrorMessage, "description": "Subscription inactive"},
+        502: {"model": ErrorMessage, "description": "Upstream Ajax API error"}
+    }
+)
 async def read_hubs(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -48,7 +58,15 @@ async def read_hubs(
     except Exception as e:
         handle_ajax_error(e)
 
-@router.get("/hubs/{hub_id}", response_model=schemas.HubDetail)
+@router.get(
+    "/hubs/{hub_id}", 
+    response_model=schemas.HubDetail,
+    summary="Get Hub Detail",
+    responses={
+        404: {"model": ErrorMessage, "description": "Hub not found"},
+        502: {"model": ErrorMessage, "description": "Upstream Ajax API error"}
+    }
+)
 async def read_hub_detail(
     hub_id: str,
     current_user: User = Depends(get_current_user),
@@ -159,7 +177,15 @@ async def read_hub_logs(
     except Exception as e:
         handle_ajax_error(e)
 
-@router.post("/hubs/{hub_id}/arm-state", response_model=schemas.CommandResponse)
+@router.post(
+    "/hubs/{hub_id}/arm-state", 
+    response_model=schemas.CommandResponse,
+    summary="Set Arm State (Control)",
+    responses={
+        200: {"model": schemas.CommandResponse, "description": "Command sent successfully"},
+        502: {"model": ErrorMessage, "description": "Upstream Ajax API error"}
+    }
+)
 async def set_hub_arm_state(
     hub_id: str,
     command: schemas.HubCommandRequest,

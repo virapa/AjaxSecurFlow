@@ -52,9 +52,17 @@ Una vez que los contenedores estén corriendo, es necesario aplicar las migracio
 docker-compose run --rm app alembic upgrade head
 ```
 
+### Gestión de Sesión Premium (Dual Token)
+El sistema implementa una estrategia de **Dual Token** para máxima seguridad y una experiencia de usuario fluida:
+1.  **Login (`/auth/token`)**: Al autenticarse, el sistema devuelve un `access_token` (30m) y un `refresh_token` (7d).
+2.  **Transparencia**: El backend gestiona automáticamente el refresco de la sesión de Ajax Systems.
+3.  **Refreso Local (`/auth/refresh`)**: El dashboard puede usar el `refresh_token` para obtener un nuevo par de tokens sin que el usuario reintroduzca su contraseña.
+4.  **Token Rotation**: Por seguridad, cada vez que se usa un refresh token, el anterior se invalida.
+5.  **Fingerprinting**: Los tokens están vinculados al `User-Agent` e IP del cliente para prevenir el secuestro de sesiones.
+
 ### Documentación de la API
 Una vez iniciados los servicios, la documentación interactiva y técnica está disponible en:
-- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs) (Para pruebas interactivas)
+- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs) (Para pruebas interactivas y manual visual)
 - **Redoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc) (Para referencia técnica detallada)
 
 ### Ejecución de Tests

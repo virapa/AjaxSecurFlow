@@ -12,6 +12,7 @@ from backend.app.core import crud_user
 from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
 from backend.app.services import audit_service, security_service
+from backend.app.schemas.auth import Token, TokenRefreshRequest, ErrorMessage
 
 router = APIRouter()
 
@@ -20,10 +21,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 import hashlib
 import uuid
 from backend.app.services.rate_limiter import get_redis
-from pydantic import BaseModel
-
-class TokenRefreshRequest(BaseModel):
-    refresh_token: str
 
 async def get_current_user(
     request: Request,
@@ -95,7 +92,21 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
-@router.post("/token")
+@router.post(
+    "/token", 
+    response_model=Token,
+    responses={
+        401: {"model": ErrorMessage, "description": "Invalid Ajax credentials"},
+        403: {"model": ErrorMessage, "description": "IP Locked due to brute-force protection"},
+    },
+    summary="Login with Ajax Credentials",
+    description="""
+    Authenticate using your **Ajax Systems** account. 
+    - **username**: Your Ajax email.
+    - **password**: Your Ajax password.
+    - *Other fields (grant_type, scope, etc.) are standard OAuth2 boilerplate and can be ignored.*
+    """
+)
 async def login_for_access_token(
     request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -193,7 +204,18 @@ async def login_for_access_token(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/refresh")
+@router.post(
+    "/refresh", 
+    response_model=Token,
+    responses={
+        401: {"model": ErrorMessage, "description": "Invalid or expired refresh token"},
+    },
+    summary="Refresh Session",
+    description="""
+    Use the `refresh_token` obtained during login to get a brand new pair of tokens. 
+    This implements **Refresh Token Rotation**: the old refresh token will be invalidated.
+    """
+)
 async def refresh_token(
     request: Request,
     body: TokenRefreshRequest,

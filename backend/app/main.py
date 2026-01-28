@@ -11,6 +11,21 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
+    description="""
+    ## AjaxSecurFlow Proxy API
+    An advanced, secure proxy for Ajax Systems API with:
+    - **Unified Authentication**: Integrated with Ajax cloud identities.
+    - **Session Persistence**: Automated token refresh (Dual Token).
+    - **SaaS Billing**: Integrated Stripe lifecycle management.
+    - **Corporate Auditing**: Comprehensive logging and tracking.
+    """,
+    contact={
+        "name": "Satyatec Development Team",
+        "url": "https://satyatec.es",
+    },
+    license_info={
+        "name": "Proprietary",
+    },
     lifespan=lifespan
 )
 
