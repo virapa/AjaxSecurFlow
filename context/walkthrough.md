@@ -53,6 +53,15 @@ For advanced development, we have a dynamic route that allows calling ANY Ajax A
 - **ENABLE_DEVELOPER_MODE**: New bypass for Stripe during development.
 - **Clean Swagger UI**: Removed unnecessary OAuth2 fields for a streamlined experience.
 
+## B2B Voucher System (Offline Activation)
+We have implemented a powerful alternative to Stripe for service activation:
+- **Voucher Model**: Unique codes (AJAX-XXXX-XXXX) that grant fixed-term access (30-365 days).
+- **Hybrid Security**: Generation is "blinded" and double-locked:
+    - Only users in `ADMIN_EMAILS` (.env) can access the generation endpoint.
+    - Requires a physical master key `X-Admin-Secret` header.
+- **Additive Time**: Redeeming a voucher while having an active session extends the expiration date instead of overwriting it.
+
 ## Verification Results
-- All 40 unit and integration tests passed.
+- All 41 unit and integration tests passed (including new Voucher security suite).
 - Redundant `flower` container removed for a leaner stack.
+- Database upgraded with 2 new migrations for Vouchers and expiration tracking.
