@@ -60,7 +60,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    ADMIN_SECRET_KEY: SecretStr # Secondary secret for voucher generation
+
+    # Admin Security (Ghost Admin + Master Key)
+    ADMIN_EMAILS: list[str] = [] # Emails authorized for admin actions
+    ADMIN_SECRET_KEY: Optional[SecretStr] = None # Physical secondary key for hazardous actions
 
     model_config = SettingsConfigDict(
         env_file=".env", 

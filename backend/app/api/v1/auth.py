@@ -100,17 +100,40 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return user
 
-async def get_current_admin(
-    current_user: User = Depends(get_current_user)
-) -> User:
+async def check_admin(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
     """
-    Sub-dependency that restricts access to admin users only.
+    Security check for admin-only endpoints (Blinded Hybrid Security).
+    Requires:
+    1. Authenticated user from ADMIN_EMAILS list.
+    2. Valid X-Admin-Secret header matching config.
     """
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have administrative privileges to perform this action."
-        )
+    # 1. Check Email Authorization (Ghost Admin)
+    if current_user.email not in settings.ADMIN_EMAILS:
+         raise HTTPException(
+             status_code=status.HTTP_403_FORBIDDEN,
+             detail="You do not have administrative privileges."
+         )
+
+    # 2. Check Master Secret Key (Secondary Factor)
+    if settings.ADMIN_SECRET_KEY:
+        admin_secret = request.headers.get("X-Admin-Secret")
+        if not admin_secret or admin_secret != settings.ADMIN_SECRET_KEY.get_secret_value():
+             from backend.app.core.db import get_db
+             # We want to audit this failed attempt
+             async for db in get_db():
+                 await audit_service.log_request_action(
+                     db=db, request=request, user_id=current_user.id,
+                     action="SECURITY_ALERT_ADMIN_KEY_FAILED", status_code=403,
+                     severity="CRITICAL", payload={"email": current_user.email}
+                 )
+             raise HTTPException(
+                 status_code=status.HTTP_403_FORBIDDEN,
+                 detail="Administrative master key missing or invalid."
+             )
+    
     return current_user
 
 @router.post(

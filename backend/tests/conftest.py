@@ -60,19 +60,3 @@ def mock_user_no_subscription(mock_db):
     app.dependency_overrides[get_current_user] = lambda: mock_user
     yield mock_user
     app.dependency_overrides = {}
-
-@pytest.fixture
-def mock_admin_user(mock_db):
-    """Overrides get_current_user/admin to return an ADMIN user."""
-    mock_user = AsyncMock()
-    mock_user.id = 99
-    mock_user.email = "admin@example.com"
-    mock_user.is_admin = True
-    mock_user.subscription_status = "active"
-    mock_user.subscription_expires_at = None
-    
-    from backend.app.api.v1.auth import get_current_user, get_current_admin
-    app.dependency_overrides[get_current_user] = lambda: mock_user
-    app.dependency_overrides[get_current_admin] = lambda: mock_user
-    yield mock_user
-    app.dependency_overrides = {}
