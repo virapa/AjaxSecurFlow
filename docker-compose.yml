@@ -45,7 +45,7 @@ services:
       - postgres
     volumes:
       - ./backend:/app/backend
-    command: celery -A backend.app.worker.tasks worker --loglevel=info
+    command: celery -A backend.app.worker.celery_app worker --loglevel=info -B
 
   postgres:
     image: postgres:15-alpine

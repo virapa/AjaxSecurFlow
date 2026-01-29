@@ -25,6 +25,45 @@ def send_transactional_email(to_email: str, subject: str, html_content: str, tex
     """
     return email_service.send_email(to_email, subject, html_content, text_content)
 
+@celery_app.task(name="tasks.cleanup_expired_subscriptions")
+def cleanup_expired_subscriptions() -> int:
+    """
+    Daily cleanup task that marks users with expired vouchers/subscriptions as 'inactive'.
+
+    Returns:
+        int: Total number of users updated.
+    """
+    return asyncio.run(_cleanup_expired_subscriptions_logic())
+
+async def _cleanup_expired_subscriptions_logic() -> int:
+    """
+    Internal logic for subscription cleanup, separated for testing.
+
+    Returns:
+        int: Number of records updated.
+    """
+    from datetime import datetime, timezone
+    from sqlalchemy import update, and_
+    
+    now = datetime.now(timezone.utc)
+    async with async_session_factory() as session:
+        # Target 'active' users whose expiration has passed.
+        stmt = update(User).where(
+            and_(
+                User.subscription_status == "active",
+                User.subscription_expires_at != None,
+                User.subscription_expires_at < now
+            )
+        ).values(subscription_status="inactive")
+        
+        result = await session.execute(stmt)
+        await session.commit()
+        
+        updated_count = result.rowcount
+        if updated_count > 0:
+            logger.info(f"Cleaned up {updated_count} expired subscriptions.")
+        return updated_count
+
 logger = logging.getLogger(__name__)
 
 @celery_app.task(name="tasks.sync_ajax_data")

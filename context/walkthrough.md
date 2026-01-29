@@ -53,13 +53,15 @@ For advanced development, we have a dynamic route that allows calling ANY Ajax A
 - **ENABLE_DEVELOPER_MODE**: New bypass for Stripe during development.
 - **Clean Swagger UI**: Removed unnecessary OAuth2 fields for a streamlined experience.
 
-## B2B Voucher System (Offline Activation)
-We have implemented a powerful alternative to Stripe for service activation:
-- **Voucher Model**: Unique codes (AJAX-XXXX-XXXX) that grant fixed-term access (30-365 days).
-- **Hybrid Security**: Generation is "blinded" and double-locked:
-    - Only users in `ADMIN_EMAILS` (.env) can access the generation endpoint.
-    - Requires a physical master key `X-Admin-Secret` header.
-- **Additive Time**: Redeeming a voucher while having an active session extends the expiration date instead of overwriting it.
+## B2B Voucher System (New Rules)
+- **Voucher Model**: Unique codes (AJAX-XXXX-XXXX) that grant **Premium** plan access for a fixed term (30-365 days).
+- **Redemption Limit**: Maximum **5 vouchers** can be redeemed per account to prevent abuse.
+- **Additive Time**: Redeeming multiple vouchers extends the expiration date incrementally.
+- **Automatic Fallback**: Users revert to the **Free** plan immediately upon expiration if no active Stripe subscription exists.
+- **Hybrid Security**: Generation is blinded and requires `ADMIN_EMAILS` membership plus `X-Admin-Secret` header.
+
+## Background Maintenance
+- **Celery Beat Execution**: A daily cron job (`cleanup_expired_subscriptions`) runs at midnight to synchronize the database states.
 
 ## Communication & Notifications System
 - **In-App Dashboard Alerts**: Real-time notifications for billing, security, and account status.

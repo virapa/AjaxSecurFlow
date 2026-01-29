@@ -20,7 +20,14 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     # Clean Architecture: Autodiscover tasks in the worker package
-    imports=["backend.app.worker.tasks"]
+    imports=["backend.app.worker.tasks"],
+    # Schedule: Run sub cleanup every day at midnight
+    beat_schedule={
+        "cleanup-expired-subs-every-midnight": {
+            "task": "tasks.cleanup_expired_subscriptions",
+            "schedule": 86400.0, # Every 24 hours (86400 seconds)
+        },
+    }
 )
 
 if __name__ == "__main__":

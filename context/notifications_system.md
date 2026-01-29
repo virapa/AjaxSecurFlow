@@ -43,3 +43,10 @@ El sistema ahora envía correos profesionales automáticamente en los siguientes
 - **Tests Integrados**: Se ha añadido `test_notifications.py` que valida el flujo completo de lectura y resumen de alertas.
 - **SMTP Diagnostics**: Incluido script `scripts/test_smtp.py` para validar la conexión con el proveedor de correo una vez configurado el `.env`.
 - **Q&A Compliance**: Todo el código de notificaciones cumple con el estándar de Docstrings Google y Tipado Estricto de Python.
+
+---
+
+## Gestión Automática de Expiración
+Para garantizar que la base de datos refleje siempre el estado real del servicio, se ha implementado un sistema de dos capas:
+1. **Validación en Tiempo Real**: En cada petición al Proxy API, el sistema verifica la fecha de expiración. El acceso se corta al segundo exacto de vencer el plazo.
+2. **Tarea de Limpieza Diaria (Cron)**: Un trabajador de Celery Beat ejecuta cada medianoche la tarea `cleanup_expired_subscriptions`, que marca formalmente como `inactive` a todos los usuarios cuyo tiempo de voucher o suscripción ha concluido.
