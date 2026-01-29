@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.core.config import settings
 from backend.app.core.db import get_db
-from backend.app.api.v1.auth import get_current_user
+from backend.app.api.v1.auth import get_current_user, get_current_admin
 from backend.app.domain.models import User
 from backend.app.services import audit_service
 from backend.app.worker.tasks import process_stripe_webhook
@@ -144,11 +144,40 @@ async def redeem_voucher(
     include_in_schema=True
 )
 async def generate_vouchers(
+    request: Request,
     payload: VoucherCreate,
     db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_current_admin),
+    x_admin_secret: str = Header(..., description="Secondary secret key for administrative operations")
 ):
     """
     Mass generate vouchers for distributors or offline sales.
+    Requires Admin privileges AND a valid secondary secret key.
     """
+    # 1. Verify Secondary Secret
+    if x_admin_secret != settings.ADMIN_SECRET_KEY.get_secret_value():
+        await audit_service.log_request_action(
+            db=db,
+            request=request,
+            user_id=admin_user.id,
+            action="VOUCHER_GEN_SECRET_FAILURE",
+            status_code=403,
+            severity="CRITICAL"
+        )
+        raise HTTPException(status_code=403, detail="Invalid administrative secret key.")
+
+    # 2. Generate
     vouchers = await voucher_service.create_vouchers(db, payload.count, payload.duration_days)
+    
+    # 3. Enhanced Audit
+    await audit_service.log_request_action(
+        db=db,
+        request=request,
+        user_id=admin_user.id,
+        action="VOUCHER_BATCH_GENERATED",
+        status_code=200,
+        severity="WARNING", # High visibility
+        payload={"count": payload.count, "duration": payload.duration_days}
+    )
+    
     return vouchers

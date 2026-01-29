@@ -100,6 +100,19 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return user
 
+async def get_current_admin(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """
+    Sub-dependency that restricts access to admin users only.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have administrative privileges to perform this action."
+        )
+    return current_user
+
 @router.post(
     "/token", 
     response_model=Token,
