@@ -100,6 +100,9 @@ El sistema implementa capas de defensa activa para proteger las sesiones de usua
 - **Auditoría VIP**: Registro inmutable que incluye IP, navegador y nivel de severidad (INFO, WARNING, CRITICAL) para cada acción.
 - **Mensajes de Error Opacos (Hardened Auth)**: Todos los fallos de autenticación devuelven un genérico "Invalid credentials", evitando fugas de información sobre la existencia de usuarios o validez de tokens a atacantes.
 - **Ofuscación de Upstream**: Los errores de la API de Ajax se filtran para eliminar URLs internas o IDs técnicos, devolviendo mensajes seguros para el cliente final.
+- **Blinded Hybrid Admin Security**: Los endpoints administrativos (Ej: Generación de Vouchers) están protegidos doblemente:
+    - **Ghost Admin**: Solo emails en una lista blanca (`ADMIN_EMAILS`) tienen acceso.
+    - **Master Key**: Requiere un secreto físico (`X-Admin-Secret`) no almacenado en base de datos.
 
 ## 6. Instalación y Ejecución
 
@@ -171,6 +174,7 @@ docker-compose exec app python -m pytest backend/tests
 - ✅ Motor de Suscripciones con Stripe.
 - ✅ Suite de Tests Unitarios e Integración (100% Pass).
 - ✅ Auditoría Inmutable de transacciones.
+- ✅ Sistema de Vouchers B2B (Activación Offline).
 
 ### Fase 2: Dashboard Frontend (⏳ En Progreso)
 - 🔲 Panel de Control en Next.js.
