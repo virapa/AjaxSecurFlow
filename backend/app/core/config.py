@@ -65,6 +65,15 @@ class Settings(BaseSettings):
     ADMIN_EMAILS: list[str] = [] # Emails authorized for admin actions
     ADMIN_SECRET_KEY: Optional[SecretStr] = None # Physical secondary key for hazardous actions
 
+    # Email / SMTP (Point 2)
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[SecretStr] = None
+    SMTP_FROM_EMAIL: str = "noreply@ajaxsecurflow.com"
+    SMTP_FROM_NAME: str = "AjaxSecurFlow Alertas"
+    SMTP_TLS: bool = True
+
     model_config = SettingsConfigDict(
         env_file=".env", 
         env_file_encoding="utf-8", 

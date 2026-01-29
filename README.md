@@ -103,6 +103,9 @@ El sistema implementa capas de defensa activa para proteger las sesiones de usua
 - **Blinded Hybrid Admin Security**: Los endpoints administrativos (Ej: Generación de Vouchers) están protegidos doblemente:
     - **Ghost Admin**: Solo emails en una lista blanca (`ADMIN_EMAILS`) tienen acceso.
     - **Master Key**: Requiere un secreto físico (`X-Admin-Secret`) no almacenado en base de datos.
+- **In-App & Email Notifications**: Sistema proactivo de comunicación con el usuario:
+    - **Alertas en Dashboard**: Notificaciones de seguridad, facturación y sistema.
+    - **Transactional Emails**: Envío asíncrono (Celery + SMTP) para bienvenida, renovaciones y fallos de pago.
 
 ## 6. Instalación y Ejecución
 
@@ -175,8 +178,10 @@ docker-compose exec app python -m pytest backend/tests
 - ✅ Suite de Tests Unitarios e Integración (100% Pass).
 - ✅ Auditoría Inmutable de transacciones.
 - ✅ Sistema de Vouchers B2B (Activación Offline).
+- ✅ Sistema de Notificaciones In-App y Alertas por Email.
 
 ### Fase 2: Dashboard Frontend (⏳ En Progreso)
 - 🔲 Panel de Control en Next.js.
 - 🔲 Visualización de dispositivos en tiempo real.
 - 🔲 Gestión de suscripciones para el usuario final.
+- 🔲 Integración de alertas en tiempo real.

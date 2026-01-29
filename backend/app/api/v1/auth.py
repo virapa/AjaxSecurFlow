@@ -11,7 +11,7 @@ from backend.app.core.db import get_db
 from backend.app.core import crud_user
 from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
-from backend.app.services import audit_service, security_service
+from backend.app.services import audit_service, security_service, notification_service
 from backend.app.schemas.auth import Token, TokenRefreshRequest, ErrorMessage, LoginRequest
 
 from fastapi.security import APIKeyHeader
@@ -30,7 +30,7 @@ async def get_current_user(
     request: Request,
     token: Annotated[str, Depends(oauth2_scheme)], 
     db: AsyncSession = Depends(get_db)
-):
+) -> User:
     """
     Validate the JWT token and retrieve the current authenticated user.
     Now includes JTI and Fingerprint (uah) verification.
@@ -98,6 +98,17 @@ async def get_current_user(
     user = await crud_user.get_user_by_email(db, email=user_email)
     if user is None:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # 4. Notify on Security Events (IP Shift)
+    if uip and current_ip and uip != current_ip:
+         await notification_service.create_notification(
+             db=db,
+             user_id=user.id,
+             title="Nueva IP detectada",
+             message=f"Se ha detectado un cambio de ubicación (IP: {current_ip}). Si no has sido tú, revisa tu seguridad.",
+             notification_type="warning"
+         )
+
     return user
 
 async def check_admin(

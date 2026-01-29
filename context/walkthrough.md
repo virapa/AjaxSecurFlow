@@ -61,7 +61,18 @@ We have implemented a powerful alternative to Stripe for service activation:
     - Requires a physical master key `X-Admin-Secret` header.
 - **Additive Time**: Redeeming a voucher while having an active session extends the expiration date instead of overwriting it.
 
+## Communication & Notifications System
+- **In-App Dashboard Alerts**: Real-time notifications for billing, security, and account status.
+- **Transactional Emails (Celery + SMTP)**: Automated professional emails for:
+    - Welcome (Subscription Activation).
+    - Renewals (Subscription Updated).
+    - Cancellations (Subscription Deleted).
+    - Urgent Action (Payment Failed).
+- **Security Awareness**: Proactive notifications if a session IP change is detected.
+
 ## Verification Results
-- All 41 unit and integration tests passed (including new Voucher security suite).
-- Redundant `flower` container removed for a leaner stack.
-- Database upgraded with 2 new migrations for Vouchers and expiration tracking.
+- All 42 unit and integration tests passed (including new Notification & Voucher suites).
+- SMTP Connectivity verified with Mailgun (diag script `test_smtp.py`).
+- No vulnerabilities found via `pip-audit` or `bandit`.
+- Q&A Standards applied: Google-style Docstrings & Strict Type Hinting.
+- Database upgraded: New migration for `notifications` table.

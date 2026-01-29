@@ -10,7 +10,7 @@ from backend.app.worker.tasks import process_stripe_webhook
 from backend.app.schemas.billing import CheckoutSessionResponse, WebhookResponse, CheckoutSessionCreate
 from backend.app.schemas.voucher import VoucherRedeem, VoucherCreate, VoucherDetailed
 from backend.app.schemas.auth import ErrorMessage
-from backend.app.services import voucher_service
+from backend.app.services import voucher_service, notification_service
 
 router = APIRouter()
 
@@ -120,7 +120,25 @@ async def redeem_voucher(
     payload: VoucherRedeem,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
-):
+) -> dict:
+    """
+    Allows a user to activate or extend their subscription using a unique voucher code.
+    
+    This endpoint extends the subscription_expires_at field of the user and 
+    creates both an audit log and an in-app notification.
+
+    Args:
+        request: FastAPI Request object.
+        payload: Voucher code to redeem.
+        current_user: Authenticated user.
+        db: Async database session.
+
+    Returns:
+        dict: Success message.
+
+    Raises:
+        HTTPException: 400 if the code is invalid, expired or already used.
+    """
     success = await voucher_service.redeem_voucher(db, current_user, payload.code)
     if not success:
         raise HTTPException(status_code=400, detail="Invalid, expired or already redeemed voucher code.")
@@ -133,6 +151,14 @@ async def redeem_voucher(
         status_code=200,
         severity="INFO",
         payload={"code": payload.code}
+    )
+
+    await notification_service.create_notification(
+        db=db,
+        user_id=current_user.id,
+        title="Voucher Canjeado",
+        message="Has activado correctamente tu suscripción mediante un código. ¡Gracias por confiar en nosotros!",
+        notification_type="success"
     )
     
     return {"status": "success", "message": "Voucher redeemed successfully. Your access has been extended."}
@@ -148,10 +174,20 @@ async def generate_vouchers(
     payload: VoucherCreate,
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(check_admin)
-):
+) -> list[VoucherDetailed]:
     """
     Mass generate vouchers for distributors or offline sales.
-    Requires ADMIN_EMAILS membership and X-Admin-Secret header.
+    
+    Ghost Admin Security: Requires ADMIN_EMAILS membership and X-Admin-Secret header.
+
+    Args:
+        request: FastAPI Request object.
+        payload: Metadata for the generation (count and duration).
+        db: Async database session.
+        admin: Verified admin user.
+
+    Returns:
+        list[VoucherDetailed]: List of generated voucher codes and metadata.
     """
     vouchers = await voucher_service.create_vouchers(db, payload.count, payload.duration_days)
     

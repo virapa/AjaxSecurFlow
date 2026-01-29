@@ -79,3 +79,21 @@ class Voucher(Base):
     redeemed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class Notification(Base):
+    """
+    In-app notifications for end users (sponsorship, security alerts, billing).
+    """
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    
+    type: Mapped[str] = mapped_column(String, default="info") # info, warning, success, error, security
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    message: Mapped[str] = mapped_column(String, nullable=False)
+    
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    link: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Optional URL for action
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
