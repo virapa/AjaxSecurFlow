@@ -15,6 +15,8 @@ async def get_user_subscription_status(user: User) -> str:
     # In the future, this service will handle Stripe API calls for sync.
     return user.subscription_status or "inactive"
 
+from datetime import datetime, timezone
+
 def is_subscription_active(user: User) -> bool:
     """
     Business logic to determine if a user can access the Proxy.
@@ -23,5 +25,10 @@ def is_subscription_active(user: User) -> bool:
     if settings.ENABLE_DEVELOPER_MODE:
         return True
 
-    # 2. Production: Allow active and trialing subscriptions
+    # 2. Check for Voucher/Manual expiration date
+    if user.subscription_expires_at:
+        if user.subscription_expires_at > datetime.now(timezone.utc):
+            return True
+
+    # 3. Production: Allow active and trialing subscriptions (Stripe)
     return user.subscription_status in ["active", "trialing"]

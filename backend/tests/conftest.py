@@ -40,6 +40,7 @@ def mock_user_subscription(mock_db):
     mock_user.id = 1
     mock_user.email = "sub@example.com"
     mock_user.subscription_status = "active"
+    mock_user.subscription_expires_at = None
     
     from backend.app.api.v1.auth import get_current_user
     app.dependency_overrides[get_current_user] = lambda: mock_user
@@ -53,6 +54,7 @@ def mock_user_no_subscription(mock_db):
     mock_user.id = 2
     mock_user.email = "free@example.com"
     mock_user.subscription_status = "free"
+    mock_user.subscription_expires_at = None
     
     from backend.app.api.v1.auth import get_current_user
     app.dependency_overrides[get_current_user] = lambda: mock_user

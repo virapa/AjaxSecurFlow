@@ -25,6 +25,7 @@ class User(Base):
     subscription_id: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
     subscription_status: Mapped[Optional[str]] = mapped_column(String, nullable=True) # active, past_due, etc.
     subscription_plan: Mapped[str] = mapped_column(String, default="free")
+    subscription_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -62,3 +63,19 @@ class ProcessedStripeEvent(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True) # Stripe Event ID
     event_type: Mapped[str] = mapped_column(String, index=True)
     processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class Voucher(Base):
+    """
+    Activation codes for service subscription (B2B/Offline sales).
+    """
+    __tablename__ = "vouchers"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    code: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    duration_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    
+    is_redeemed: Mapped[bool] = mapped_column(Boolean, default=False)
+    redeemed_by_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    redeemed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

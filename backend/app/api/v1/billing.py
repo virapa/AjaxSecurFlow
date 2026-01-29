@@ -8,7 +8,9 @@ from backend.app.domain.models import User
 from backend.app.services import audit_service
 from backend.app.worker.tasks import process_stripe_webhook
 from backend.app.schemas.billing import CheckoutSessionResponse, WebhookResponse, CheckoutSessionCreate
+from backend.app.schemas.voucher import VoucherRedeem, VoucherCreate, VoucherDetailed
 from backend.app.schemas.auth import ErrorMessage
+from backend.app.services import voucher_service
 
 router = APIRouter()
 
@@ -105,3 +107,48 @@ async def stripe_webhook(
         raise HTTPException(status_code=400, detail="Invalid signature")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+# --- Voucher Management ---
+
+@router.post(
+    "/vouchers/redeem",
+    summary="Redeem an activation code",
+    description="Allows a user to activate or extend their subscription using a unique voucher code."
+)
+async def redeem_voucher(
+    request: Request,
+    payload: VoucherRedeem,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    success = await voucher_service.redeem_voucher(db, current_user, payload.code)
+    if not success:
+        raise HTTPException(status_code=400, detail="Invalid, expired or already redeemed voucher code.")
+    
+    await audit_service.log_request_action(
+        db=db,
+        request=request, 
+        user_id=current_user.id,
+        action="VOUCHER_REDEEMED",
+        status_code=200,
+        severity="INFO",
+        payload={"code": payload.code}
+    )
+    
+    return {"status": "success", "message": "Voucher redeemed successfully. Your access has been extended."}
+
+@router.post(
+    "/vouchers/generate",
+    response_model=list[VoucherDetailed],
+    summary="Generate new activation codes (Admin Only)",
+    include_in_schema=True
+)
+async def generate_vouchers(
+    payload: VoucherCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Mass generate vouchers for distributors or offline sales.
+    """
+    vouchers = await voucher_service.create_vouchers(db, payload.count, payload.duration_days)
+    return vouchers
