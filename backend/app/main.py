@@ -8,6 +8,8 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown logic
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -26,6 +28,15 @@ app = FastAPI(
         "name": "Proprietary",
     },
     lifespan=lifespan
+)
+
+# CORS Configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Standardize auditing with automated middleware

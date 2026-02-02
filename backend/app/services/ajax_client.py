@@ -32,7 +32,7 @@ class AjaxClient:
             # Initialize HTTP client with base URL from settings
             self.client = httpx.AsyncClient(
                 base_url=settings.AJAX_API_BASE_URL, 
-                timeout=10.0
+                timeout=15.0
             )
             self.initialized = True
 
@@ -243,6 +243,11 @@ class AjaxClient:
                 raise AjaxAuthError("Ajax session expired.")
             
             response.raise_for_status()
+            
+            # Handle 204 No Content (common for security commands)
+            if response.status_code == 204:
+                return {"success": True}
+                
             return response.json()
             
         except httpx.HTTPStatusError as e:
@@ -267,10 +272,45 @@ class AjaxClient:
             raise AjaxAuthError("No active Ajax session for this user.")
         return user_id
 
-    async def get_hubs(self, user_email: str) -> Dict[str, Any]:
-        """Get hubs for user."""
+    async def get_hubs(self, user_email: str) -> List[Dict[str, Any]]:
+        """
+        Get hubs for user with enriched detail.
+        The base Ajax list endpoint only returns IDs, so we fetch details 
+        for each hub to provide a rich dashboard experience.
+        """
+        import asyncio
         user_id = await self._ensure_user_id(user_email)
-        return await self.request(user_email, "GET", f"/user/{user_id}/hubs")
+        hubs_list = await self.request(user_email, "GET", f"/user/{user_id}/hubs")
+        
+        if not isinstance(hubs_list, list):
+            return []
+            
+        # Fetch details for each hub in parallel for efficiency
+        tasks = [self.get_hub_details(user_email, h.get('hubId')) for h in hubs_list if h.get('hubId')]
+        details = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        enriched_hubs = []
+        for i, hub_summary in enumerate(hubs_list):
+            detail = details[i]
+            if isinstance(detail, Exception):
+                logger.error(f"Failed to fetch details for hub {hub_summary.get('hubId')}: {detail}")
+                # Fallback to basic info
+                hub_data = hub_summary
+            else:
+                # Merge summary and detail
+                hub_data = {**hub_summary, **detail}
+            
+            # Ensure 'online' status is calculated if missing (Backend logic for Frontend)
+            if hub_data.get('online') is None:
+                # If there are active communication channels, the hub is online
+                active_channels = hub_data.get('activeChannels', [])
+                # Also, if we have a state (ARMED/DISARMED), it means it's communicating
+                has_state = hub_data.get('state') is not None
+                hub_data['online'] = len(active_channels) > 0 or has_state
+                
+            enriched_hubs.append(hub_data)
+            
+        return enriched_hubs
 
     async def get_hub_details(self, user_email: str, hub_id: str) -> Dict[str, Any]:
         """Get hub detail."""
@@ -288,10 +328,23 @@ class AjaxClient:
         user_id = await self._ensure_user_id(user_email)
         return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/groups")
 
-    async def get_hub_devices(self, user_email: str, hub_id: str) -> Dict[str, Any]:
-        """Get hub devices with enriched state."""
+    async def get_hub_devices(self, user_email: str, hub_id: str) -> List[Dict[str, Any]]:
+        """Get hub devices with enriched state, flattened for easy use."""
         user_id = await self._ensure_user_id(user_email)
-        return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/devices?enrich=true")
+        raw_response = await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/devices?enrich=true")
+        
+        # Raw response is a list of {deviceId: ..., properties: {...}}
+        if not isinstance(raw_response, list):
+            return []
+            
+        flattened = []
+        for item in raw_response:
+            device_id = item.get("deviceId")
+            properties = item.get("properties", {})
+            # Merge deviceId into the properties dict to flatten
+            flattened.append({"deviceId": device_id, **properties})
+            
+        return flattened
 
     async def get_device_details(self, user_email: str, hub_id: str, device_id: str) -> Dict[str, Any]:
         """Get details for a specific device."""
@@ -299,9 +352,29 @@ class AjaxClient:
         return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/devices/{device_id}")
 
     async def set_arm_state(self, user_email: str, hub_id: str, arm_state: int, group_id: Optional[str] = None) -> Dict[str, Any]:
-        """Set arm state for hub or group."""
+        """Set arm state for hub or group using the correct Swagger endpoint."""
         user_id = await self._ensure_user_id(user_email)
-        payload = {"armState": arm_state}
+        
+        # Map integer state to Swagger command strings
+        # 0: DISARMED, 1: ARMED, 2: NIGHT_MODE
+        state_map = {
+            0: "DISARM",
+            1: "ARM",
+            2: "NIGHT_MODE_ON"
+        }
+        
+        command_str = state_map.get(arm_state, "ARM")
+        
+        # Endpoint differs if controlling a specific group (partition)
         if group_id:
-            payload["groupId"] = group_id
-        return await self.request(user_email, "POST", f"/user/{user_id}/hubs/{hub_id}/commands/set-arm-state", json=payload)
+            endpoint = f"/user/{user_id}/hubs/{hub_id}/groups/{group_id}/commands/arming"
+        else:
+            endpoint = f"/user/{user_id}/hubs/{hub_id}/commands/arming"
+            
+        payload = {
+            "command": command_str,
+            "ignoreProblems": True  # Common practice to ensure arming even if there are non-critical warnings
+        }
+        
+        # According to Swagger, this is a PUT request
+        return await self.request(user_email, "PUT", endpoint, json=payload)

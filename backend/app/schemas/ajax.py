@@ -1,5 +1,5 @@
 from typing import List, Optional, Any, Dict
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, AliasChoices
 
 # --- Shared ---
 class AjaxResponseBase(BaseModel):
@@ -41,14 +41,14 @@ class HubJeweller(BaseModel):
 # --- Hubs ---
 class HubBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: str = Field(..., alias="hubId")
-    name: Optional[str] = Field(None, alias="hubName")
-    role: Optional[str] = Field(None, alias="hubBindingRole")
+    id: str = Field(..., validation_alias=AliasChoices("id", "hubId"))
+    name: Optional[str] = Field(None, validation_alias="hubName")
+    role: Optional[str] = Field(None, validation_alias="hubBindingRole")
 
 class HubDetail(HubBase):
-    connection_status: Optional[str] = Field(None, alias="online")
+    online: Optional[bool] = None # Map directly to 'online' boolean from Ajax
     state: Optional[str] = None # ARMED, DISARMED, etc.
-    hub_subtype: Optional[str] = Field(None, alias="hubSubtype")
+    hub_subtype: Optional[str] = Field(None, validation_alias="hubSubtype")
     timeZone: Optional[str] = None
     color: Optional[str] = None
     externallyPowered: Optional[bool] = None
@@ -60,58 +60,51 @@ class HubDetail(HubBase):
     battery: Optional[HubBattery] = None
     gsm: Optional[HubGSM] = None
     jeweller: Optional[HubJeweller] = None
-    
-    # Original simplified fields (kept for backward compatibility if used)
-    battery_level: Optional[int] = None 
-    gsm_signal: Optional[str] = None
-    ethernet_ip: Optional[str] = None
-    firmware_version: Optional[str] = None
 
 # --- Devices ---
 class DeviceBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: str
-    hub_id: Optional[str] = Field(None, alias="hubId")
-    name: Optional[str] = Field(None, alias="deviceName")
-    device_type: Optional[str] = Field(None, alias="deviceType")
-    room_id: Optional[str] = Field(None, alias="roomId")
-    group_id: Optional[str] = Field(None, alias="groupId")
+    id: str = Field(..., validation_alias=AliasChoices("id", "deviceId"))
+    hub_id: Optional[str] = Field(None, validation_alias="hubId")
+    name: Optional[str] = Field(None, validation_alias="deviceName")
+    device_type: Optional[str] = Field(None, validation_alias="deviceType")
+    room_id: Optional[str] = Field(None, validation_alias="roomId")
+    group_id: Optional[str] = Field(None, validation_alias="groupId")
 
 class DeviceDetail(DeviceBase):
     online: Optional[bool] = True
     state: Optional[str] = None
     color: Optional[str] = None
-    battery_charge_level: Optional[int] = Field(None, alias="batteryChargeLevelPercentage")
-    firmware_version: Optional[str] = Field(None, alias="firmwareVersion")
+    battery_level: Optional[int] = Field(None, validation_alias=AliasChoices("battery_level", "batteryChargeLevelPercentage"))
+    firmware_version: Optional[str] = Field(None, validation_alias=AliasChoices("firmware_version", "firmwareVersion"))
     temperature: Optional[float] = None
-    signal_level: Optional[str] = Field(None, alias="signalLevel")
+    signal_level: Optional[str] = Field(None, validation_alias=AliasChoices("signal_level", "signalLevel"))
     tampered: Optional[bool] = None
-    night_mode_arm: Optional[bool] = Field(None, alias="nightModeArm")
+    night_mode_arm: Optional[bool] = Field(None, validation_alias=AliasChoices("night_mode_arm", "nightModeArm"))
     
     # Delays
-    arm_delay: Optional[int] = Field(None, alias="armDelaySeconds")
-    alarm_delay: Optional[int] = Field(None, alias="alarmDelaySeconds")
+    arm_delay: Optional[int] = Field(None, validation_alias=AliasChoices("arm_delay", "armDelaySeconds"))
+    alarm_delay: Optional[int] = Field(None, validation_alias=AliasChoices("alarm_delay", "alarmDelaySeconds"))
     
     # CMS/Technical
-    cms_index: Optional[int] = Field(None, alias="cmsDeviceIndex")
+    cms_index: Optional[int] = Field(None, validation_alias=AliasChoices("cms_index", "cmsDeviceIndex"))
     malfunctions: List[str] = []
     
-    # Legacy/Simplified compatibility (keep if needed)
-    battery_level: Optional[int] = None # Will map from batteryChargeLevelPercentage
-    signal_strength: Optional[str] = None # Will map from signalLevel
+    # Legacy compatibility fields
+    signal_strength: Optional[str] = None 
 
 # --- Groups ---
 class GroupBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: str
-    hub_id: str
+    id: str = Field(..., validation_alias=AliasChoices("id", "groupId"))
+    hub_id: str = Field(..., validation_alias=AliasChoices("hub_id", "hubId"))
     name: str
     state: Optional[str] = None # armed, disarmed, etc.
 
 # --- Logs/Events ---
 class EventLog(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: str
+    id: str = Field(..., validation_alias=AliasChoices("id", "logId", "timestamp"))
     hub_id: str
     timestamp: str # ISO format
     event_code: str
@@ -124,7 +117,7 @@ class EventLog(BaseModel):
 class EventLogList(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     logs: List[EventLog]
-    total_count: int
+    total_count: int = Field(..., validation_alias="totalCount")
 
 from enum import IntEnum
 

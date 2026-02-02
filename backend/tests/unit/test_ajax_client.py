@@ -91,8 +91,8 @@ async def test_set_arm_state_command(ajax_client):
     mock_redis.get.side_effect = ["ajax_user_123", "cached_token"]
     
     mock_success = MagicMock()
-    mock_success.status_code = 200
-    mock_success.json.return_value = {"success": True}
+    mock_success.status_code = 204
+    # Note: request() method handles 204 by returning {"success": True}
     
     with patch.object(ajax_client, '_get_redis', new_callable=AsyncMock) as mock_get_redis, \
          patch.object(ajax_client.client, 'request', new_callable=AsyncMock) as mock_request:
@@ -103,9 +103,9 @@ async def test_set_arm_state_command(ajax_client):
              await ajax_client.set_arm_state("user@example.com", "hub_007", arm_state=1)
              
              args, kwargs = mock_request.call_args
-             assert args[0] == "POST"
-             assert "user/ajax_user_123/hubs/hub_007/commands/set-arm-state" in args[1]
-             assert kwargs["json"] == {"armState": 1}
+             assert args[0] == "PUT"
+             assert "user/ajax_user_123/hubs/hub_007/commands/arming" in args[1]
+             assert kwargs["json"] == {"command": "ARM", "ignoreProblems": True}
 
 @pytest.mark.asyncio
 async def test_refresh_session_success(ajax_client):
