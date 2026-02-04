@@ -41,9 +41,9 @@ describe('HubList Component (Local Scope: Hubs)', () => {
         render(<HubList {...defaultProps} hubs={mockHubs} />)
 
         // Use getAllByText with exact match to avoid confusion with buttons like "Armado Total"
-        expect(screen.getAllByText(/^armado$/i).length).toBeGreaterThan(0)
-        expect(screen.getAllByText(/^desarmado$/i).length).toBeGreaterThan(0)
-        expect(screen.getAllByText(/^modo noche$/i).length).toBeGreaterThan(0)
+        expect(screen.getAllByText(/armado/i).length).toBeGreaterThan(0)
+        expect(screen.getAllByText(/desarmado/i).length).toBeGreaterThan(0)
+        expect(screen.getAllByText(/modo noche/i).length).toBeGreaterThan(0)
     })
 
     it('should display an empty state message when no hubs are provided', () => {

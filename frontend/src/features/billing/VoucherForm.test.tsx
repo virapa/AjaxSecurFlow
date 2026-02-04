@@ -19,7 +19,7 @@ describe('VoucherForm Component (Local Scope: Billing)', () => {
     })
 
     it('should call billingService.redeemVoucher when form is submitted', async () => {
-        const redeemMock = vi.mocked(billingService.redeemVoucher).mockResolvedValue({ status: 'success' })
+        const redeemMock = vi.mocked(billingService.redeemVoucher).mockResolvedValue({ status: 'success', message: 'OK' })
         render(<VoucherForm />)
 
         const input = screen.getByLabelText(/código de activación/i)
@@ -33,7 +33,7 @@ describe('VoucherForm Component (Local Scope: Billing)', () => {
     })
 
     it('should display success message on successful redemption', async () => {
-        vi.mocked(billingService.redeemVoucher).mockResolvedValue({ status: 'success' })
+        vi.mocked(billingService.redeemVoucher).mockResolvedValue({ status: 'success', message: 'OK' })
         render(<VoucherForm />)
 
         fireEvent.change(screen.getByLabelText(/código de activación/i), { target: { value: 'AJAX-VALID' } })

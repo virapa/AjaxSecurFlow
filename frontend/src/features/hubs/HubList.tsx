@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { Card } from '@/shared/components/Card'
 import { Button } from '@/shared/components/Button'
 import { hubService, Hub } from './hub.service'
+import { es as t } from '@/shared/i18n/es'
 
 interface HubListProps {
     hubs: Hub[]
@@ -57,8 +58,8 @@ export const HubList: React.FC<HubListProps> = ({
     if (hubs.length === 0) {
         return (
             <Card className="text-center p-16 border-white/5 bg-white/[0.02]">
-                <h3 className="text-white font-bold mb-2">No se encontraron Hubs activos</h3>
-                <p className="text-gray-500 text-sm">Asegúrate de tener dispositivos en tu cuenta Ajax.</p>
+                <h3 className="text-white font-bold mb-2">{t.dashboard.hubs.empty}</h3>
+                <p className="text-gray-500 text-sm">{t.dashboard.hubs.emptyHint}</p>
             </Card>
         )
     }
@@ -95,27 +96,27 @@ export const HubList: React.FC<HubListProps> = ({
                                 hub.state === 'NIGHT_MODE' ? 'bg-purple-500/20 text-purple-100 border border-purple-500/30' :
                                     'bg-green-500/20 text-green-400 border border-green-500/30'
                                 }`}>
-                                {hub.state === 'ARMED' ? 'Armado' :
-                                    hub.state === 'NIGHT_MODE' ? 'Modo Noche' : 'Desarmado'}
+                                {hub.state === 'ARMED' ? t.dashboard.hubs.status.armed :
+                                    hub.state === 'NIGHT_MODE' ? t.dashboard.hubs.status.night : t.dashboard.hubs.status.disarmed}
                             </div>
                         </div>
 
                         {/* Mid Section: Telemetry Highlights */}
                         <div className="p-6 grid grid-cols-3 gap-2 border-y border-white/5">
                             <div className="text-center">
-                                <span className="block text-[8px] uppercase text-gray-600 font-bold mb-1 tracking-widest">Conexión</span>
+                                <span className="block text-[8px] uppercase text-gray-600 font-bold mb-1 tracking-widest">{t.dashboard.hubs.telemetry.connection}</span>
                                 <span className={`text-[11px] font-bold ${hub.online ? 'text-white' : 'text-gray-500'}`}>
-                                    {hub.online ? (hub.gsm?.activeSimCard !== undefined ? 'GSM + ETH' : 'Ethernet') : 'Fuera de línea'}
+                                    {hub.online ? (hub.gsm?.activeSimCard !== undefined ? 'GSM + ETH' : 'Ethernet') : t.dashboard.hubs.status.offline}
                                 </span>
                             </div>
                             <div className="text-center border-x border-white/5">
-                                <span className="block text-[8px] uppercase text-gray-600 font-bold mb-1 tracking-widest">Señal</span>
+                                <span className="block text-[8px] uppercase text-gray-600 font-bold mb-1 tracking-widest">{t.dashboard.hubs.telemetry.signal}</span>
                                 <span className={`text-[11px] font-bold ${hub.gsm?.signalLevel === 'STRONG' ? 'text-green-400' : 'text-yellow-500'}`}>
-                                    {hub.gsm?.signalLevel || 'Excelente'}
+                                    {hub.gsm?.signalLevel || t.dashboard.hubs.telemetry.excellent}
                                 </span>
                             </div>
                             <div className="text-center">
-                                <span className="block text-[8px] uppercase text-gray-600 font-bold mb-1 tracking-widest">Batería</span>
+                                <span className="block text-[8px] uppercase text-gray-600 font-bold mb-1 tracking-widest">{t.dashboard.hubs.telemetry.battery}</span>
                                 <span className="text-[11px] font-bold text-white">
                                     {hub.battery?.chargeLevelPercentage || hub.battery_level || 100}%
                                 </span>
@@ -128,11 +129,11 @@ export const HubList: React.FC<HubListProps> = ({
                                 <div className="flex items-center gap-2">
                                     <span className={`h-2 w-2 rounded-full ${hub.online ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                        {hub.online ? 'Hub Conectado' : 'Hub Desconectado'}
+                                        {hub.online ? t.dashboard.hubs.status.online : t.dashboard.hubs.status.offline}
                                     </span>
                                 </div>
                                 {isActionLoading === hub.id && (
-                                    <span className="text-[9px] font-bold text-blue-500 animate-pulse uppercase">Enviando...</span>
+                                    <span className="text-[9px] font-bold text-blue-500 animate-pulse uppercase">{t.dashboard.hubs.telemetry.sending}</span>
                                 )}
                             </div>
 
@@ -146,7 +147,7 @@ export const HubList: React.FC<HubListProps> = ({
                                             onClick={(e) => handleArmAction(e, hub.id, 2)}
                                             className="rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20"
                                         >
-                                            🌙 Modo Noche
+                                            {t.dashboard.hubs.telemetry.nightMode}
                                         </Button>
                                         <Button
                                             size="sm"
@@ -154,7 +155,7 @@ export const HubList: React.FC<HubListProps> = ({
                                             onClick={(e) => handleArmAction(e, hub.id, 0)}
                                             className="rounded-xl font-bold text-[10px] uppercase tracking-tighter bg-white/5 hover:bg-white/10 text-white border-white/10"
                                         >
-                                            🔓 Desarmar
+                                            {t.dashboard.hubs.telemetry.disarm}
                                         </Button>
                                     </>
                                 ) : hub.state === 'NIGHT_MODE' ? (
@@ -165,7 +166,7 @@ export const HubList: React.FC<HubListProps> = ({
                                             onClick={(e) => handleArmAction(e, hub.id, 1)}
                                             className="rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20"
                                         >
-                                            🛡️ Armado Total
+                                            {t.dashboard.hubs.telemetry.armTotal}
                                         </Button>
                                         <Button
                                             size="sm"
@@ -173,7 +174,7 @@ export const HubList: React.FC<HubListProps> = ({
                                             onClick={(e) => handleArmAction(e, hub.id, 0)}
                                             className="rounded-xl font-bold text-[10px] uppercase tracking-tighter bg-white/5 hover:bg-white/10 text-white border-white/10"
                                         >
-                                            🔓 Desarmar
+                                            {t.dashboard.hubs.telemetry.disarm}
                                         </Button>
                                     </>
                                 ) : (
@@ -184,7 +185,7 @@ export const HubList: React.FC<HubListProps> = ({
                                             onClick={(e) => handleArmAction(e, hub.id, 1)}
                                             className="rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20"
                                         >
-                                            🛡️ Armado Total
+                                            {t.dashboard.hubs.telemetry.armTotal}
                                         </Button>
                                         <Button
                                             size="sm"
@@ -192,7 +193,7 @@ export const HubList: React.FC<HubListProps> = ({
                                             onClick={(e) => handleArmAction(e, hub.id, 2)}
                                             className="rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20"
                                         >
-                                            🌙 Modo Noche
+                                            {t.dashboard.hubs.telemetry.nightMode}
                                         </Button>
                                     </>
                                 )}

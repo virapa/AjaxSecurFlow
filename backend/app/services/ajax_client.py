@@ -1,7 +1,7 @@
 import httpx
 import redis.asyncio as redis
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from backend.app.core.config import settings
@@ -331,18 +331,40 @@ class AjaxClient:
     async def get_hub_devices(self, user_email: str, hub_id: str) -> List[Dict[str, Any]]:
         """Get hub devices with enriched state, flattened for easy use."""
         user_id = await self._ensure_user_id(user_email)
-        raw_response = await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/devices?enrich=true")
+        endpoint = f"/user/{user_id}/hubs/{hub_id}/devices?enrich=true"
+        logger.info(f"Requesting devices from Ajax: {endpoint}")
+        raw_response = await self.request(user_email, "GET", endpoint)
         
         # Raw response is a list of {deviceId: ..., properties: {...}}
         if not isinstance(raw_response, list):
+            logger.warning(f"Unexpected response type for devices: {type(raw_response)}")
             return []
             
+        logger.info(f"Received {len(raw_response)} devices from Ajax API")
         flattened = []
         for item in raw_response:
-            device_id = item.get("deviceId")
+            # When enrich=true, Ajax might return 'id' instead of 'deviceId' at the root
+            device_id = item.get("deviceId") or item.get("id")
             properties = item.get("properties", {})
+            
+            if not device_id:
+                logger.warning(f"Device item missing ID: {item}")
+                continue
+                
             # Merge deviceId into the properties dict to flatten
-            flattened.append({"deviceId": device_id, **properties})
+            # Ensure properties has base fields if missing
+            flattened_item = {
+                "deviceId": device_id,
+                **properties
+            }
+            
+            # Additional fallback for commonly used fields at root in enriched responses
+            if "deviceName" in item and "deviceName" not in flattened_item:
+                flattened_item["deviceName"] = item["deviceName"]
+            if "deviceType" in item and "deviceType" not in flattened_item:
+                flattened_item["deviceType"] = item["deviceType"]
+                
+            flattened.append(flattened_item)
             
         return flattened
 

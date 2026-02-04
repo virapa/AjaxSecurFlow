@@ -10,6 +10,9 @@ from backend.app.services.billing_service import is_subscription_active
 from backend.app.services import audit_service
 from backend.app.schemas import ajax as schemas
 from backend.app.schemas.auth import ErrorMessage
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -239,12 +242,30 @@ async def read_hub_logs(
 
     try:
         client = AjaxClient()
-        return await client.get_hub_logs(
+        raw_data = await client.get_hub_logs(
             user_email=current_user.email, 
             hub_id=hub_id, 
             limit=limit, 
             offset=offset
         )
+        
+        # Diagnostic logging
+        logger.info(f"raw_data type: {type(raw_data)}")
+        if isinstance(raw_data, list):
+            logger.info(f"raw_data is a list of length {len(raw_data)}")
+            # If it's a list, we might need to wrap it for EventLogList
+            validated_data = {"logs": raw_data, "total_count": len(raw_data)}
+        else:
+            logger.info(f"raw_data keys: {raw_data.keys() if isinstance(raw_data, dict) else 'N/A'}")
+            validated_data = raw_data
+
+        # Explicitly validate to capture detailed errors in logs
+        try:
+            return schemas.EventLogList.model_validate(validated_data)
+        except Exception as ve:
+            logger.error(f"Pydantic Validation Error for Hub Logs ({hub_id}): {ve}")
+            raise ve
+            
     except Exception as e:
         handle_ajax_error(e)
 

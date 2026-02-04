@@ -145,8 +145,8 @@ export const LandingPage: React.FC = () => {
                         <div
                             key={idx}
                             className={`relative rounded-3xl border p-8 text-left transition-all ${plan.recommended
-                                    ? 'border-blue-500/50 bg-[#0ea5e9]/5 shadow-2xl shadow-blue-500/10 scale-105'
-                                    : 'border-white/5 bg-white/[0.02] hover:border-white/10'
+                                ? 'border-blue-500/50 bg-[#0ea5e9]/5 shadow-2xl shadow-blue-500/10 scale-105'
+                                : 'border-white/5 bg-white/[0.02] hover:border-white/10'
                                 }`}
                         >
                             {plan.recommended && (
@@ -173,7 +173,7 @@ export const LandingPage: React.FC = () => {
                             </ul>
 
                             <Button
-                                variant={plan.recommended ? 'default' : 'ghost'}
+                                variant={plan.recommended ? 'primary' : 'ghost'}
                                 className={`w-full ${!plan.recommended ? 'border border-white/10 hover:bg-white/5' : ''}`}
                             >
                                 {plan.recommended ? t.common.contactSales : t.common.startFree}

@@ -1,12 +1,18 @@
 from fastapi import HTTPException
 import httpx
+import logging
+import traceback
 from backend.app.services.ajax_client import AjaxAuthError
+
+logger = logging.getLogger(__name__)
 
 def handle_ajax_error(e: Exception) -> None:
     """
     Standardize exception handling for Ajax API calls.
     Prevents leaking internal upstream URLs or session details.
     """
+    logger.error(f"Ajax Error Caught: {type(e).__name__}: {str(e)}")
+    logger.error(traceback.format_exc())
     if isinstance(e, AjaxAuthError):
         # Keep it consistent with authentication hardening
         raise HTTPException(status_code=401, detail="Invalid credentials")

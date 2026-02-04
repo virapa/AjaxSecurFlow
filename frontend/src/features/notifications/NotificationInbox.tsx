@@ -50,7 +50,7 @@ export const NotificationInbox: React.FC = () => {
     if (notifications.length === 0) {
         return (
             <Card className="text-center p-12">
-                <p className="text-gray-500">No tienes notificaciones en este momento.</p>
+                <p className="text-gray-500">{t.dashboard.notifications.empty}</p>
             </Card>
         )
     }

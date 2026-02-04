@@ -112,6 +112,10 @@ export const es = {
             support: 'Soporte',
             logout: 'Cerrar Sesión'
         },
+        profile: {
+            adminUser: 'Usuario Administrador',
+            role: 'Ajax Systems Pro'
+        },
         stats: {
             activeHubs: 'Hubs Activos',
             securityAlerts: 'Alertas de Seguridad',
@@ -122,11 +126,35 @@ export const es = {
             past24h: 'Últimas 24h',
             uptime: 'Tiempos de actividad',
             active: 'Activo',
-            manageBilling: 'GESTIONAR FACTURACIÓN'
+            manageBilling: 'GESTIONAR FACTURACIÓN',
+            enterprise: 'Misión Crítica',
+            connectivityValue: '99.9%'
         },
         hubs: {
             title: 'Estado de Hubs Activos',
-            viewAll: 'Ver todos los dispositivos'
+            viewAll: 'Ver todos los dispositivos',
+            empty: 'No se encontraron Hubs activos',
+            emptyHint: 'Asegúrate de tener dispositivos en tu cuenta Ajax.',
+            status: {
+                armed: 'Armado',
+                disarmed: 'Desarmado',
+                night: 'Modo Noche',
+                online: 'Hub Conectado',
+                offline: 'Hub Desconectado'
+            },
+            telemetry: {
+                connection: 'Conexión',
+                signal: 'Señal',
+                battery: 'Batería',
+                excellent: 'Excelente',
+                sending: 'Enviando...',
+                armTotal: '🛡️ Armado Total',
+                disarm: '🔓 Desarmar',
+                nightMode: '🌙 Modo Noche'
+            }
+        },
+        notifications: {
+            empty: 'No tienes notificaciones en este momento.'
         },
         telemetry: {
             title: 'Telemetría del Dispositivo',
@@ -139,11 +167,13 @@ export const es = {
                 temp: 'Temp',
                 action: 'Acción',
                 details: 'Detalles'
-            }
+            },
+            empty: 'No se han detectado dispositivos activos'
         },
         events: {
             title: 'Flujo de Eventos',
-            live: 'En Vivo'
+            live: 'En Vivo',
+            empty: 'No hay eventos recientes'
         }
     }
 }

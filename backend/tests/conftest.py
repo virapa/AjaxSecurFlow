@@ -5,13 +5,16 @@ import httpx
 from httpx import AsyncClient
 from unittest.mock import AsyncMock
 
-# Set environment variables for testing BEFORE importing the app
-os.environ["POSTGRES_USER"] = "postgres"
-os.environ["POSTGRES_PASSWORD"] = "postgres"
-os.environ["POSTGRES_DB"] = "ajax_proxy"
-os.environ["POSTGRES_HOST"] = "localhost"
-os.environ["DATABASE_URL"] = "postgresql+asyncpg://postgres:postgres@localhost:5432/ajax_proxy"
-os.environ["REDIS_URL"] = "redis://localhost:6379/0"
+# Set environment variables for testing ONLY if not already defined (Docker-friendly)
+os.environ.setdefault("POSTGRES_USER", "postgres")
+os.environ.setdefault("POSTGRES_PASSWORD", "postgres")
+os.environ.setdefault("POSTGRES_DB", "ajax_proxy")
+os.environ.setdefault("POSTGRES_HOST", "localhost")
+
+if not os.environ.get("DATABASE_URL"):
+    os.environ["DATABASE_URL"] = f"postgresql+asyncpg://{os.environ['POSTGRES_USER']}:{os.environ['POSTGRES_PASSWORD']}@{os.environ['POSTGRES_HOST']}:5432/{os.environ['POSTGRES_DB']}"
+
+os.environ.setdefault("REDIS_URL", f"redis://{os.environ['POSTGRES_HOST']}:6379/0")
 os.environ["AJAX_API_KEY"] = "test_key"
 os.environ["AJAX_LOGIN"] = "test_login"
 os.environ["AJAX_PASSWORD"] = "test_password"

@@ -64,23 +64,23 @@ class HubDetail(HubBase):
 # --- Devices ---
 class DeviceBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: str = Field(..., validation_alias=AliasChoices("id", "deviceId"))
-    hub_id: Optional[str] = Field(None, validation_alias="hubId")
-    name: Optional[str] = Field(None, validation_alias="deviceName")
-    device_type: Optional[str] = Field(None, validation_alias="deviceType")
-    room_id: Optional[str] = Field(None, validation_alias="roomId")
-    group_id: Optional[str] = Field(None, validation_alias="groupId")
+    id: str = Field(..., validation_alias=AliasChoices("id", "deviceId", "DeviceId"), serialization_alias="id")
+    hub_id: Optional[str] = Field(None, validation_alias=AliasChoices("hubId", "hub_id"), serialization_alias="hub_id")
+    name: Optional[str] = Field(None, validation_alias=AliasChoices("deviceName", "device_name", "name"), serialization_alias="name")
+    device_type: Optional[str] = Field(None, validation_alias=AliasChoices("deviceType", "device_type", "type"), serialization_alias="device_type")
+    room_id: Optional[str] = Field(None, validation_alias=AliasChoices("roomId", "room_id"), serialization_alias="room_id")
+    group_id: Optional[str] = Field(None, validation_alias=AliasChoices("groupId", "group_id"), serialization_alias="group_id")
 
 class DeviceDetail(DeviceBase):
-    online: Optional[bool] = True
-    state: Optional[str] = None
-    color: Optional[str] = None
-    battery_level: Optional[int] = Field(None, validation_alias=AliasChoices("battery_level", "batteryChargeLevelPercentage"))
-    firmware_version: Optional[str] = Field(None, validation_alias=AliasChoices("firmware_version", "firmwareVersion"))
-    temperature: Optional[float] = None
-    signal_level: Optional[str] = Field(None, validation_alias=AliasChoices("signal_level", "signalLevel"))
-    tampered: Optional[bool] = None
-    night_mode_arm: Optional[bool] = Field(None, validation_alias=AliasChoices("night_mode_arm", "nightModeArm"))
+    online: Optional[bool] = Field(True, serialization_alias="online")
+    state: Optional[str] = Field(None, serialization_alias="state")
+    color: Optional[str] = Field(None, serialization_alias="color")
+    battery_level: Optional[int] = Field(None, validation_alias=AliasChoices("battery_level", "batteryChargeLevelPercentage"), serialization_alias="battery_level")
+    firmware_version: Optional[str] = Field(None, validation_alias=AliasChoices("firmware_version", "firmwareVersion"), serialization_alias="firmware_version")
+    temperature: Optional[float] = Field(None, serialization_alias="temperature")
+    signal_level: Optional[str] = Field(None, validation_alias=AliasChoices("signal_level", "signalLevel"), serialization_alias="signal_level")
+    tampered: Optional[bool] = Field(None, serialization_alias="tampered")
+    night_mode_arm: Optional[bool] = Field(None, validation_alias=AliasChoices("night_mode_arm", "nightModeArm"), serialization_alias="night_mode_arm")
     
     # Delays
     arm_delay: Optional[int] = Field(None, validation_alias=AliasChoices("arm_delay", "armDelaySeconds"))
@@ -104,20 +104,21 @@ class GroupBase(BaseModel):
 # --- Logs/Events ---
 class EventLog(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: str = Field(..., validation_alias=AliasChoices("id", "logId", "timestamp"))
-    hub_id: str
-    timestamp: str # ISO format
-    event_code: str
-    event_desc: Optional[str] = None
-    user_name: Optional[str] = None
-    group_name: Optional[str] = None
-    room_name: Optional[str] = None
-    device_name: Optional[str] = None
+    id: Any = Field(None, validation_alias=AliasChoices("id", "logId", "eventId", "timestamp"))
+    hub_id: Any = Field(None, validation_alias=AliasChoices("hub_id", "hubId"))
+    timestamp: Any = Field(None, validation_alias=AliasChoices("timestamp", "time"))
+    event_code: Any = Field(None, validation_alias=AliasChoices("event_code", "eventCode"))
+    event_desc: Any = Field("", validation_alias=AliasChoices("event_desc", "description", "eventText"))
+    user_name: Optional[str] = Field(None, validation_alias=AliasChoices("user_name", "userName"))
+    group_name: Optional[str] = Field(None, validation_alias=AliasChoices("group_name", "groupName"))
+    room_name: Optional[str] = Field(None, validation_alias=AliasChoices("room_name", "roomName"))
+    device_name: Optional[str] = Field(None, validation_alias=AliasChoices("device_name", "deviceName"))
+    event_source: Optional[str] = Field(None, validation_alias=AliasChoices("eventSource", "source"))
     
 class EventLogList(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    logs: List[EventLog]
-    total_count: int = Field(..., validation_alias="totalCount")
+    logs: List[EventLog] = []
+    total_count: int = Field(0, validation_alias=AliasChoices("total_count", "totalCount"))
 
 from enum import IntEnum
 

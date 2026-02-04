@@ -24,14 +24,15 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId }) => {
         const fetchLogs = async () => {
             try {
                 const response = await logService.getHubLogs(hubId, 10)
+                if (!response) {
+                    console.log(`[EventFeed] Hub logs not supported for hub ${hubId}`)
+                    setLogs([])
+                    return
+                }
                 setLogs(response.logs || [])
             } catch (err: any) {
-                // Ignore 404 errors for logs (hubs without history support)
-                if (err.status === 404 || err.message?.includes('404')) {
-                    setLogs([])
-                } else {
-                    console.error('Failed to fetch logs', err)
-                }
+                console.error('Unexpected error fetching logs:', err)
+                setLogs([])
             } finally {
                 setIsLoading(false)
             }
@@ -91,7 +92,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId }) => {
                     </div>
                 )) : (
                     <div className="h-full flex flex-col items-center justify-center text-gray-700 italic text-[10px] uppercase tracking-widest py-20">
-                        <span>📭 No hay eventos recientes</span>
+                        <span>📭 {t.dashboard.events.empty}</span>
                     </div>
                 )}
             </div>

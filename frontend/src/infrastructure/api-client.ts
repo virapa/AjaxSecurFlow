@@ -49,7 +49,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
         }
 
         if (!response.ok) {
-            console.error(`[API] Request failed with status ${response.status}`)
+            if (response.status === 404) {
+                // Silently handle 404s for optional features (like hub logs)
+                console.log(`[API] Resource not found (404) at ${endpoint}. Returning null.`)
+                return null as any
+            }
+
+            console.error(`[API] Request failed with status ${response.status} at ${endpoint}`)
             // If 401, clear token and redirect (standard security)
             if (response.status === 401 && typeof window !== 'undefined') {
                 localStorage.removeItem('ajax_access_token')
@@ -93,6 +99,13 @@ export const apiClient = {
             ...options,
             method: 'PUT',
             body: JSON.stringify(body)
+        }),
+
+    patch: <T>(endpoint: string, body?: any, options?: RequestInit) =>
+        request<T>(endpoint, {
+            ...options,
+            method: 'PATCH',
+            body: body ? JSON.stringify(body) : undefined
         }),
 
     delete: <T>(endpoint: string, options?: RequestInit) =>

@@ -23,10 +23,18 @@ export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
 
         const fetchDevices = async () => {
             try {
+                console.log(`[DeviceTelemetry] Fetching devices for hub: ${hubId}`)
                 const data = await deviceService.getHubDevices(hubId)
+                if (!data) {
+                    console.log(`[DeviceTelemetry] Hub returned null for devices list (Hub: ${hubId})`)
+                    setDevices([])
+                    return
+                }
+                console.log(`[DeviceTelemetry] Successfully fetched ${data.length} devices`)
                 setDevices(data)
-            } catch (err) {
-                console.error('Failed to fetch devices', err)
+            } catch (err: any) {
+                console.error(`[DeviceTelemetry] Critical failure fetching devices for hub ${hubId}:`, err)
+                setDevices([])
             } finally {
                 setIsLoading(false)
             }
@@ -101,7 +109,7 @@ export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
                     )) : (
                         <tr>
                             <td colSpan={6} className="px-6 py-20 text-center text-gray-700 italic text-[10px] uppercase tracking-widest">
-                                No se han detectado dispositivos activos
+                                {t.dashboard.telemetry.empty}
                             </td>
                         </tr>
                     )}

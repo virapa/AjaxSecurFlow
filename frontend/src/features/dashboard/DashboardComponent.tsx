@@ -142,8 +142,8 @@ export const DashboardComponent: React.FC = () => {
                                 className="flex items-center gap-3 hover:bg-white/5 p-2 rounded-2xl transition-all"
                             >
                                 <div className="text-right hidden sm:block">
-                                    <p className="text-xs font-bold text-white">Admin User</p>
-                                    <p className="text-[9px] font-medium text-gray-500">Ajax Systems Pro</p>
+                                    <p className="text-xs font-bold text-white">{t.dashboard.profile.adminUser}</p>
+                                    <p className="text-[9px] font-medium text-gray-500">{t.dashboard.profile.role}</p>
                                 </div>
                                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-xs shadow-lg">👤</div>
                             </button>
@@ -181,8 +181,8 @@ export const DashboardComponent: React.FC = () => {
                             progress={totalHubsCount > 0 ? (activeHubsCount / totalHubsCount) * 100 : 0}
                         />
                         <StatCard label={t.dashboard.stats.securityAlerts} value="0" trend={t.dashboard.stats.past24h} color="blue" progress={0} />
-                        <StatCard label={t.dashboard.stats.connectivity} value="99.9%" trend={t.dashboard.stats.uptime} color="cyan" progress={99.9} />
-                        <StatCard label={t.dashboard.stats.planStatus} value="Enterprise" trend={t.dashboard.stats.active} color="indigo" special={t.dashboard.stats.manageBilling} progress={100} />
+                        <StatCard label={t.dashboard.stats.connectivity} value={t.dashboard.stats.connectivityValue} trend={t.dashboard.stats.uptime} color="cyan" progress={99.9} />
+                        <StatCard label={t.dashboard.stats.planStatus} value={t.dashboard.stats.enterprise} trend={t.dashboard.stats.active} color="indigo" special={t.dashboard.stats.manageBilling} progress={100} />
                     </div>
 
                     <div className="grid grid-cols-12 gap-8">
