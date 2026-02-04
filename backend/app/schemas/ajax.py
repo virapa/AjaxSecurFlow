@@ -8,6 +8,11 @@ class AjaxResponseBase(BaseModel):
     success: bool = True
     data: Any
 
+class ImageUrls(BaseModel):
+    small: Optional[str] = None
+    medium: Optional[str] = None
+    big: Optional[str] = None
+
 # --- Hub Nested Models ---
 class HubFirmware(BaseModel):
     version: Optional[str] = None
@@ -101,24 +106,34 @@ class GroupBase(BaseModel):
     name: str
     state: Optional[str] = None # armed, disarmed, etc.
 
+# --- Rooms ---
+class Room(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    id: str = Field(..., validation_alias=AliasChoices("id", "roomId"))
+    roomName: str
+    imageUrls: Optional[ImageUrls] = None
+
 # --- Logs/Events ---
 class EventLog(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: Any = Field(None, validation_alias=AliasChoices("id", "logId", "eventId", "timestamp"))
-    hub_id: Any = Field(None, validation_alias=AliasChoices("hub_id", "hubId"))
-    timestamp: Any = Field(None, validation_alias=AliasChoices("timestamp", "time"))
-    event_code: Any = Field(None, validation_alias=AliasChoices("event_code", "eventCode"))
-    event_desc: Any = Field("", validation_alias=AliasChoices("event_desc", "description", "eventText"))
-    user_name: Optional[str] = Field(None, validation_alias=AliasChoices("user_name", "userName"))
-    group_name: Optional[str] = Field(None, validation_alias=AliasChoices("group_name", "groupName"))
-    room_name: Optional[str] = Field(None, validation_alias=AliasChoices("room_name", "roomName"))
-    device_name: Optional[str] = Field(None, validation_alias=AliasChoices("device_name", "deviceName"))
-    event_source: Optional[str] = Field(None, validation_alias=AliasChoices("eventSource", "source"))
     
-class EventLogList(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    logs: List[EventLog] = []
-    total_count: int = Field(0, validation_alias=AliasChoices("total_count", "totalCount"))
+    eventId: str
+    hubId: str
+    hubName: Optional[str] = None
+    eventType: Optional[str] = None
+    eventTypeV2: Optional[str] = None
+    eventCode: Optional[str] = None
+    sourceObjectType: Optional[str] = None
+    sourceObjectId: Optional[str] = None
+    sourceObjectName: Optional[str] = None
+    sourceRoomId: Optional[str] = None
+    sourceRoomName: Optional[str] = None
+    timestamp: int
+    eventTag: Optional[str] = None
+    transition: Optional[str] = None
+    additionalData: Optional[Dict[str, Any]] = None
+    additionalDataV2: Optional[List[Dict[str, Any]]] = None
+    eventSource: Optional[str] = None
 
 from enum import IntEnum
 

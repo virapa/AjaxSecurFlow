@@ -328,6 +328,17 @@ class AjaxClient:
         user_id = await self._ensure_user_id(user_email)
         return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/groups")
 
+    async def get_hub_rooms(self, user_email: str, hub_id: str) -> List[Dict[str, Any]]:
+        """Get list of rooms for a specific hub."""
+        user_id = await self._ensure_user_id(user_email)
+        response = await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/rooms")
+        return response if isinstance(response, list) else response.get("rooms", [])
+
+    async def get_room_details(self, user_email: str, hub_id: str, room_id: str) -> Dict[str, Any]:
+        """Get detailed info for a specific room."""
+        user_id = await self._ensure_user_id(user_email)
+        return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/rooms/{room_id}")
+
     async def get_hub_devices(self, user_email: str, hub_id: str) -> List[Dict[str, Any]]:
         """Get hub devices with enriched state, flattened for easy use."""
         user_id = await self._ensure_user_id(user_email)

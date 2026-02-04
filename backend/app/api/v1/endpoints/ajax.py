@@ -137,6 +137,65 @@ async def read_hub_groups(
         handle_ajax_error(e)
 
 @router.get(
+    "/hubs/{hub_id}/rooms", 
+    response_model=List[schemas.Room],
+    summary="List Hub Rooms",
+    responses={
+        403: {"model": ErrorMessage, "description": "Subscription inactive"},
+        502: {"model": ErrorMessage, "description": "Upstream Ajax API error"}
+    }
+)
+async def read_hub_rooms(
+    hub_id: str = Path(..., description="ID of the Hub to query rooms from", example="0004C602"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Retrieve the list of rooms configured for a specific hub.
+    """
+    if not is_subscription_active(current_user):
+        raise HTTPException(status_code=403, detail="Active subscription required")
+
+    try:
+        client = AjaxClient()
+        response = await client.get_hub_rooms(user_email=current_user.email, hub_id=hub_id)
+        return response
+    except Exception as e:
+        handle_ajax_error(e)
+
+@router.get(
+    "/hubs/{hub_id}/rooms/{room_id}", 
+    response_model=schemas.Room,
+    summary="Get Room Detail",
+    responses={
+        404: {"model": ErrorMessage, "description": "Room not found"},
+        502: {"model": ErrorMessage, "description": "Upstream Ajax API error"}
+    }
+)
+async def read_room_detail(
+    hub_id: str = Path(..., description="ID of the Hub", example="0004C602"),
+    room_id: str = Path(..., description="ID of the Room", example="1"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get all details for a specific room within a hub.
+    """
+    if not is_subscription_active(current_user):
+        raise HTTPException(status_code=403, detail="Active subscription required")
+
+    try:
+        client = AjaxClient()
+        data = await client.get_room_details(
+            user_email=current_user.email, 
+            hub_id=hub_id, 
+            room_id=room_id
+        )
+        return data
+    except Exception as e:
+        handle_ajax_error(e)
+
+@router.get(
     "/hubs/{hub_id}/devices", 
     response_model=List[schemas.DeviceDetail],
     summary="List Hub Devices",
@@ -211,7 +270,7 @@ async def read_device_detail(
 
 @router.get(
     "/hubs/{hub_id}/logs", 
-    response_model=schemas.EventLogList,
+    response_model=List[schemas.EventLog],
     summary="Get Hub Event Logs",
     responses={
         403: {"model": ErrorMessage, "description": "Subscription inactive"},
@@ -227,15 +286,7 @@ async def read_hub_logs(
 ):
     """
     Retrieve event logs and history for a specific hub with pagination support.
-
-    Args:
-        hub_id: Unique identifier of the hub.
-        limit: Max number of logs to return.
-        offset: Pagination offset.
-        current_user: The authenticated user.
-
-    Returns:
-        schemas.EventLogList: Container with log entries and total count.
+    Returns the raw list of events as provided by the Ajax API.
     """
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
@@ -249,19 +300,20 @@ async def read_hub_logs(
             offset=offset
         )
         
-        # Diagnostic logging
-        logger.info(f"raw_data type: {type(raw_data)}")
+        # Ensure we are returning a list
+        logs_list = []
         if isinstance(raw_data, list):
-            logger.info(f"raw_data is a list of length {len(raw_data)}")
-            # If it's a list, we might need to wrap it for EventLogList
-            validated_data = {"logs": raw_data, "total_count": len(raw_data)}
+            logs_list = raw_data
+        elif isinstance(raw_data, dict) and "logs" in raw_data:
+            logs_list = raw_data["logs"]
         else:
-            logger.info(f"raw_data keys: {raw_data.keys() if isinstance(raw_data, dict) else 'N/A'}")
-            validated_data = raw_data
+            # Fallback for unexpected formats
+            logger.warning(f"Unexpected logs format from Ajax API: {type(raw_data)}")
+            logs_list = []
 
         # Explicitly validate to capture detailed errors in logs
         try:
-            return schemas.EventLogList.model_validate(validated_data)
+            return [schemas.EventLog.model_validate(log) for log in logs_list]
         except Exception as ve:
             logger.error(f"Pydantic Validation Error for Hub Logs ({hub_id}): {ve}")
             raise ve
