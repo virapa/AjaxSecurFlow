@@ -26,3 +26,4 @@ current_logs.txt
 !requirements.txt
 *.py_backup
 ajax_client_container.py
+diag*.py
