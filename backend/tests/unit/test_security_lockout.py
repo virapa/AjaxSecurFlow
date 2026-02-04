@@ -13,7 +13,7 @@ async def test_track_login_failure_increments_and_bans():
     mock_redis.incr.side_effect = [1, 2, 3, 4, 5]
     mock_redis.exists.return_value = False
     
-    with patch("backend.app.services.security_service.get_redis", return_value=mock_redis):
+    with patch("backend.app.services.security_service.get_redis", side_effect=AsyncMock(return_value=mock_redis)):
         # 4 attempts should not ban
         for i in range(4):
             count = await security_service.track_login_failure("127.0.0.1")
@@ -34,7 +34,7 @@ async def test_check_ip_lockout_returns_true_if_banned():
     mock_redis = AsyncMock()
     mock_redis.exists.return_value = True
     
-    with patch("backend.app.services.security_service.get_redis", return_value=mock_redis):
+    with patch("backend.app.services.security_service.get_redis", side_effect=AsyncMock(return_value=mock_redis)):
         is_locked = await security_service.check_ip_lockout("1.2.3.4")
         assert is_locked is True
         mock_redis.exists.assert_called_with("lockout:1.2.3.4")
@@ -46,6 +46,6 @@ async def test_reset_login_failures_deletes_key():
     """
     mock_redis = AsyncMock()
     
-    with patch("backend.app.services.security_service.get_redis", return_value=mock_redis):
+    with patch("backend.app.services.security_service.get_redis", side_effect=AsyncMock(return_value=mock_redis)):
         await security_service.reset_login_failures("1.1.1.1")
         mock_redis.delete.assert_called_with("failed_attempts:1.1.1.1")

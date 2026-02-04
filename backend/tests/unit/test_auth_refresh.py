@@ -5,8 +5,8 @@ import jwt
 from httpx import AsyncClient
 from backend.app.main import app
 from unittest.mock import AsyncMock, patch
-from backend.app.core.config import settings
 from datetime import datetime, timedelta, timezone
+from backend.app.api.deps import get_db, get_redis
 
 @pytest_asyncio.fixture
 async def client():
@@ -16,10 +16,10 @@ async def client():
 @pytest.fixture
 def mock_db():
     mock_session = AsyncMock()
-    from backend.app.core.db import get_db
     app.dependency_overrides[get_db] = lambda: mock_session
     yield mock_session
-    app.dependency_overrides = {}
+    if get_db in app.dependency_overrides:
+        del app.dependency_overrides[get_db]
 
 @pytest.mark.asyncio
 async def test_refresh_token_rotation_success(client, mock_db):
@@ -33,12 +33,13 @@ async def test_refresh_token_rotation_success(client, mock_db):
     refresh_token = create_refresh_token(subject=user_email, jti=old_jti)
     
     # Mock Redis for blacklist check and setting
-    with patch("backend.app.api.v1.auth.get_redis") as mock_get_redis, \
-         patch("backend.app.api.v1.auth.crud_user.get_user_by_email") as mock_get_user:
-        
-        mock_redis = AsyncMock()
-        mock_redis.exists.return_value = False # Not revoked yet
-        mock_get_redis.return_value = mock_redis
+    from backend.app.crud import user as crud_user
+    
+    mock_redis = AsyncMock()
+    mock_redis.exists.return_value = False # Not revoked yet
+    app.dependency_overrides[get_redis] = lambda: mock_redis
+    
+    with patch("backend.app.crud.user.get_user_by_email") as mock_get_user:
         
         mock_user = AsyncMock()
         mock_user.email = user_email
@@ -59,6 +60,9 @@ async def test_refresh_token_rotation_success(client, mock_db):
         mock_redis.set.assert_called()
         calls = [call[0][0] for call in mock_redis.set.call_args_list]
         assert f"token_blacklist:{old_jti}" in calls
+    
+    if get_redis in app.dependency_overrides:
+        del app.dependency_overrides[get_redis]
 
 @pytest.mark.asyncio
 async def test_refresh_token_revoked_fails(client, mock_db):
@@ -71,18 +75,20 @@ async def test_refresh_token_revoked_fails(client, mock_db):
     jti = "revoked-jti"
     refresh_token = create_refresh_token(subject=user_email, jti=jti)
     
-    with patch("backend.app.api.v1.auth.get_redis") as mock_get_redis:
-        mock_redis = AsyncMock()
-        mock_redis.exists.return_value = True # Revoked!
-        mock_get_redis.return_value = mock_redis
-        
-        response = await client.post(
-            "/api/v1/auth/refresh",
-            json={"refresh_token": refresh_token}
-        )
-        
-        assert response.status_code == 401
-        assert response.json()["detail"] == "Invalid credentials"
+    mock_redis = AsyncMock()
+    mock_redis.exists.return_value = True # Revoked!
+    app.dependency_overrides[get_redis] = lambda: mock_redis
+    
+    response = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token}
+    )
+    
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid credentials"
+    
+    if get_redis in app.dependency_overrides:
+        del app.dependency_overrides[get_redis]
 
 @pytest.mark.asyncio
 async def test_refresh_token_invalid_type_fails(client, mock_db):

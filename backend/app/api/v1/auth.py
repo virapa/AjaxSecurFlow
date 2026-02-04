@@ -5,10 +5,11 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt 
 from jwt.exceptions import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
+from redis.asyncio import Redis
 from backend.app.core.security import create_access_token, create_refresh_token
 from backend.app.core.config import settings
-from backend.app.core.db import get_db
-from backend.app.core import crud_user
+from backend.app.api.deps import get_db, get_redis, get_ajax_client
+from backend.app.crud import user as crud_user
 from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
 from backend.app.services import audit_service, security_service, notification_service
@@ -24,12 +25,13 @@ oauth2_scheme = APIKeyHeader(name="Authorization", scheme_name="JWT Token", desc
 
 import hashlib
 import uuid
-from backend.app.services.rate_limiter import get_redis
+from backend.app.core.db import get_db
 
 async def get_current_user(
     request: Request,
     token: Annotated[str, Depends(oauth2_scheme)], 
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis)
 ) -> User:
     """
     Validate the JWT token and retrieve the current authenticated user.
@@ -87,7 +89,6 @@ async def get_current_user(
 
         # 3. JTI Revocation Check 
         if jti:
-            redis_client = await get_redis()
             is_revoked = await redis_client.exists(f"token_blacklist:{jti}")
             if is_revoked:
                  raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -162,7 +163,9 @@ async def check_admin(
 async def login_for_access_token(
     request: Request,
     body: LoginRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+    ajax: AjaxClient = Depends(get_ajax_client)
 ):
     """
     Unified login: Verify email/password against Ajax Systems.
@@ -173,7 +176,7 @@ async def login_for_access_token(
     client_ip = forwarded.split(",")[0].strip() if forwarded else (request.headers.get("x-real-ip") or (request.client.host if request.client else None))
 
     # 1. Check if IP is locked out
-    if await security_service.check_ip_lockout(client_ip):
+    if await security_service.check_ip_lockout(client_ip, redis):
         await audit_service.log_request_action(
             db=db, request=request, user_id=None,
             action="SECURITY_ALERT_LOGIN_LOCKED", status_code=403, 
@@ -183,8 +186,6 @@ async def login_for_access_token(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Your IP is temporarily locked due to multiple failed login attempts. Try again in 15 minutes."
         )
-
-    ajax = AjaxClient()
     try:
         # 2. Verify credentials directly with Ajax API
         ajax_data = await ajax.login_with_credentials(
@@ -199,7 +200,7 @@ async def login_for_access_token(
             user = await crud_user.create_user(db, email=body.username, password=body.password)
         
         # 4. Success Tasks
-        await security_service.reset_login_failures(client_ip)
+        await security_service.reset_login_failures(client_ip, redis)
         
         # Generate Security Context (JTI, UAH, UIP)
         jti = str(uuid.uuid4())
@@ -234,7 +235,7 @@ async def login_for_access_token(
 
     except AjaxAuthError:
         # 6. Failure Tracking (Fail2Ban logic)
-        await security_service.track_login_failure(client_ip)
+        await security_service.track_login_failure(client_ip, redis)
         
         # Audit: Failed Login
         await audit_service.log_request_action(
@@ -269,7 +270,8 @@ async def login_for_access_token(
 async def refresh_token(
     request: Request,
     body: TokenRefreshRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis)
 ):
     """
     Refresh access token using a valid refresh token.
@@ -290,7 +292,6 @@ async def refresh_token(
             raise HTTPException(status_code=401, detail="Invalid credentials")
             
         # 1. Rotation Check (Revocation)
-        redis_client = await get_redis()
         is_revoked = await redis_client.exists(f"token_blacklist:{jti}")
         if is_revoked:
             # SAFETY: If a refresh token is reused, potentially stolen. Logout all.
@@ -351,7 +352,8 @@ async def refresh_token(
 async def logout(
     token: Annotated[str, Depends(oauth2_scheme)],
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis)
 ):
     """
     Revoke the current JWT access token using its JTI.
@@ -363,7 +365,6 @@ async def logout(
         exp = payload.get("exp")
         
         if jti and exp:
-            redis_client = await get_redis()
             # Calculate TTL for the blacklist entry
             now = datetime.now(timezone.utc).timestamp()
             ttl = int(exp - now)

@@ -1,6 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from backend.app.core.config import settings
+from backend.app.services.ajax_client import AjaxAuthError
+import logging
+
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,6 +35,25 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Global Exception Handlers
+@app.exception_handler(AjaxAuthError)
+async def ajax_auth_exception_handler(request: Request, exc: AjaxAuthError):
+    """Handle Ajax authentication failures specifically."""
+    logger.warning(f"Ajax Auth Failure: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        content={"detail": "Upstream authentication failure. Please check your Ajax credentials."}
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Final fallback to prevent leaking technical details."""
+    logger.exception(f"Unhandled exception at {request.url.path}: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "An internal server error occurred."}
+    )
+
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
@@ -44,7 +68,47 @@ import time
 import uuid
 from fastapi import Request
 from backend.app.core.db import async_session_factory
+from backend.app.crud import audit as crud_audit
 from backend.app.services import audit_service
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """
+    Injects security headers recommended by OWASP 2025:
+    - Content-Security-Policy (CSP)
+    - Strict-Transport-Security (HSTS)
+    - X-Frame-Options
+    - X-Content-Type-Options
+    - Referrer-Policy
+    """
+    response = await call_next(request)
+    
+    # Prevents Clickjacking
+    response.headers["X-Frame-Options"] = "DENY"
+    
+    # Prevents MIME-sniffing
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    
+    # Controls how much referrer information is sent
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    
+    # Enforces HTTPS
+    # Only meaningful on HTTPS deployments
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    
+    # Basic CSP - Restrictive by default
+    # Note: Adjust these if you use external CDNs or inline scripts
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data:; "
+        "frame-ancestors 'none';"
+    )
+    
+    return response
 
 @app.middleware("http")
 async def audit_middleware(request: Request, call_next):
@@ -74,17 +138,21 @@ async def audit_middleware(request: Request, call_next):
             # (Though in FastAPI, middleware runs BEFORE dependencies, so user_id might be None here)
             user_id = getattr(request.state, "user_id", None)
             
-            await audit_service.log_request_action(
+            await crud_audit.create_audit_log(
                 db=db,
-                request=request,
                 user_id=user_id,
                 action=f"AUTO_AUDIT_{request.method}",
+                endpoint=request.url.path,
+                method=request.method,
                 status_code=response.status_code,
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get("user-agent"),
                 latency_ms=latency_ms,
                 correlation_id=correlation_id
             )
-    except Exception:  # nosec B110
+    except Exception as e:  # nosec B110
         # Failsafe: Audit failure shouldn't crash the main request
+        logger.error(f"Audit middleware failure: {str(e)}")
         pass
         
     response.headers["X-Correlation-ID"] = correlation_id

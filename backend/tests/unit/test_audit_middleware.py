@@ -20,7 +20,7 @@ async def test_audit_middleware_logs_to_db(async_client: AsyncClient):
     """
     Test that the middleware actually calls the audit service.
     """
-    with patch("backend.app.main.audit_service.log_request_action", new_callable=AsyncMock) as mock_log:
+    with patch("backend.app.crud.audit.create_audit_log", new_callable=AsyncMock) as mock_log:
         response = await async_client.get("/api/v1/users/me") # Protected route, will 401 but middleware logs it
         
         assert response.status_code == 401

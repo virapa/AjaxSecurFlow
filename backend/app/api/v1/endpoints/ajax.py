@@ -2,8 +2,8 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Path, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.api.deps import get_db, get_ajax_client
 from backend.app.api.v1.auth import get_current_user
-from backend.app.core.db import get_db
 from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
 from backend.app.services.billing_service import is_subscription_active
@@ -19,6 +19,35 @@ router = APIRouter()
 from backend.app.api.v1.utils import handle_ajax_error
 import httpx
 
+
+async def verify_hub_access(user_email: str, hub_id: str, client: AjaxClient) -> None:
+    """
+    Validates that the user has access to the specified hub.
+    This prevents Broken Access Control (A01:2025) even if the upstream API 
+    doesn't strictly enforce it for some resources.
+    """
+    try:
+        # We fetch the user's hubs and check if the requested ID is present
+        hubs_data = await client.get_hubs(user_email=user_email)
+        hubs = hubs_data.get("hubs", []) if isinstance(hubs_data, dict) else hubs_data
+        
+        hub_ids = [str(h.get("id") if isinstance(h, dict) else h) for h in hubs]
+        if hub_id not in hub_ids:
+            logger.warning(f"Unauthorized Access Attempt: User {user_email} tried to access hub {hub_id}")
+            raise HTTPException(
+                status_code=403, 
+                detail="Access denied to this security hub."
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying hub access: {str(e)}")
+        # If we can't verify, we fail secure (A10:2025)
+        raise HTTPException(
+            status_code=502, 
+            detail="Could not verify access permissions with security provider."
+        )
+
 @router.get(
     "/hubs", 
     response_model=List[schemas.HubDetail],
@@ -31,26 +60,16 @@ import httpx
 )
 async def read_hubs(
     current_user: User = Depends(get_current_user),
+    client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Retrieve the list of all hubs associated with the authenticated user.
-
-    Args:
-        current_user: The user object retrieved from the security token.
-        db: Database session (for auditing or supplemental lookups).
-
-    Returns:
-        List[schemas.HubDetail]: A list of hubs with their metadata.
-
-    Raises:
-        HTTPException: 403 if subscription is inactive, 502 for upstream errors.
     """
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
     
     try:
-        client = AjaxClient()
         response = await client.get_hubs(user_email=current_user.email)
         return response.get("hubs", []) if isinstance(response, dict) else response
     except Exception as e:
@@ -68,23 +87,18 @@ async def read_hubs(
 async def read_hub_detail(
     hub_id: str = Path(..., description="The unique 8-character ID of the Hub", example="0004C602"),
     current_user: User = Depends(get_current_user),
+    client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Get detailed information for a specific hub.
-
-    Args:
-        hub_id: Unique identifier of the hub.
-        current_user: The authenticated user.
-
-    Returns:
-        schemas.HubDetail: Hub specific detail.
     """
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
         
+    await verify_hub_access(current_user.email, hub_id, client)
+        
     try:
-        client = AjaxClient()
         data = await client.get_hub_details(user_email=current_user.email, hub_id=hub_id)
         
         # Mapping for legacy fields if they are missing at root but exist in nested objects
@@ -114,23 +128,18 @@ async def read_hub_detail(
 async def read_hub_groups(
     hub_id: str = Path(..., description="ID of the Hub to query groups from", example="0004C602"),
     current_user: User = Depends(get_current_user),
+    client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Retrieve security groups and partitions for a specific hub.
-
-    Args:
-        hub_id: Unique identifier of the hub.
-        current_user: The authenticated user.
-
-    Returns:
-        List[schemas.GroupBase]: List of groups configured in the hub.
     """
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
 
+    await verify_hub_access(current_user.email, hub_id, client)
+
     try:
-        client = AjaxClient()
         response = await client.get_hub_groups(user_email=current_user.email, hub_id=hub_id)
         return response.get("groups", []) if isinstance(response, dict) else response
     except Exception as e:
@@ -148,6 +157,7 @@ async def read_hub_groups(
 async def read_hub_rooms(
     hub_id: str = Path(..., description="ID of the Hub to query rooms from", example="0004C602"),
     current_user: User = Depends(get_current_user),
+    client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -156,8 +166,9 @@ async def read_hub_rooms(
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
 
+    await verify_hub_access(current_user.email, hub_id, client)
+
     try:
-        client = AjaxClient()
         response = await client.get_hub_rooms(user_email=current_user.email, hub_id=hub_id)
         return response
     except Exception as e:
@@ -176,6 +187,7 @@ async def read_room_detail(
     hub_id: str = Path(..., description="ID of the Hub", example="0004C602"),
     room_id: str = Path(..., description="ID of the Room", example="1"),
     current_user: User = Depends(get_current_user),
+    client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -184,8 +196,9 @@ async def read_room_detail(
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
 
+    await verify_hub_access(current_user.email, hub_id, client)
+
     try:
-        client = AjaxClient()
         data = await client.get_room_details(
             user_email=current_user.email, 
             hub_id=hub_id, 
@@ -207,23 +220,18 @@ async def read_room_detail(
 async def read_hub_devices(
     hub_id: str = Path(..., description="ID of the Hub to query devices from", example="0004C602"),
     current_user: User = Depends(get_current_user),
+    client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Fetch all devices currently linked to the specified hub.
-
-    Args:
-        hub_id: Unique identifier of the hub.
-        current_user: The authenticated user.
-
-    Returns:
-        List[schemas.DeviceDetail]: Detailed list of devices.
     """
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
 
+    await verify_hub_access(current_user.email, hub_id, client)
+
     try:
-        client = AjaxClient()
         response = await client.get_hub_devices(user_email=current_user.email, hub_id=hub_id)
         return response.get("devices", []) if isinstance(response, dict) else response
     except Exception as e:
@@ -242,6 +250,7 @@ async def read_device_detail(
     hub_id: str = Path(..., description="ID of the Hub where the device is registered", example="0004C602"),
     device_id: str = Path(..., description="The unique 8-character ID of the Device", example="3056A52F"),
     current_user: User = Depends(get_current_user),
+    client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -250,8 +259,9 @@ async def read_device_detail(
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
         
+    await verify_hub_access(current_user.email, hub_id, client)
+        
     try:
-        client = AjaxClient()
         data = await client.get_device_details(
             user_email=current_user.email, 
             hub_id=hub_id, 
@@ -282,17 +292,18 @@ async def read_hub_logs(
     limit: int = Query(100, description="Max number of logs to return (Page size)"),
     offset: int = Query(0, description="Number of logs to skip (Pagination)"),
     current_user: User = Depends(get_current_user),
+    client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Retrieve event logs and history for a specific hub with pagination support.
-    Returns the raw list of events as provided by the Ajax API.
     """
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
 
+    await verify_hub_access(current_user.email, hub_id, client)
+
     try:
-        client = AjaxClient()
         raw_data = await client.get_hub_logs(
             user_email=current_user.email, 
             hub_id=hub_id, 
@@ -307,16 +318,10 @@ async def read_hub_logs(
         elif isinstance(raw_data, dict) and "logs" in raw_data:
             logs_list = raw_data["logs"]
         else:
-            # Fallback for unexpected formats
             logger.warning(f"Unexpected logs format from Ajax API: {type(raw_data)}")
             logs_list = []
 
-        # Explicitly validate to capture detailed errors in logs
-        try:
-            return [schemas.EventLog.model_validate(log) for log in logs_list]
-        except Exception as ve:
-            logger.error(f"Pydantic Validation Error for Hub Logs ({hub_id}): {ve}")
-            raise ve
+        return [schemas.EventLog.model_validate(log) for log in logs_list]
             
     except Exception as e:
         handle_ajax_error(e)
@@ -335,24 +340,18 @@ async def set_hub_arm_state(
     hub_id: str = Path(..., description="ID of the Hub to control", example="0004C602"),
     command: schemas.HubCommandRequest = Body(..., description="Arming command details"),
     current_user: User = Depends(get_current_user),
+    client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Set the arming state for a specific hub or security group.
-
-    This command supports the following **arming states**:
-    - `0`: **DISARMED** - Deactivate security.
-    - `1`: **ARMED** - Fully activate security.
-    - `2`: **NIGHT_MODE** - Activate partial/stay mode.
-
-    If `groupId` is provided in the request body, the command will only affect that specific partition. 
-    Otherwise, the command applies to the entire Hub.
     """
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
 
+    await verify_hub_access(current_user.email, hub_id, client)
+
     try:
-        client = AjaxClient()
         response = await client.set_arm_state(
             user_email=current_user.email,
             hub_id=hub_id, 
@@ -367,7 +366,7 @@ async def set_hub_arm_state(
             user_id=current_user.id,
             action="HUB_SET_ARM_STATE",
             status_code=200,
-            severity="WARNING", # Commands are altidude-level actions
+            severity="WARNING",
             resource_id=hub_id,
             payload={
                 "hub_id": hub_id, 

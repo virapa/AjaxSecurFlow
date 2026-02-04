@@ -17,27 +17,19 @@ class AjaxClient:
     """
     Async Client for Ajax Systems API.
     Handles Authentication (Session Token) with Redis Caching and Automatic Renewal.
-    Singleton pattern to ensure shared HTTP connection pool.
     """
-    _instance = None
     
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super(AjaxClient, cls).__new__(cls)
-        return cls._instance
-
-    def __init__(self):
-        if not hasattr(self, 'initialized'):
-            self.redis: Optional[redis.Redis] = None
-            # Initialize HTTP client with base URL from settings
-            self.client = httpx.AsyncClient(
-                base_url=settings.AJAX_API_BASE_URL, 
-                timeout=15.0
-            )
-            self.initialized = True
+    def __init__(self, redis_client: Optional[redis.Redis] = None):
+        self.redis = redis_client
+        # Initialize HTTP client with base URL from settings
+        self.client = httpx.AsyncClient(
+            base_url=settings.AJAX_API_BASE_URL, 
+            timeout=15.0
+        )
 
     async def _get_redis(self) -> redis.Redis:
         if not self.redis:
+            # Fallback for manual instantiation if absolutely necessary
             self.redis = redis.from_url(
                 str(settings.REDIS_URL), 
                 encoding="utf-8", 

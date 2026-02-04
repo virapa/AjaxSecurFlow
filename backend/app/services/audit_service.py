@@ -1,8 +1,7 @@
-from datetime import datetime, timezone
-from typing import Optional, Any
+from typing import Optional
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.domain.models import AuditLog
+from backend.app.crud import audit as crud_audit
 
 async def log_action(
     db: AsyncSession,
@@ -20,9 +19,10 @@ async def log_action(
     correlation_id: Optional[str] = None
 ):
     """
-    Creates an enriched audit log entry.
+    Creates an enriched audit log entry via CRUD.
     """
-    log_entry = AuditLog(
+    await crud_audit.create_audit_log(
+        db=db,
         user_id=user_id,
         action=action,
         endpoint=endpoint,
@@ -34,11 +34,8 @@ async def log_action(
         severity=severity,
         resource_id=resource_id,
         latency_ms=latency_ms,
-        correlation_id=correlation_id,
-        timestamp=datetime.now(timezone.utc)
+        correlation_id=correlation_id
     )
-    db.add(log_entry)
-    await db.commit()
 
 async def log_request_action(
     db: AsyncSession,

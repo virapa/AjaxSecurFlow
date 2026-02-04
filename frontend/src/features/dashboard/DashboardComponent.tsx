@@ -75,7 +75,7 @@ export const DashboardComponent: React.FC = () => {
         } catch (err) {
             console.warn('Network logout failed, proceeding with local cleanup:', err)
         } finally {
-            window.location.href = '/login'
+            window.location.href = '/'
         }
     }
 

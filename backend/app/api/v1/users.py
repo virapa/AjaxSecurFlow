@@ -1,12 +1,13 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.core.db import get_db
-from backend.app.core import crud_user
+from backend.app.api.deps import get_db, get_ajax_client
+from backend.app.crud import user as crud_user
 from backend.app.schemas.user import UserCreate, UserRead
 from backend.app.schemas.auth import ErrorMessage
 from backend.app.api.v1.auth import get_current_user
 from backend.app.domain.models import User
+from backend.app.services.ajax_client import AjaxClient
 
 router = APIRouter()
 
@@ -34,8 +35,6 @@ async def create_user(
         )
     return await crud_user.create_user(db, email=user_in.email, password=user_in.password)
 
-from backend.app.services.ajax_client import AjaxClient
-
 @router.get(
     "/me", 
     response_model=UserRead,
@@ -43,10 +42,10 @@ from backend.app.services.ajax_client import AjaxClient
     description="Returns the profile information of the currently authenticated user enriched with Ajax data."
 )
 async def read_user_me(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    client: AjaxClient = Depends(get_ajax_client)
 ):
     try:
-        client = AjaxClient()
         ajax_data = await client.get_user_info(current_user.email)
         
         # Enforce Pydantic validation for the enriched object

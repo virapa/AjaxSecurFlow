@@ -4,7 +4,7 @@ import stripe
 from backend.app.worker.celery_app import celery_app
 from backend.app.services.ajax_client import AjaxClient
 from backend.app.core.db import async_session_factory
-from backend.app.core import crud_user
+from backend.app.crud import user as crud_user
 from backend.app.domain.models import User, ProcessedStripeEvent
 from backend.app.services import audit_service, notification_service, email_service
 from sqlalchemy import select

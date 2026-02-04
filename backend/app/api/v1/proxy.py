@@ -8,7 +8,7 @@ from backend.app.schemas.auth import ErrorMessage
 from backend.app.api.v1.auth import get_current_user
 from backend.app.api.v1.utils import handle_ajax_error
 from backend.app.domain.models import User
-from backend.app.core.db import get_db
+from backend.app.api.deps import get_db, get_ajax_client
 from urllib.parse import unquote
 
 router = APIRouter()
@@ -24,6 +24,7 @@ async def proxy_ajax_request(
     path: str = Path(..., description="The sub-resource path in Ajax API (e.g., 'hubs', 'hubs/ID/devices')"), 
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    client: AjaxClient = Depends(get_ajax_client),
     _ = Depends(rate_limiter)
 ):
     """
@@ -41,7 +42,6 @@ async def proxy_ajax_request(
             detail="Active subscription required to access Proxy API."
         )
 
-    client = AjaxClient()
     
     body = None
     if request.method in ["POST", "PUT", "PATCH"]:

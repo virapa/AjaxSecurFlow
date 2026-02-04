@@ -3,18 +3,9 @@ from fastapi import HTTPException, Request, Depends
 from functools import wraps
 from backend.app.core.config import settings
 
-# Global Redis pool
-redis_pool = None
+from backend.app.api.deps import get_redis
 
-async def get_redis():
-    global redis_pool
-    if redis_pool is None:
-        redis_pool = redis.from_url(
-            str(settings.REDIS_URL), 
-            encoding="utf-8", 
-            decode_responses=True
-        )
-    return redis_pool
+# Global Redis pool removal handled by deps.py
 
 class RateLimiter:
     """
