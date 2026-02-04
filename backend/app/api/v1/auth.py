@@ -248,7 +248,11 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception(f"Unexpected error during login: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="An unexpected internal error occurred during authentication."
+        )
 
 @router.post(
     "/refresh", 

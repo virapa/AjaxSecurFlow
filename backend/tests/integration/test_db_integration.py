@@ -2,6 +2,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select, delete
 from unittest.mock import AsyncMock, patch
+import uuid
 from backend.app.main import app
 from backend.app.domain.models import User, AuditLog
 from backend.app.core.db import async_session_factory
@@ -15,8 +16,8 @@ async def test_full_flow_integration(client):
     3. Use Proxy
     4. Verify Audit Log entry in DB
     """
-    email = "integration_user@example.com"
-    password = "securepassword"
+    email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    password = "REDACTED_RANDOM_PWD_PLACEHOLDER"
     
     # Clean up previous runs if any
     async with async_session_factory() as session:
@@ -56,6 +57,7 @@ async def test_full_flow_integration(client):
     async with async_session_factory() as session:
         user_to_activate = await session.get(User, user_id)
         user_to_activate.subscription_status = "active"
+        user_to_activate.subscription_plan = "premium"
         await session.commit()
     
     # 3. Access Proxy (this will call AjaxClient, which we MOCK to avoid external hits)

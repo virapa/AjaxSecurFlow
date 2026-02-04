@@ -59,11 +59,11 @@ def test_get_effective_plan_transitions():
 
     # 2. Active voucher = PREMIUM
     future_date = datetime.now(timezone.utc) + timedelta(days=1)
-    user_active_voucher = User(subscription_status="inactive", subscription_expires_at=future_date)
+    user_active_voucher = User(subscription_status="inactive", subscription_expires_at=future_date, subscription_plan="premium")
     assert billing_service.get_effective_plan(user_active_voucher) == "premium"
 
     # 3. Active Stripe = PREMIUM (regardless of voucher)
-    user_stripe = User(subscription_status="active", subscription_expires_at=past_date)
+    user_stripe = User(subscription_status="active", subscription_expires_at=past_date, subscription_plan="premium")
     assert billing_service.get_effective_plan(user_stripe) == "premium"
 
     # 4. No anything = FREE

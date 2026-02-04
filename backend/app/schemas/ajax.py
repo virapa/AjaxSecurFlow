@@ -1,5 +1,5 @@
 from typing import List, Optional, Any, Dict
-from pydantic import BaseModel, Field, ConfigDict, AliasChoices
+from pydantic import BaseModel, Field, ConfigDict, AliasChoices, EmailStr
 
 # --- Shared ---
 class AjaxResponseBase(BaseModel):
@@ -111,6 +111,14 @@ class Room(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     id: str = Field(..., validation_alias=AliasChoices("id", "roomId"))
     roomName: str
+    imageUrls: Optional[ImageUrls] = None
+
+class AjaxUserInfo(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    phone: Optional[str] = None
+    firstName: Optional[str] = None
+    language: Optional[str] = None
+    login: Optional[EmailStr] = None
     imageUrls: Optional[ImageUrls] = None
 
 # --- Logs/Events ---

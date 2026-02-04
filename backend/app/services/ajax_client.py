@@ -272,6 +272,11 @@ class AjaxClient:
             raise AjaxAuthError("No active Ajax session for this user.")
         return user_id
 
+    async def get_user_info(self, user_email: str) -> Dict[str, Any]:
+        """Get general info for the user."""
+        user_id = await self._ensure_user_id(user_email)
+        return await self.request(user_email, "GET", f"/user/{user_id}")
+
     async def get_hubs(self, user_email: str) -> List[Dict[str, Any]]:
         """
         Get hubs for user with enriched detail.

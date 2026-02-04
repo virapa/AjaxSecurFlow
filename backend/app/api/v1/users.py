@@ -34,13 +34,28 @@ async def create_user(
         )
     return await crud_user.create_user(db, email=user_in.email, password=user_in.password)
 
+from backend.app.services.ajax_client import AjaxClient
+
 @router.get(
     "/me", 
     response_model=UserRead,
     summary="Get Current User Profile",
-    description="Returns the profile information of the currently authenticated user."
+    description="Returns the profile information of the currently authenticated user enriched with Ajax data."
 )
 async def read_user_me(
     current_user: User = Depends(get_current_user)
 ):
-    return current_user
+    try:
+        client = AjaxClient()
+        ajax_data = await client.get_user_info(current_user.email)
+        
+        # Enforce Pydantic validation for the enriched object
+        user_read_data = UserRead.model_validate(current_user).model_dump()
+        user_read_data["ajax_info"] = ajax_data
+        
+        return user_read_data
+    except Exception as e:
+        # Fallback to local data if Ajax call fails
+        import logging
+        logging.getLogger("uvicorn.error").warning(f"Failed to fetch Ajax user info for {current_user.email}: {e}")
+        return current_user

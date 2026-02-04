@@ -10,23 +10,21 @@ def get_effective_plan(user: User) -> str:
     """
     Determines the current active plan for a user considering expiration and Stripe status.
     If the premium time (voucher or stripe) has ended, returns 'free'.
-
-    Args:
-        user: The user object from database.
-
-    Returns:
-        str: 'premium' or 'free'.
     """
-    # 1. Check for recurring active subscription (highest priority)
+    # 1. Determine if the user HAS an active "paid" status
+    is_active = False
+    
+    # Check for recurring active subscription
     if user.subscription_status in ["active", "trialing"]:
-        return "premium"
+        is_active = True
+    # Check for Voucher expiration (grants premium by default but we respect the field)
+    elif user.subscription_expires_at and user.subscription_expires_at > datetime.now(timezone.utc):
+        is_active = True
 
-    # 2. Check for Voucher expiration
-    if user.subscription_expires_at:
-        if user.subscription_expires_at > datetime.now(timezone.utc):
-            return "premium"
-
-    # 3. Default to free
+    # 2. Return the stored plan if active, otherwise fallback to free
+    if is_active:
+        return user.subscription_plan
+        
     return "free"
 
 async def get_user_subscription_status(user: User) -> str:
@@ -59,4 +57,4 @@ def is_subscription_active(user: User) -> bool:
     if settings.ENABLE_DEVELOPER_MODE:
         return True
 
-    return get_effective_plan(user) == "premium"
+    return get_effective_plan(user) != "free"

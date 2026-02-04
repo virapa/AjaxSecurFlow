@@ -4,12 +4,12 @@ from backend.app.domain.models import User
 from unittest.mock import MagicMock, patch
 
 def test_is_subscription_active_true():
-    user = User(subscription_status="active")
+    user = User(subscription_status="active", subscription_plan="premium")
     with patch("backend.app.services.billing_service.settings") as mock_settings:
         mock_settings.ENABLE_DEVELOPER_MODE = False
         assert is_subscription_active(user) is True
     
-    user = User(subscription_status="trialing")
+    user = User(subscription_status="trialing", subscription_plan="premium")
     with patch("backend.app.services.billing_service.settings") as mock_settings:
         mock_settings.ENABLE_DEVELOPER_MODE = False
         assert is_subscription_active(user) is True

@@ -4,7 +4,7 @@ from httpx import AsyncClient
 
 # Mock data
 MOCK_HUBS = [{"id": "000000", "name": "Success Hub", "role": "MASTER"}]
-MOCK_LOGS = {"logs": [{"id": "ev1", "hub_id": "000000", "event_code": "M_12", "timestamp": "2023-01-01T12:00:00Z"}], "total_count": 1}
+MOCK_LOGS = {"logs": [{"eventId": "ev1", "hubId": "000000", "eventCode": "M_12", "timestamp": 1672574400}], "total_count": 1}
 
 @pytest.mark.asyncio
 async def test_get_hubs_success(async_client: AsyncClient, mock_user_subscription):
