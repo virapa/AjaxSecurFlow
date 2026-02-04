@@ -56,12 +56,16 @@ El sistema utiliza a **Ajax Systems** como el proveedor de identidad principal (
 ### 4.2 Telemetría e Interfaz de Control
 El sistema expone información detallada y estructurada de todo el ecosistema Ajax:
 - **Telemetría**: Información de batería, señal, firmware e IP de hubs y dispositivos.
+- **Gestión de Espacios (Rooms)**: Mapeo y visualización de la estructura física del sistema.
+- **Perfiles Enriquecidos**: Sincronización automática de datos de usuario (teléfono, idioma, nombre, imagen) desde la API de Ajax.
 - **Control de Seguridad**: Interfaz unificada para cambiar estados de armado.
 
 #### Detalle de Hubs y Dispositivos
 - `GET /api/v1/ajax/hubs/{hub_id}`
 - `GET /api/v1/ajax/hubs/{hub_id}/devices`
 - `GET /api/v1/ajax/hubs/{hub_id}/devices/{device_id}`
+- `GET /api/v1/ajax/hubs/{hub_id}/rooms` (Listado completo de habitaciones)
+- `GET /api/v1/ajax/hubs/{hub_id}/rooms/{room_id}` (Detalle de habitación específica)
 
 #### Control de Seguridad (Armado/Desarmado)
 El proxy expone una interfaz unificada para el control de estados:
@@ -100,6 +104,8 @@ El sistema implementa capas de defensa activa para proteger las sesiones de usua
 - **Auditoría VIP**: Registro inmutable que incluye IP, navegador y nivel de severidad (INFO, WARNING, CRITICAL) para cada acción.
 - **Mensajes de Error Opacos (Hardened Auth)**: Todos los fallos de autenticación devuelven un genérico "Invalid credentials", evitando fugas de información sobre la existencia de usuarios o validez de tokens a atacantes.
 - **Ofuscación de Upstream**: Los errores de la API de Ajax se filtran para eliminar URLs internas o IDs técnicos, devolviendo mensajes seguros para el cliente final.
+- **Auditoría de Secretos (Remediación)**: Eliminación permanente de secretos del historial de Git y neutralización de scripts de diagnóstico mediante el uso estricto de variables de entorno.
+- **Escaneo Automático**: Integración de `bandit` y `pip-audit` en el flujo de desarrollo para detectar vulnerabilidades en código y dependencias.
 - **Blinded Hybrid Admin Security**: Los endpoints administrativos (Ej: Generación de Vouchers) están protegidos doblemente:
     - **Ghost Admin**: Solo emails en una lista blanca (`ADMIN_EMAILS`) tienen acceso.
     - **Master Key**: Requiere un secreto físico (`X-Admin-Secret`) no almacenado en base de datos.
@@ -171,11 +177,14 @@ docker-compose exec app python -m pytest backend/tests
 ### Fase 1: Core Backend (✅ Completada)
 - ✅ Proxy Seguro con Auth SHA256.
 - ✅ Comandos de Armado/Desarmado/Noche por Hub o Grupo.
+- ✅ Gestión de Rooms y mapeo de dispositivos por habitación.
+- ✅ Perfiles de usuario enriquecidos con datos reales de Ajax.
 - ✅ Telemetría Enriquecida (Estados de batería, señal, hardware detalle).
 - ✅ Proxy Genérico Catch-all (Extensibilidad total).
 - ✅ Rate Limiting por usuario en Redis.
 - ✅ Motor de Suscripciones con Stripe.
 - ✅ Suite de Tests Unitarios e Integración (100% Pass).
+- ✅ Auditoría de Seguridad (Bandit) y limpieza de historial de secretos.
 - ✅ Auditoría Inmutable de transacciones.
 - ✅ Sistema de Vouchers B2B (Activación Offline).
 - ✅ Sistema de Notificaciones In-App y Alertas por Email.
