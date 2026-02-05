@@ -98,13 +98,13 @@ async def security_headers_middleware(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     
     # Basic CSP - Restrictive by default
-    # Note: Adjust these if you use external CDNs or inline scripts
+    # Note: Swagger UI and Redoc require jsdelivr for assets by default in FastAPI
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data:; "
+        "img-src 'self' data: https://fastapi.tiangolo.com; "
         "frame-ancestors 'none';"
     )
     
@@ -167,30 +167,42 @@ def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
     
-    # Generate the base schema
-    openapi_schema = get_openapi(
-        title="Ajax Client API",
-        version="1.135.0", # Usando versión de tu imagen
-        description="General API description",
-        routes=app.routes,
-    )
-    
-    # VISUAL CLEANUP: Strip /api/v1 from the paths displayed in Swagger
-    new_paths = {}
-    for path, methods in openapi_schema["paths"].items():
-        if path.startswith(settings.API_V1_STR):
-            clean_path = path.replace(settings.API_V1_STR, "")
-            new_paths[clean_path] = methods
-        else:
-            new_paths[path] = methods
-            
-    openapi_schema["paths"] = new_paths
-    
-    # Display the Base URL exactly as in your image
-    openapi_schema["servers"] = [{"url": settings.API_V1_STR, "description": "Local server"}]
-    
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
+    try:
+        # Generate the base schema
+        openapi_schema = get_openapi(
+            title="Ajax Client API",
+            version="1.135.0", # Usando versión de tu imagen
+            description="General API description",
+            routes=app.routes,
+        )
+        
+        # VISUAL CLEANUP: Strip /api/v1 from the paths displayed in Swagger
+        new_paths = {}
+        for path, methods in openapi_schema["paths"].items():
+            if path.startswith(settings.API_V1_STR):
+                clean_path = path.replace(settings.API_V1_STR, "", 1) # Only replace first occurrence
+                if not clean_path.startswith("/"):
+                    clean_path = "/" + clean_path
+                new_paths[clean_path] = methods
+            else:
+                new_paths[path] = methods
+                
+        openapi_schema["paths"] = new_paths
+        
+        # Display the Base URL exactly as in your image
+        openapi_schema["servers"] = [{"url": settings.API_V1_STR, "description": "Local server"}]
+        
+        app.openapi_schema = openapi_schema
+        logger.info("OpenAPI schema generated successfully with path cleanup.")
+        return app.openapi_schema
+    except Exception as e:
+        logger.error(f"Error generating OpenAPI schema: {e}")
+        # Return fallback default schema if custom logic fails
+        return get_openapi(
+            title="Ajax Client API (Fallback)",
+            version="1.0.0",
+            routes=app.routes
+        )
 
 app.openapi = custom_openapi
 
