@@ -8,14 +8,35 @@ interface DeviceTelemetryProps {
     hubId?: string
 }
 
-interface EnrichedDevice extends Device {
-    isEnriching?: boolean
-    [key: string]: any // Allow additional dynamic properties
+interface DeviceDetails extends Device {
+    [key: string]: any
 }
 
-// Modal Component for Device Details
-const DeviceDetailModal: React.FC<{ device: EnrichedDevice; onClose: () => void }> = ({ device, onClose }) => {
+// Modal Component for Device Details - fetches details on demand
+const DeviceDetailModal: React.FC<{
+    device: Device
+    hubId: string
+    onClose: () => void
+}> = ({ device, hubId, onClose }) => {
+    const [details, setDetails] = useState<DeviceDetails | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
     const isOffline = device.online === false
+
+    // Fetch device details on mount
+    useEffect(() => {
+        const fetchDetails = async () => {
+            try {
+                const data = await deviceService.getDeviceDetails(hubId, device.id)
+                setDetails({ ...device, ...data })
+            } catch (err) {
+                console.warn(`[DeviceDetailModal] Failed to fetch details for ${device.id}`)
+                setDetails(device)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        fetchDetails()
+    }, [hubId, device])
 
     // Close on escape key
     useEffect(() => {
@@ -56,12 +77,13 @@ const DeviceDetailModal: React.FC<{ device: EnrichedDevice; onClose: () => void 
         if (key === 'online') {
             return value === true ? 'text-green-400' : value === false ? 'text-red-400' : 'text-gray-400'
         }
-        // For offline devices, show cached values in light gray
         if (isOffline) {
             return 'text-gray-600'
         }
         return 'text-white'
     }
+
+    const displayDevice = details || device
 
     return (
         <div
@@ -106,38 +128,46 @@ const DeviceDetailModal: React.FC<{ device: EnrichedDevice; onClose: () => void 
 
                 {/* Content */}
                 <div className="px-6 py-4 overflow-y-auto max-h-[calc(80vh-100px)]">
-                    <div className="space-y-3">
-                        {displayFields.map(({ key, label }) => {
-                            const value = device[key]
-                            if (value === undefined) return null
+                    {isLoading ? (
+                        <div className="py-8 text-center">
+                            <span className="text-[10px] text-gray-600 animate-pulse font-bold uppercase tracking-widest">Cargando detalles...</span>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="space-y-3">
+                                {displayFields.map(({ key, label }) => {
+                                    const value = displayDevice[key]
+                                    if (value === undefined) return null
 
-                            return (
-                                <div key={key} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</span>
-                                    <span className={`text-sm font-medium ${getValueColor(key, value)}`}>
-                                        {key === 'online'
-                                            ? (value === true ? '🟢 Online' : value === false ? '🔴 Offline' : '—')
-                                            : key === 'battery_level' && value !== null
-                                                ? `${value}%`
-                                                : key === 'temperature' && value !== null
-                                                    ? `${value}°C`
-                                                    : formatValue(value)
-                                        }
-                                    </span>
-                                </div>
-                            )
-                        })}
-                    </div>
+                                    return (
+                                        <div key={key} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+                                            <span className={`text-sm font-medium ${getValueColor(key, value)}`}>
+                                                {key === 'online'
+                                                    ? (value === true ? '🟢 Online' : value === false ? '🔴 Offline' : '—')
+                                                    : key === 'battery_level' && value !== null
+                                                        ? `${value}%`
+                                                        : key === 'temperature' && value !== null
+                                                            ? `${value}°C`
+                                                            : formatValue(value)
+                                                }
+                                            </span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
 
-                    {/* Additional raw data section (collapsed) */}
-                    <details className="mt-4">
-                        <summary className="text-[10px] font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:text-gray-400 transition-colors">
-                            Datos técnicos
-                        </summary>
-                        <pre className="mt-2 p-3 bg-black/30 rounded-xl text-[10px] text-gray-500 overflow-x-auto font-mono">
-                            {JSON.stringify(device, null, 2)}
-                        </pre>
-                    </details>
+                            {/* Additional raw data section (collapsed) */}
+                            <details className="mt-4">
+                                <summary className="text-[10px] font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:text-gray-400 transition-colors">
+                                    Datos técnicos
+                                </summary>
+                                <pre className="mt-2 p-3 bg-black/30 rounded-xl text-[10px] text-gray-500 overflow-x-auto font-mono">
+                                    {JSON.stringify(displayDevice, null, 2)}
+                                </pre>
+                            </details>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
@@ -145,10 +175,10 @@ const DeviceDetailModal: React.FC<{ device: EnrichedDevice; onClose: () => void 
 }
 
 export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
-    const [devices, setDevices] = useState<EnrichedDevice[]>([])
+    const [devices, setDevices] = useState<Device[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [mounted, setMounted] = useState(false)
-    const [selectedDevice, setSelectedDevice] = useState<EnrichedDevice | null>(null)
+    const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
 
     useEffect(() => {
         setMounted(true)
@@ -162,34 +192,9 @@ export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
             try {
                 console.log(`[DeviceTelemetry] Fetching devices for hub: ${hubId}`)
                 const data = await deviceService.getHubDevices(hubId)
-                if (!data) {
-                    setDevices([])
-                    return
-                }
-
-                // Set devices with enriching flag
-                const enrichedData = data.map(d => ({ ...d, isEnriching: true }))
-                setDevices(enrichedData)
-                setIsLoading(false)
-
-                // Enrich each device with details (battery, temperature)
-                for (const device of data) {
-                    try {
-                        const details = await deviceService.getDeviceDetails(hubId, device.id)
-                        setDevices(prev => prev.map(d =>
-                            d.id === device.id
-                                ? { ...d, ...details, isEnriching: false }
-                                : d
-                        ))
-                    } catch (err) {
-                        console.warn(`[DeviceTelemetry] Failed to enrich device ${device.id}`)
-                        setDevices(prev => prev.map(d =>
-                            d.id === device.id ? { ...d, isEnriching: false } : d
-                        ))
-                    }
-                }
+                setDevices(data || [])
             } catch (err: any) {
-                console.error(`[DeviceTelemetry] Critical failure fetching devices:`, err)
+                console.error(`[DeviceTelemetry] Failed to fetch devices:`, err)
                 setDevices([])
             } finally {
                 setIsLoading(false)
@@ -205,10 +210,11 @@ export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
 
     return (
         <>
-            {/* Modal */}
-            {selectedDevice && (
+            {/* Modal - fetches details on demand */}
+            {selectedDevice && hubId && (
                 <DeviceDetailModal
                     device={selectedDevice}
+                    hubId={hubId}
                     onClose={() => setSelectedDevice(null)}
                 />
             )}
@@ -219,8 +225,6 @@ export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
                         <tr className="border-b border-white/5">
                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.name}</th>
                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.status}</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.battery}</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.temp}</th>
                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600 text-right">{t.dashboard.telemetry.labels.action}</th>
                         </tr>
                     </thead>
@@ -254,32 +258,6 @@ export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
                                             </span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-5">
-                                        {device.isEnriching ? (
-                                            <span className="text-[10px] text-gray-600 animate-pulse">...</span>
-                                        ) : device.battery_level !== null && device.battery_level !== undefined ? (
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-12 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                                    <div
-                                                        className={`h-full rounded-full ${isOffline ? 'bg-gray-600' : device.battery_level < 20 ? 'bg-red-500' : device.battery_level < 50 ? 'bg-orange-500' : 'bg-green-500'}`}
-                                                        style={{ width: `${device.battery_level}%` }}
-                                                    />
-                                                </div>
-                                                <span className={`text-[10px] font-bold ${isOffline ? 'text-gray-600' : 'text-gray-400'}`}>{device.battery_level}%</span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-[10px] text-gray-600">—</span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        {device.isEnriching ? (
-                                            <span className="text-[10px] text-gray-600 animate-pulse">...</span>
-                                        ) : device.temperature !== null && device.temperature !== undefined ? (
-                                            <span className={`text-xs font-bold ${isOffline ? 'text-gray-600' : 'text-gray-400'}`}>{device.temperature}°C</span>
-                                        ) : (
-                                            <span className="text-[10px] text-gray-600">—</span>
-                                        )}
-                                    </td>
                                     <td className="px-6 py-5 text-right">
                                         <button
                                             onClick={() => setSelectedDevice(device)}
@@ -292,7 +270,7 @@ export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
                             )
                         }) : (
                             <tr>
-                                <td colSpan={5} className="px-6 py-20 text-center text-gray-700 italic text-[10px] uppercase tracking-widest">
+                                <td colSpan={3} className="px-6 py-20 text-center text-gray-700 italic text-[10px] uppercase tracking-widest">
                                     {t.dashboard.telemetry.empty}
                                 </td>
                             </tr>

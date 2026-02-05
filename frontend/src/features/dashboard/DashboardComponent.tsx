@@ -39,12 +39,11 @@ export const DashboardComponent: React.FC = () => {
             const data = await hubService.getHubs()
             setHubs(data)
 
+            // Only auto-select first hub on initial load (when no hub is selected)
             if (!selectedHub && data.length > 0) {
                 setSelectedHub(data[0])
-            } else if (selectedHub) {
-                const updated = data.find(h => h.id === selectedHub.id)
-                if (updated) setSelectedHub(updated)
             }
+            // Note: We don't update selectedHub on refresh to avoid resetting user's selection
         } catch (err: any) {
             setError(err.message || t.dashboard.stats.systemDegraded)
         } finally {
@@ -55,9 +54,10 @@ export const DashboardComponent: React.FC = () => {
     useEffect(() => {
         fetchProfile()
         fetchHubs()
-        const interval = setInterval(fetchHubs, 30000)
-        return () => clearInterval(interval)
+        // Removed polling - hubs are loaded once on mount
+        // User can refresh page if they want updated data
     }, [])
+
 
     // Click outside handler for user menu
     useEffect(() => {
