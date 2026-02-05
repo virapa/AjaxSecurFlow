@@ -126,8 +126,12 @@ export const es = {
             past24h: 'Últimas 24h',
             uptime: 'Tiempos de actividad',
             active: 'Activo',
+            expired: 'Expirado / Inactivo',
             manageBilling: 'GESTIONAR FACTURACIÓN',
-            enterprise: 'Misión Crítica',
+            premium: 'Misión Crítica',
+            pro: 'Pro Industrial',
+            basic: 'Plan Básico',
+            free: 'Uso Personal',
             connectivityValue: '99.9%'
         },
         hubs: {

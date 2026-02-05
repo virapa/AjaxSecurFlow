@@ -21,8 +21,18 @@ export const DashboardComponent: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [selectedHub, setSelectedHub] = useState<Hub | null>(null)
+    const [user, setUser] = useState<any>(null)
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
+
+    const fetchProfile = async () => {
+        try {
+            const data = await authService.getProfile()
+            setUser(data)
+        } catch (err: any) {
+            console.error('Failed to fetch profile:', err)
+        }
+    }
 
     const fetchHubs = async () => {
         try {
@@ -43,6 +53,7 @@ export const DashboardComponent: React.FC = () => {
     }
 
     useEffect(() => {
+        fetchProfile()
         fetchHubs()
         const interval = setInterval(fetchHubs, 30000)
         return () => clearInterval(interval)
@@ -182,7 +193,14 @@ export const DashboardComponent: React.FC = () => {
                         />
                         <StatCard label={t.dashboard.stats.securityAlerts} value="0" trend={t.dashboard.stats.past24h} color="blue" progress={0} />
                         <StatCard label={t.dashboard.stats.connectivity} value={t.dashboard.stats.connectivityValue} trend={t.dashboard.stats.uptime} color="cyan" progress={99.9} />
-                        <StatCard label={t.dashboard.stats.planStatus} value={t.dashboard.stats.enterprise} trend={t.dashboard.stats.active} color="indigo" special={t.dashboard.stats.manageBilling} progress={100} />
+                        <StatCard
+                            label={t.dashboard.stats.planStatus}
+                            value={user ? (user.subscription_active ? (t.dashboard.stats as any)[user.subscription_plan] : t.dashboard.stats.free) : '...'}
+                            trend={user?.subscription_active ? t.dashboard.stats.active : t.dashboard.stats.expired}
+                            color={user?.subscription_active ? 'indigo' : 'yellow'}
+                            special={t.dashboard.stats.manageBilling}
+                            progress={user?.subscription_active ? 100 : 0}
+                        />
                     </div>
 
                     <div className="grid grid-cols-12 gap-8">

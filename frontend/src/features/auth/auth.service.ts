@@ -21,5 +21,12 @@ export const authService = {
      */
     logout: async () => {
         return apiClient.post('/auth/logout', {})
+    },
+
+    /**
+     * Fetches the profile of the currently authenticated user.
+     */
+    getProfile: async () => {
+        return apiClient.get('/users/me')
     }
 }

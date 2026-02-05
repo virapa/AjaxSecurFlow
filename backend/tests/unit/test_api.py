@@ -149,8 +149,8 @@ async def test_auth_login_invalid(client, mock_db):
 @pytest.mark.asyncio
 async def test_proxy_endpoint_protected(client, mock_rate_limiter):
     response = await client.get("/api/v1/ajax/some/resource")
-    # APIKeyHeader returns 403 by default if header is missing
-    assert response.status_code == 403
+    # APIKeyHeader returns 401 by default if header is missing in newer FastAPI
+    assert response.status_code == 401
 
 @pytest.mark.asyncio
 async def test_proxy_endpoint_success(client, mock_ajax_client, mock_rate_limiter, mock_db):

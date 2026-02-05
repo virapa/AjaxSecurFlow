@@ -1,4 +1,4 @@
-fastapi==0.115.10
+fastapi==0.128.1
 uvicorn[standard]==0.40.0
 sqlalchemy[asyncio]==2.0.38
 asyncpg==0.30.0

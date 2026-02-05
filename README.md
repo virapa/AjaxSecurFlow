@@ -15,7 +15,7 @@ El proyecto utiliza tecnologías modernas y robustas, siguiendo los estándares 
 - **Gestión de Configuración**: Pydantic V2 & Settings (Validación estricta)
 - **Seguridad**: Bcrypt (Hashing moderno), PyJWT (Tokens), SHA256 (Ajax Auth), Endurecimiento de Errores (Opaque Errors)
 - **Infraestructura**: Docker & Docker Compose (Contenerización completa)
-- **Testing y Calidad**: Pytest, Bandit (Seguridad), pip-audit (Vulnerabilidades)
+- **Testing y Calidad**: Pytest (46 tests), Bandit (Seguridad), pip-audit (Vulnerabilidades: 0 encontradas)
 
 ## 3. Estructura del Proyecto
 El proyecto sigue una **Clean Architecture** (Arquitectura Cebolla) estricta:
@@ -93,7 +93,7 @@ Este proyecto implementa controles de calidad de grado militar:
 -   **Q&A Policies**: Código 100% documentado con Docstrings (Google format), Tipado estricto (Type Hints) y manejo de errores estandarizado.
 -   **Security Scanning**:
     -   `bandit`: Análisis estático para detectar vulnerabilidades en el código Python.
-    -   `pip-audit`: Escaneo de dependencias con vulnerabilidades conocidas (CVEs).
+    -   `pip-audit`: Escaneo de dependencias. Actualmente **0 vulnerabilidades detectadas** tras la remediación de `starlette` (actualización a `fastapi==0.128.1`).
 -   **Modern Hashing**: Uso de `bcrypt` (v4.0+) nativo, eliminando dependencias obsoletas como `passlib`.
 
 ### Seguridad de Grado Industrial (Security by Design)
@@ -153,6 +153,24 @@ Una vez que los contenedores estén corriendo, es necesario aplicar las migracio
 docker-compose run --rm app alembic upgrade head
 ```
 
+### 4.4 Gestión de Planes y Suscripciones (SaaS Logic)
+El sistema implementa una lógica de facturación híbrida (Stripe + Vouchers) diseñada para ser transparente y robusta:
+
+- **subscription_plan**: Define el nivel de servicio actual del usuario (`free`, `basic`, `pro`, `premium`).
+- **subscription_active**: Booleano de estado final. Indica si el usuario tiene permiso de acceso. Es `true` si el plan de pago está vigente (según Stripe) o si tiene un cupón activo.
+- **billing_status**: Estado técnico descriptivo que permite depurar el ciclo de vida del usuario:
+    - `active`: Suscripción o Voucher al día.
+    - `trialing`: Periodo de prueba.
+    - `past_due`: Fallo en el último pago (proporciona un periodo de gracia).
+    - `inactive` / `expired`: Acceso revocado (reversión automática a `free` visualmente).
+
+#### Dinámica de Vouchers B2B
+Los vouchers (`Voucher`) permiten una activación offline. Al canjear un código `AJAX-XXXX`:
+1. El `billing_status` cambia a `active`.
+2. El `subscription_plan` se establece en `premium`.
+3. El acceso se extiende por la duración del cupón de forma aditiva.
+4. Al expirar, una tarea programada (`Celery`) limpia el estado, asegurando que la seguridad del proxy sea siempre coherente con la facturación real.
+
 ### Gestión de Sesión Premium (Dual Token)
 El sistema implementa una estrategia de **Dual Token** para máxima seguridad y una experiencia de usuario fluida:
 1.  **Login (`/auth/token`)**: Al autenticarse, el sistema devuelve un `access_token` (30m) y un `refresh_token` (7d).
@@ -189,8 +207,9 @@ docker-compose exec app python -m pytest backend/tests
 - ✅ Sistema de Vouchers B2B (Activación Offline).
 - ✅ Sistema de Notificaciones In-App y Alertas por Email.
 
-### Fase 2: Dashboard Frontend (⏳ En Progreso)
-- 🔲 Panel de Control en Next.js.
-- 🔲 Visualización de dispositivos en tiempo real.
-- 🔲 Gestión de suscripciones para el usuario final.
-- 🔲 Integración de alertas en tiempo real.
+### Fase 2: Dashboard Frontend (✅ Funcional - Modo Dev)
+- ✅ Panel de Control en Next.js (Dashboard funcional).
+- ✅ Visualización de dispositivos en tiempo real.
+- ✅ Gestión de suscripciones para el usuario final.
+- ✅ Integración de alertas en tiempo real.
+- ✅ Modo Desarrollo (Bypass Stripe) operativo.

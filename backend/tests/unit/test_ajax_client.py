@@ -17,12 +17,90 @@ def mock_settings():
 
 @pytest.fixture
 def ajax_client():
-    # Reset singleton for testing
-    AjaxClient._instance = None
     client = AjaxClient()
     # Mock redis inside the client to avoid real connection attempt
     client.redis = AsyncMock() 
     return client
+
+@pytest.mark.asyncio
+async def test_get_hubs_enriched_parallel(ajax_client):
+    """Test that get_hubs calls get_hub_details for each hub in parallel."""
+    mock_redis = ajax_client.redis
+    mock_redis.get.side_effect = ["ajax_user_123"] # For _ensure_user_id
+    
+    # Mock the request for get_hubs (the list)
+    hubs_list = [{"hubId": "hub1"}, {"hubId": "hub2"}]
+    
+    with patch.object(ajax_client, 'request', new_callable=AsyncMock) as mock_request, \
+         patch.object(ajax_client, 'get_hub_details', new_callable=AsyncMock) as mock_details:
+        
+        mock_request.return_value = hubs_list
+        mock_details.side_effect = [
+            {"hubId": "hub1", "state": "ARMED", "activeChannels": ["ETHERNET"]},
+            {"hubId": "hub2", "state": "DISARMED", "activeChannels": []}
+        ]
+        
+        enriched = await ajax_client.get_hubs("user@example.com")
+        
+        assert len(enriched) == 2
+        assert enriched[0]["hubId"] == "hub1"
+        assert enriched[0]["online"] is True
+        assert enriched[1]["hubId"] == "hub2"
+        # online should be True if it has a state even if channels are empty
+        assert enriched[1]["online"] is True
+        assert mock_details.call_count == 2
+
+@pytest.mark.asyncio
+async def test_get_hub_devices_flattening(ajax_client):
+    """Test that properties are correctly flattened in get_hub_devices."""
+    mock_redis = ajax_client.redis
+    mock_redis.get.side_effect = ["ajax_user_123"]
+    
+    ajax_response = [
+        {
+            "deviceId": "dev1",
+            "properties": {
+                "deviceName": "Front Door",
+                "deviceType": "DoorProtect",
+                "online": True
+            }
+        },
+        {
+            "id": "dev2", # Alternative ID field
+            "properties": {
+                "deviceName": "Motion",
+                "deviceType": "MotionProtect"
+            }
+        }
+    ]
+    
+    with patch.object(ajax_client, 'request', new_callable=AsyncMock) as mock_request:
+        mock_request.return_value = ajax_response
+        
+        devices = await ajax_client.get_hub_devices("user@example.com", "hub123")
+        
+        assert len(devices) == 2
+        assert devices[0]["deviceId"] == "dev1"
+        assert devices[0]["deviceName"] == "Front Door"
+        assert devices[1]["deviceId"] == "dev2"
+        assert devices[1]["deviceName"] == "Motion"
+
+@pytest.mark.asyncio
+async def test_get_hub_rooms_and_details(ajax_client):
+    """Test room-related methods."""
+    mock_redis = ajax_client.redis
+    mock_redis.get.return_value = "ajax_user_123"
+    
+    with patch.object(ajax_client, 'request', new_callable=AsyncMock) as mock_request:
+        # Test get_hub_rooms
+        mock_request.return_value = [{"id": "room1", "name": "Living"}]
+        rooms = await ajax_client.get_hub_rooms("u@e.com", "h1")
+        assert rooms[0]["name"] == "Living"
+        
+        # Test get_room_details
+        mock_request.return_value = {"id": "room1", "name": "Living", "hubs": ["h1"]}
+        detail = await ajax_client.get_room_details("u@e.com", "h1", "room1")
+        assert detail["id"] == "room1"
 
 @pytest.mark.asyncio
 async def test_get_session_token_from_redis(ajax_client):
