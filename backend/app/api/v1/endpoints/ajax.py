@@ -7,6 +7,7 @@ from backend.app.api.v1.auth import get_current_user
 from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
 from backend.app.services.billing_service import is_subscription_active
+from backend.app.services.rate_limiter import RateLimiter
 from backend.app.services import audit_service
 from backend.app.schemas import ajax as schemas
 from backend.app.schemas.auth import ErrorMessage
@@ -15,6 +16,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Rate limiter: 100 requests per minute per user for Ajax API endpoints
+rate_limiter = RateLimiter(key_prefix="ajax_api", limit=100, window=60)
 
 from backend.app.api.v1.utils import handle_ajax_error
 import httpx
@@ -62,6 +66,7 @@ async def read_hubs(
     current_user: User = Depends(get_current_user),
     client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
 ):
     """
     Retrieve the list of all hubs associated with the authenticated user.
@@ -89,6 +94,7 @@ async def read_hub_detail(
     current_user: User = Depends(get_current_user),
     client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
 ):
     """
     Get detailed information for a specific hub.
@@ -130,6 +136,7 @@ async def read_hub_groups(
     current_user: User = Depends(get_current_user),
     client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
 ):
     """
     Retrieve security groups and partitions for a specific hub.
@@ -159,6 +166,7 @@ async def read_hub_rooms(
     current_user: User = Depends(get_current_user),
     client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
 ):
     """
     Retrieve the list of rooms configured for a specific hub.
@@ -189,6 +197,7 @@ async def read_room_detail(
     current_user: User = Depends(get_current_user),
     client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
 ):
     """
     Get all details for a specific room within a hub.
@@ -222,6 +231,7 @@ async def read_hub_devices(
     current_user: User = Depends(get_current_user),
     client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
 ):
     """
     Fetch all devices currently linked to the specified hub.
@@ -252,6 +262,7 @@ async def read_device_detail(
     current_user: User = Depends(get_current_user),
     client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
 ):
     """
     Get all technical and telemetry data for a specific device.
@@ -295,6 +306,7 @@ async def read_hub_logs(
     current_user: User = Depends(get_current_user),
     client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
 ):
     """
     Retrieve event logs and history for a specific hub with pagination support.
@@ -380,6 +392,7 @@ async def set_hub_arm_state(
     current_user: User = Depends(get_current_user),
     client: AjaxClient = Depends(get_ajax_client),
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
 ):
     """
     Set the arming state for a specific hub or security group.
