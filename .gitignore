@@ -29,3 +29,5 @@ current_logs.txt
 *.py_backup
 ajax_client_container.py
 diag*
+debug*
+*.log

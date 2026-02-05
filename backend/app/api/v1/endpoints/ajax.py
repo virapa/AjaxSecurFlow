@@ -210,7 +210,7 @@ async def read_room_detail(
 
 @router.get(
     "/hubs/{hub_id}/devices", 
-    response_model=List[schemas.DeviceDetail],
+    response_model=List[schemas.DeviceListItem],
     summary="List Hub Devices",
     responses={
         403: {"model": ErrorMessage, "description": "Subscription inactive"},
@@ -278,9 +278,10 @@ async def read_device_detail(
     except Exception as e:
         handle_ajax_error(e)
 
+# --- Logs/Events ---
 @router.get(
     "/hubs/{hub_id}/logs", 
-    response_model=List[schemas.EventLog],
+    response_model=schemas.EventLogResponse,
     summary="Get Hub Event Logs",
     responses={
         403: {"model": ErrorMessage, "description": "Subscription inactive"},
@@ -297,6 +298,7 @@ async def read_hub_logs(
 ):
     """
     Retrieve event logs and history for a specific hub with pagination support.
+    Returns a wrapped object with logs and total count.
     """
     if not is_subscription_active(current_user):
         raise HTTPException(status_code=403, detail="Active subscription required")
@@ -311,17 +313,53 @@ async def read_hub_logs(
             offset=offset
         )
         
-        # Ensure we are returning a list
+        # Parse logs list from response
         logs_list = []
         if isinstance(raw_data, list):
             logs_list = raw_data
         elif isinstance(raw_data, dict) and "logs" in raw_data:
             logs_list = raw_data["logs"]
-        else:
-            logger.warning(f"Unexpected logs format from Ajax API: {type(raw_data)}")
-            logs_list = []
+            
+        # Mapping for human-readable events in Spanish
+        EVENT_MAP = {
+            "Arm": "Sistema Armado",
+            "Disarm": "Sistema Desarmado",
+            "NightModeOn": "Modo Noche Activado",
+            "Panic": "ALERTA DE PÁNICO",
+            "Motion": "Movimiento Detectado",
+            "Door": "Apertura de Puerta",
+            "PowerLost": "Pérdida de Alimentación",
+            "PowerRestored": "Alimentación Restaurada"
+        }
 
-        return [schemas.EventLog.model_validate(log) for log in logs_list]
+        # Map raw data to schema and handle enrichment
+        validated_logs = []
+        for log in logs_list:
+            # 1. Identity Mapping
+            obj_type = log.get("sourceObjectType")
+            obj_name = log.get("sourceObjectName")
+            
+            if obj_type == "USER":
+                # We prioritize user_name for USER objects
+                log["user_name"] = obj_name
+            else:
+                # We prioritize device_name for everything else
+                log["device_name"] = obj_name
+                
+            # 2. Description Mapping (Event Translation)
+            # Prioritize eventTag if it's in our map
+            tag = log.get("eventTag")
+            if tag in EVENT_MAP:
+                log["event_desc"] = EVENT_MAP[tag]
+            elif not log.get("event_desc") and tag:
+                log["event_desc"] = tag # Fallback to raw tag if no mapping exists
+                
+            validated_logs.append(schemas.EventLog.model_validate(log))
+
+        return schemas.EventLogResponse(
+            logs=validated_logs,
+            total_count=len(validated_logs)
+        )
             
     except Exception as e:
         handle_ajax_error(e)

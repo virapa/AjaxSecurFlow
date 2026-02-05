@@ -76,6 +76,10 @@ class DeviceBase(BaseModel):
     room_id: Optional[str] = Field(None, validation_alias=AliasChoices("roomId", "room_id"), serialization_alias="room_id")
     group_id: Optional[str] = Field(None, validation_alias=AliasChoices("groupId", "group_id"), serialization_alias="group_id")
 
+class DeviceListItem(DeviceBase):
+    """Lightweight schema for device list endpoint - only essential fields."""
+    online: Optional[bool] = Field(None, validation_alias=AliasChoices("online", "isOnline"), serialization_alias="online")
+
 class DeviceDetail(DeviceBase):
     online: Optional[bool] = Field(True, serialization_alias="online")
     state: Optional[str] = Field(None, serialization_alias="state")
@@ -122,26 +126,29 @@ class AjaxUserInfo(BaseModel):
     imageUrls: Optional[ImageUrls] = None
 
 # --- Logs/Events ---
+# --- Logs/Events ---
 class EventLog(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     
-    eventId: str
-    hubId: str
-    hubName: Optional[str] = None
-    eventType: Optional[str] = None
-    eventTypeV2: Optional[str] = None
-    eventCode: Optional[str] = None
+    id: str = Field(..., validation_alias=AliasChoices("id", "eventId", "eventIdV2"), serialization_alias="id")
+    hub_id: str = Field(..., validation_alias=AliasChoices("hub_id", "hubId"), serialization_alias="hub_id")
+    timestamp: int = Field(..., description="Unix timestamp (milliseconds)")
+    event_code: Optional[str] = Field(None, validation_alias=AliasChoices("event_code", "eventCode"), serialization_alias="event_code")
+    # Prioritize eventTag over generic eventType
+    event_desc: str = Field(..., validation_alias=AliasChoices("event_desc", "eventTag", "eventTypeV2", "eventType"), serialization_alias="event_desc")
+    user_name: Optional[str] = Field(None, validation_alias=AliasChoices("user_name", "sourceObjectName"), serialization_alias="user_name")
+    device_name: Optional[str] = Field(None, validation_alias=AliasChoices("device_name", "sourceObjectName"), serialization_alias="device_name")
+    
+    # Technical fields for deep debugging
+    eventTag: Optional[str] = None
     sourceObjectType: Optional[str] = None
     sourceObjectId: Optional[str] = None
-    sourceObjectName: Optional[str] = None
-    sourceRoomId: Optional[str] = None
     sourceRoomName: Optional[str] = None
-    timestamp: int
-    eventTag: Optional[str] = None
-    transition: Optional[str] = None
     additionalData: Optional[Dict[str, Any]] = None
-    additionalDataV2: Optional[List[Dict[str, Any]]] = None
-    eventSource: Optional[str] = None
+
+class EventLogResponse(BaseModel):
+    logs: List[EventLog] = []
+    total_count: int = 0
 
 from enum import IntEnum
 

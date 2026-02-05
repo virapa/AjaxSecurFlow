@@ -24,14 +24,19 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId }) => {
         const fetchLogs = async () => {
             try {
                 const response = await logService.getHubLogs(hubId, 10)
+                console.log('[EventFeed] Raw response:', response)
+
                 if (!response) {
-                    console.log(`[EventFeed] Hub logs not supported for hub ${hubId}`)
+                    console.warn(`[EventFeed] No response for hub ${hubId}`)
                     setLogs([])
                     return
                 }
-                setLogs(response.logs || [])
+
+                // Support both legacy list and new wrapped object
+                const logsData = Array.isArray(response) ? response : (response.logs || [])
+                setLogs(logsData)
             } catch (err: any) {
-                console.error('Unexpected error fetching logs:', err)
+                console.error('[EventFeed] Error fetching logs:', err)
                 setLogs([])
             } finally {
                 setIsLoading(false)
@@ -63,7 +68,11 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId }) => {
                                 log.event_desc.includes('Bater') || log.event_desc.includes('Battery') ? 'bg-orange-500/20 text-orange-500' : 'bg-gray-500/20 text-gray-400'
                             }`}>
                             <span className="text-[10px]">
-                                {log.event_desc.includes('imiento') || log.event_desc.includes('Motion') ? '🏃' : log.event_desc.includes('Armado') || log.event_desc.includes('Armed') ? '🛡️' : log.event_desc.includes('Bater') || log.event_desc.includes('Battery') ? '🔋' : '✅'}
+                                {log.event_desc.includes('imiento') || log.event_desc.includes('Motion') ? '🏃' :
+                                    log.event_desc.includes('Desarmado') || log.event_desc.includes('Disarm') ? '🔓' :
+                                        log.event_desc.includes('Armado') || log.event_desc.includes('Armed') ? '🔒' :
+                                            log.event_desc.includes('Noche') || log.event_desc.includes('Night') ? '🏠' :
+                                                log.event_desc.includes('Bater') || log.event_desc.includes('Battery') ? '🔋' : '✅'}
                             </span>
                         </div>
 
@@ -73,7 +82,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId }) => {
                                     {log.event_desc}
                                 </h4>
                                 <span className="text-[9px] font-mono text-gray-600">
-                                    {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    {new Date(log.timestamp).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} {new Date(log.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
                             <p className="text-[10px] text-gray-500 leading-tight">

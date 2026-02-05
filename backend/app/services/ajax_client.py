@@ -371,6 +371,8 @@ class AjaxClient:
                 flattened_item["deviceName"] = item["deviceName"]
             if "deviceType" in item and "deviceType" not in flattened_item:
                 flattened_item["deviceType"] = item["deviceType"]
+            if "online" in item and "online" not in flattened_item:
+                flattened_item["online"] = item["online"]
                 
             flattened.append(flattened_item)
             

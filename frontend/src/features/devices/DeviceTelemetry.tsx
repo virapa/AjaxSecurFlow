@@ -8,10 +8,147 @@ interface DeviceTelemetryProps {
     hubId?: string
 }
 
+interface EnrichedDevice extends Device {
+    isEnriching?: boolean
+    [key: string]: any // Allow additional dynamic properties
+}
+
+// Modal Component for Device Details
+const DeviceDetailModal: React.FC<{ device: EnrichedDevice; onClose: () => void }> = ({ device, onClose }) => {
+    const isOffline = device.online === false
+
+    // Close on escape key
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose()
+        }
+        window.addEventListener('keydown', handleEsc)
+        return () => window.removeEventListener('keydown', handleEsc)
+    }, [onClose])
+
+    // Format value for display
+    const formatValue = (value: any): string => {
+        if (value === null || value === undefined) return '—'
+        if (typeof value === 'boolean') return value ? 'Sí' : 'No'
+        if (typeof value === 'object') return JSON.stringify(value, null, 2)
+        return String(value)
+    }
+
+    // Fields to display with labels
+    const displayFields = [
+        { key: 'id', label: 'ID' },
+        { key: 'name', label: 'Nombre' },
+        { key: 'device_type', label: 'Tipo' },
+        { key: 'online', label: 'Estado' },
+        { key: 'battery_level', label: 'Batería' },
+        { key: 'temperature', label: 'Temperatura' },
+        { key: 'signal_level', label: 'Señal' },
+        { key: 'state', label: 'Estado Sensor' },
+        { key: 'firmware_version', label: 'Firmware' },
+        { key: 'room_id', label: 'ID Habitación' },
+        { key: 'group_id', label: 'ID Grupo' },
+        { key: 'model', label: 'Modelo' },
+        { key: 'color', label: 'Color' },
+    ]
+
+    // Get text color based on field and offline status
+    const getValueColor = (key: string, value: any): string => {
+        if (key === 'online') {
+            return value === true ? 'text-green-400' : value === false ? 'text-red-400' : 'text-gray-400'
+        }
+        // For offline devices, show cached values in light gray
+        if (isOffline) {
+            return 'text-gray-600'
+        }
+        return 'text-white'
+    }
+
+    return (
+        <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={onClose}
+        >
+            <div
+                className={`bg-[#0f172a] border border-white/10 rounded-3xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-200 ${isOffline ? 'opacity-80' : ''}`}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-2xl ${isOffline ? 'bg-gray-500/10 grayscale' : 'bg-blue-500/10'}`}>
+                            {device.device_type?.includes('Motion') || device.device_type?.includes('MotionProtect') ? '📡' :
+                                device.device_type?.includes('Door') || device.device_type?.includes('DoorProtect') ? '🚪' :
+                                    device.device_type?.includes('Space') || device.device_type?.includes('Control') ? '🎮' :
+                                        device.device_type?.includes('Relay') || device.device_type?.includes('WallSwitch') ? '💡' :
+                                            device.device_type?.includes('Fire') || device.device_type?.includes('Smoke') ? '🔥' :
+                                                device.device_type?.includes('Siren') ? '🔔' :
+                                                    device.device_type?.includes('Keyboard') || device.device_type?.includes('KeyPad') ? '⌨️' : '📦'}
+                        </div>
+                        <div>
+                            <h2 className={`text-lg font-bold ${isOffline ? 'text-gray-500' : 'text-white'}`}>{device.name || 'Sin nombre'}</h2>
+                            <p className="text-xs text-gray-500">{device.device_type}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="h-8 w-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* Offline banner */}
+                {isOffline && (
+                    <div className="px-6 py-2 bg-red-500/10 border-b border-red-500/20">
+                        <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider">⚠️ Dispositivo Offline - Mostrando últimos valores conocidos</p>
+                    </div>
+                )}
+
+                {/* Content */}
+                <div className="px-6 py-4 overflow-y-auto max-h-[calc(80vh-100px)]">
+                    <div className="space-y-3">
+                        {displayFields.map(({ key, label }) => {
+                            const value = device[key]
+                            if (value === undefined) return null
+
+                            return (
+                                <div key={key} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+                                    <span className={`text-sm font-medium ${getValueColor(key, value)}`}>
+                                        {key === 'online'
+                                            ? (value === true ? '🟢 Online' : value === false ? '🔴 Offline' : '—')
+                                            : key === 'battery_level' && value !== null
+                                                ? `${value}%`
+                                                : key === 'temperature' && value !== null
+                                                    ? `${value}°C`
+                                                    : formatValue(value)
+                                        }
+                                    </span>
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {/* Additional raw data section (collapsed) */}
+                    <details className="mt-4">
+                        <summary className="text-[10px] font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:text-gray-400 transition-colors">
+                            Datos técnicos
+                        </summary>
+                        <pre className="mt-2 p-3 bg-black/30 rounded-xl text-[10px] text-gray-500 overflow-x-auto font-mono">
+                            {JSON.stringify(device, null, 2)}
+                        </pre>
+                    </details>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
-    const [devices, setDevices] = useState<Device[]>([])
+    const [devices, setDevices] = useState<EnrichedDevice[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [mounted, setMounted] = useState(false)
+    const [selectedDevice, setSelectedDevice] = useState<EnrichedDevice | null>(null)
 
     useEffect(() => {
         setMounted(true)
@@ -26,14 +163,33 @@ export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
                 console.log(`[DeviceTelemetry] Fetching devices for hub: ${hubId}`)
                 const data = await deviceService.getHubDevices(hubId)
                 if (!data) {
-                    console.log(`[DeviceTelemetry] Hub returned null for devices list (Hub: ${hubId})`)
                     setDevices([])
                     return
                 }
-                console.log(`[DeviceTelemetry] Successfully fetched ${data.length} devices`)
-                setDevices(data)
+
+                // Set devices with enriching flag
+                const enrichedData = data.map(d => ({ ...d, isEnriching: true }))
+                setDevices(enrichedData)
+                setIsLoading(false)
+
+                // Enrich each device with details (battery, temperature)
+                for (const device of data) {
+                    try {
+                        const details = await deviceService.getDeviceDetails(hubId, device.id)
+                        setDevices(prev => prev.map(d =>
+                            d.id === device.id
+                                ? { ...d, ...details, isEnriching: false }
+                                : d
+                        ))
+                    } catch (err) {
+                        console.warn(`[DeviceTelemetry] Failed to enrich device ${device.id}`)
+                        setDevices(prev => prev.map(d =>
+                            d.id === device.id ? { ...d, isEnriching: false } : d
+                        ))
+                    }
+                }
             } catch (err: any) {
-                console.error(`[DeviceTelemetry] Critical failure fetching devices for hub ${hubId}:`, err)
+                console.error(`[DeviceTelemetry] Critical failure fetching devices:`, err)
                 setDevices([])
             } finally {
                 setIsLoading(false)
@@ -48,73 +204,102 @@ export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
     }
 
     return (
-        <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md">
-            <table className="w-full text-left">
-                <thead>
-                    <tr className="border-b border-white/5">
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.name}</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.status}</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.battery}</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.signal}</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.temp}</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600 text-right">{t.dashboard.telemetry.labels.action}</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                    {devices.length > 0 ? devices.map((device) => (
-                        <tr key={device.id} className="hover:bg-white/[0.02] transition-colors group">
-                            <td className="px-6 py-5">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
-                                        {device.name.includes('Motion') ? '📡' : device.name.includes('Door') ? '🚪' : '🔥'}
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-bold text-white">{device.name}</div>
-                                        <div className="text-[10px] text-gray-600 font-medium">{device.device_type}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td className="px-6 py-5">
-                                <div className="flex items-center gap-2">
-                                    <span className={`h-1.5 w-1.5 rounded-full ${device.state === 'Secure' || device.state === 'OK' || device.state === 'Closed' ? 'bg-green-500' : 'bg-red-500'}`} />
-                                    <span className="text-xs font-bold text-white">{device.state}</span>
-                                </div>
-                            </td>
-                            <td className="px-6 py-5">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-16 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full ${device.battery_level && device.battery_level < 20 ? 'bg-red-500' : device.battery_level && device.battery_level < 50 ? 'bg-orange-500' : 'bg-green-500'}`}
-                                            style={{ width: `${device.battery_level}%` }}
-                                        />
-                                    </div>
-                                    <span className="text-[10px] font-bold text-gray-400">{device.battery_level}%</span>
-                                </div>
-                            </td>
-                            <td className="px-6 py-5">
-                                <div className="flex items-end gap-0.5 h-3">
-                                    <div className="w-1 h-3/6 bg-green-500 rounded-[1px]" />
-                                    <div className="w-1 h-4/6 bg-green-500 rounded-[1px]" />
-                                    <div className="w-1 h-5/6 bg-green-500 rounded-[1px]" />
-                                    <div className="w-1 h-full bg-green-500 rounded-[1px]" />
-                                </div>
-                            </td>
-                            <td className="px-6 py-5">
-                                <span className="text-xs font-bold text-gray-400">{device.temperature}°C</span>
-                            </td>
-                            <td className="px-6 py-5 text-right">
-                                <button className="text-[10px] font-bold text-gray-600 hover:text-white transition-colors uppercase tracking-tighter">{t.dashboard.telemetry.labels.details}</button>
-                            </td>
+        <>
+            {/* Modal */}
+            {selectedDevice && (
+                <DeviceDetailModal
+                    device={selectedDevice}
+                    onClose={() => setSelectedDevice(null)}
+                />
+            )}
+
+            <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md">
+                <table className="w-full text-left">
+                    <thead>
+                        <tr className="border-b border-white/5">
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.name}</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.status}</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.battery}</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600">{t.dashboard.telemetry.labels.temp}</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-600 text-right">{t.dashboard.telemetry.labels.action}</th>
                         </tr>
-                    )) : (
-                        <tr>
-                            <td colSpan={6} className="px-6 py-20 text-center text-gray-700 italic text-[10px] uppercase tracking-widest">
-                                {t.dashboard.telemetry.empty}
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                        {devices.length > 0 ? devices.map((device) => {
+                            const isOffline = device.online === false
+                            return (
+                                <tr key={device.id} className={`hover:bg-white/[0.02] transition-colors group ${isOffline ? 'opacity-70' : ''}`}>
+                                    <td className="px-6 py-5">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${isOffline ? 'bg-gray-500/10 grayscale' : 'bg-blue-500/10 text-blue-400'}`}>
+                                                {device.device_type?.includes('Motion') || device.device_type?.includes('MotionProtect') ? '📡' :
+                                                    device.device_type?.includes('Door') || device.device_type?.includes('DoorProtect') ? '🚪' :
+                                                        device.device_type?.includes('Space') || device.device_type?.includes('Control') ? '🎮' :
+                                                            device.device_type?.includes('Relay') || device.device_type?.includes('WallSwitch') ? '💡' :
+                                                                device.device_type?.includes('Fire') || device.device_type?.includes('Smoke') ? '🔥' :
+                                                                    device.device_type?.includes('Siren') ? '🔔' :
+                                                                        device.device_type?.includes('Keyboard') || device.device_type?.includes('KeyPad') ? '⌨️' : '📦'}
+                                            </div>
+                                            <div>
+                                                <div className={`text-sm font-bold ${isOffline ? 'text-gray-500' : 'text-white'}`}>{device.name || 'Sin nombre'}</div>
+                                                <div className="text-[10px] text-gray-600 font-medium">{device.device_type}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`h-2 w-2 rounded-full ${device.online === true ? 'bg-green-500 animate-pulse' : device.online === false ? 'bg-red-500' : 'bg-gray-500'}`} />
+                                            <span className={`text-xs font-bold ${device.online === true ? 'text-green-400' : device.online === false ? 'text-red-400' : 'text-gray-500'}`}>
+                                                {device.online === true ? 'Online' : device.online === false ? 'Offline' : '—'}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        {device.isEnriching ? (
+                                            <span className="text-[10px] text-gray-600 animate-pulse">...</span>
+                                        ) : device.battery_level !== null && device.battery_level !== undefined ? (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-12 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full ${isOffline ? 'bg-gray-600' : device.battery_level < 20 ? 'bg-red-500' : device.battery_level < 50 ? 'bg-orange-500' : 'bg-green-500'}`}
+                                                        style={{ width: `${device.battery_level}%` }}
+                                                    />
+                                                </div>
+                                                <span className={`text-[10px] font-bold ${isOffline ? 'text-gray-600' : 'text-gray-400'}`}>{device.battery_level}%</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-[10px] text-gray-600">—</span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        {device.isEnriching ? (
+                                            <span className="text-[10px] text-gray-600 animate-pulse">...</span>
+                                        ) : device.temperature !== null && device.temperature !== undefined ? (
+                                            <span className={`text-xs font-bold ${isOffline ? 'text-gray-600' : 'text-gray-400'}`}>{device.temperature}°C</span>
+                                        ) : (
+                                            <span className="text-[10px] text-gray-600">—</span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-5 text-right">
+                                        <button
+                                            onClick={() => setSelectedDevice(device)}
+                                            className="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-tighter bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg"
+                                        >
+                                            {t.dashboard.telemetry.labels.details}
+                                        </button>
+                                    </td>
+                                </tr>
+                            )
+                        }) : (
+                            <tr>
+                                <td colSpan={5} className="px-6 py-20 text-center text-gray-700 italic text-[10px] uppercase tracking-widest">
+                                    {t.dashboard.telemetry.empty}
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </>
     )
 }

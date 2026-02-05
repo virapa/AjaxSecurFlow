@@ -128,10 +128,10 @@ export const es = {
             active: 'Activo',
             expired: 'Expirado / Inactivo',
             manageBilling: 'GESTIONAR FACTURACIÓN',
-            premium: 'Misión Crítica',
-            pro: 'Pro Industrial',
-            basic: 'Plan Básico',
-            free: 'Uso Personal',
+            premium: 'Premium',
+            pro: 'Pro',
+            basic: 'Básico',
+            free: 'Gratuito',
             connectivityValue: '99.9%'
         },
         hubs: {
@@ -161,7 +161,7 @@ export const es = {
             empty: 'No tienes notificaciones en este momento.'
         },
         telemetry: {
-            title: 'Telemetría del Dispositivo',
+            title: 'Dispositivos',
             viewFullLogs: 'Ver Historial Completo',
             labels: {
                 name: 'Nombre del Dispositivo',
