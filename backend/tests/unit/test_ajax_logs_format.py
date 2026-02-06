@@ -1,14 +1,14 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.main import app
 from backend.app.api.deps import get_ajax_client
 from backend.app.api.v1.auth import get_current_user
 from backend.app.schemas import ajax as schemas
 
-def test_read_hub_logs_format():
-    """Verify that hub logs return the correct wrapped format and aliases."""
-    
+@pytest.fixture
+def mock_ajax_logs_overrides():
     mock_user = AsyncMock()
     mock_user.id = 1
     mock_user.email = "test@example.com"
@@ -41,8 +41,27 @@ def test_read_hub_logs_format():
     # Necessary for verify_hub_access
     mock_ajax.get_hubs.return_value = {"hubs": [{"id": "hub_456"}]}
 
+    # Mock DB to prevent real DB access or leaky state
+    from backend.app.api.deps import get_db
+    mock_db = AsyncMock(spec=AsyncSession)
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_db.execute.return_value = mock_result
+
     app.dependency_overrides[get_current_user] = lambda: mock_user
     app.dependency_overrides[get_ajax_client] = lambda: mock_ajax
+    app.dependency_overrides[get_db] = lambda: mock_db
+    
+    yield mock_ajax, mock_user, mock_db
+    
+    for dep in [get_current_user, get_ajax_client, get_db]:
+        if dep in app.dependency_overrides:
+            del app.dependency_overrides[dep]
+
+def test_read_hub_logs_format(mock_ajax_logs_overrides):
+    """Verify that hub logs return the correct wrapped format and aliases."""
+    
+    mock_ajax, mock_user, _ = mock_ajax_logs_overrides
 
     with TestClient(app) as client:
         response = client.get("/api/v1/ajax/hubs/hub_456/logs")
@@ -63,6 +82,4 @@ def test_read_hub_logs_format():
     assert logs[0]["device_name"] == "Living Room Cam"
     
     assert logs[1]["id"] == "event_789"
-    assert logs[1]["event_desc"] == "Sistema Armado" # Mapped from 'Arm' (not implemented yet in mock, let's fix mock)
-
-    app.dependency_overrides = {}
+    assert logs[1]["event_desc"] == "Sistema Armado" # Mapped from 'Arm'

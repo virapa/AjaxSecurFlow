@@ -13,18 +13,23 @@ async def create_notification(
 ) -> Notification:
     """
     Creates a new in-app notification for a user.
-
-    Args:
-        db: Async database session.
-        user_id: ID of the user to notify.
-        title: Short title for the notification.
-        message: Detailed message content.
-        notification_type: Category (info, warning, success, error, security).
-        link: Optional destination URL for the user.
-
-    Returns:
-        Notification: The created notification object.
+    Includes a lightweight idempotency check: if an unread notification 
+    with the exact same title and message exists, we return it instead of creating a new one.
     """
+    # 1. Idempotency check for unread alerts
+    stmt = select(Notification).where(
+        Notification.user_id == user_id,
+        Notification.title == title,
+        Notification.message == message,
+        Notification.is_read == False
+    )
+    existing = await db.execute(stmt)
+    existing_notification = existing.scalar_one_or_none()
+    
+    if existing_notification:
+        return existing_notification
+
+    # 2. Create new if not exists
     notification = Notification(
         user_id=user_id,
         title=title,

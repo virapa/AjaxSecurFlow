@@ -13,6 +13,7 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown logic
 
+
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
@@ -34,6 +35,38 @@ app = FastAPI(
     },
     lifespan=lifespan
 )
+
+import re
+MALICIOUS_PATTERNS = [
+    # Legacy server extensions
+    r"\.(php|asp|aspx|jsp|cgi|pl|cfm|rb|py)$",
+    # Sensitive files
+    r"(\.env|\.git|\.vscode|\.ssh|web\.config|composer\.json|package\.json|Dockerfile)",
+    # Admin panels
+    r"/(admin|phpmyadmin|wp-admin|wp-content|wordpress|administrator|backoffice|cp|controlpanel|manager)",
+    # Path traversal
+    r"(/etc/passwd|/etc/shadow|/windows/system\.ini|win\.ini|\.\./)",
+    # DB and logs
+    r"\.(sql|bak|old|swp|log|sqlite|db)$",
+    # Specific probes
+    r"/(sdk|jk-status|balancer-manager|admin-console|webmail|happyaxis|uddiclient|fckeditor)"
+]
+MALICIOUS_REGEX = re.compile("|".join(MALICIOUS_PATTERNS), re.IGNORECASE)
+
+@app.middleware("http")
+async def request_shield_middleware(request: Request, call_next):
+    """
+    Backend Request Shield:
+    Intercepts and blocks malicious scanning patterns before processing.
+    """
+    path = request.url.path
+    if MALICIOUS_REGEX.search(path):
+        logger.warning(f"[SECURITY] Blocked malicious backend probe: {path} from {request.client.host if request.client else 'unknown'}")
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Forbidden: Malicious activity detected."}
+        )
+    return await call_next(request)
 
 # Global Exception Handlers
 @app.exception_handler(AjaxAuthError)

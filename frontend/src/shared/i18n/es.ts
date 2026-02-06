@@ -118,8 +118,6 @@ export const es = {
         },
         stats: {
             activeHubs: 'Hubs Activos',
-            securityAlerts: 'Alertas de Seguridad',
-            connectivity: 'Conectividad',
             planStatus: 'Estado del Plan',
             allSystemsOnline: 'Todos los sistemas en línea',
             systemDegraded: 'Sistema degradado',
@@ -132,7 +130,6 @@ export const es = {
             pro: 'Pro',
             basic: 'Básico',
             free: 'Gratuito',
-            connectivityValue: '99.9%'
         },
         hubs: {
             title: 'Estado de Hubs Activos',
@@ -182,7 +179,6 @@ export const es = {
         analytics: {
             title: 'Reporte de Inteligencia',
             trends: 'Tendencias de Seguridad (24h)',
-            signals: 'Distribución de Señal',
             battery: 'Salud de Batería',
             eventsPerSite: 'Eventos por Sitio',
             noData: 'Datos insuficientes para análisis',

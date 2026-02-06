@@ -8,7 +8,7 @@ from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
 from backend.app.services.billing_service import is_subscription_active
 from backend.app.services.global_rate_limiter import global_ajax_rate_limiter
-from backend.app.services import audit_service
+from backend.app.services import audit_service, notification_service
 from backend.app.schemas import ajax as schemas
 from backend.app.schemas.auth import ErrorMessage
 import logging
@@ -367,6 +367,24 @@ async def read_hub_logs(
                 log["event_desc"] = tag # Fallback to raw tag if no mapping exists
                 
             validated_logs.append(schemas.EventLog.model_validate(log))
+            
+            # --- SECURITY ALERT DETECTION ---
+            # If the event is critical (Motion/Panic), ensure we have a notification
+            if tag in ["Motion", "Panic"]:
+                notification_title = EVENT_MAP.get(tag, tag)
+                notification_message = f"Detección en {obj_name or 'dispositivo desconocido'} ({hub_id})"
+                
+                # Proactive notification generation
+                # Note: In a production scale-out, we'd use a separate background task 
+                # or check for duplicate notification IDs within a sliding window.
+                await notification_service.create_notification(
+                    db=db,
+                    user_id=current_user.id,
+                    title=f"ALERTA: {notification_title}",
+                    message=notification_message,
+                    notification_type="security",
+                    link=f"/dashboard?hub={hub_id}"
+                )
 
         return schemas.EventLogResponse(
             logs=validated_logs,

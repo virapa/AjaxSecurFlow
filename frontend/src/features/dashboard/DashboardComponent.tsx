@@ -9,6 +9,7 @@ import { EventFeed } from '@/features/logs/EventFeed'
 import { AnalyticsDashboard } from './AnalyticsDashboard'
 import { hubService, Hub } from '@/features/hubs/hub.service'
 import { authService } from '@/features/auth/auth.service'
+import { notificationService } from '@/features/notifications/notification.service'
 
 import { es as t } from '@/shared/i18n/es'
 
@@ -23,6 +24,7 @@ export const DashboardComponent: React.FC = () => {
     const [error, setError] = useState<string | null>(null)
     const [selectedHub, setSelectedHub] = useState<Hub | null>(null)
     const [user, setUser] = useState<any>(null)
+    const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number>(0)
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
 
@@ -52,9 +54,19 @@ export const DashboardComponent: React.FC = () => {
         }
     }
 
+    const fetchNotificationsSummary = async () => {
+        try {
+            const summary = await notificationService.getSummary()
+            setUnreadNotificationsCount(summary.unread_count)
+        } catch (err) {
+            console.error('Failed to fetch notifications summary:', err)
+        }
+    }
+
     useEffect(() => {
         fetchProfile()
         fetchHubs()
+        fetchNotificationsSummary()
         // Removed polling - hubs are loaded once on mount
         // User can refresh page if they want updated data
     }, [])
@@ -110,7 +122,7 @@ export const DashboardComponent: React.FC = () => {
                     <nav className="space-y-1">
                         <NavItem icon="📊" label={t.dashboard.nav.dashboard} active />
                         <NavItem icon="📱" label={t.dashboard.nav.devices} />
-                        <NavItem icon="🔔" label={t.dashboard.nav.notifications} badge="12" />
+                        <NavItem icon="🔔" label={t.dashboard.nav.notifications} badge={unreadNotificationsCount > 0 ? unreadNotificationsCount.toString() : undefined} />
                         <NavItem icon="💳" label={t.dashboard.nav.subscription} />
                     </nav>
                 </div>
@@ -144,7 +156,7 @@ export const DashboardComponent: React.FC = () => {
                                 {activeHubsCount > 0 ? t.dashboard.systemStatus.secure : t.dashboard.systemStatus.attention}
                             </span>
                         </div>
-                        <button onClick={fetchHubs} className="text-gray-500 hover:text-white transition-colors">🔄</button>
+                        <button onClick={() => { fetchHubs(); fetchNotificationsSummary(); }} className="text-gray-500 hover:text-white transition-colors">🔄</button>
                         <div className="h-10 w-[1px] bg-white/10 mx-2" />
 
                         {/* User Profile with Dropdown */}
@@ -184,7 +196,7 @@ export const DashboardComponent: React.FC = () => {
 
                 <div className="p-10 space-y-10 max-w-[1600px] mx-auto">
                     {/* Stats Ribbon */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
                         <StatCard
                             label={t.dashboard.stats.activeHubs}
                             value={isLoading ? '--/--' : `${activeHubsCount}/${totalHubsCount}`}
@@ -192,8 +204,12 @@ export const DashboardComponent: React.FC = () => {
                             color={activeHubsCount === totalHubsCount ? 'green' : 'yellow'}
                             progress={totalHubsCount > 0 ? (activeHubsCount / totalHubsCount) * 100 : 0}
                         />
-                        <StatCard label={t.dashboard.stats.securityAlerts} value="0" trend={t.dashboard.stats.past24h} color="blue" progress={0} />
-                        <StatCard label={t.dashboard.stats.connectivity} value={t.dashboard.stats.connectivityValue} trend={t.dashboard.stats.uptime} color="cyan" progress={99.9} />
+
+                        {/* Analytics Trends - Centered between stats */}
+                        <div className="md:mt-0">
+                            <AnalyticsDashboard hubId={selectedHub?.id} />
+                        </div>
+
                         <StatCard
                             label={t.dashboard.stats.planStatus}
                             value={user ? (user.subscription_active ? (t.dashboard.stats as any)[user.subscription_plan] : t.dashboard.stats.free) : '...'}
@@ -203,9 +219,6 @@ export const DashboardComponent: React.FC = () => {
                             progress={user?.subscription_active ? 100 : 0}
                         />
                     </div>
-
-                    {/* Analytics Dashboard Section */}
-                    <AnalyticsDashboard hubId={selectedHub?.id} />
 
                     <div className="grid grid-cols-12 gap-8">
                         {/* Middle Section: Hubs & Telemetry */}

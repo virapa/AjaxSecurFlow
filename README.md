@@ -127,9 +127,7 @@ Este proyecto implementa controles de calidad de grado militar:
 ### Seguridad de Grado Industrial (Security by Design)
 El sistema implementa capas de defensa activa para proteger las sesiones de usuario:
 - **JWT Fingerprinting (UA Hash)**: El token está vinculado al `User-Agent` del cliente que inició sesión. Si el token es robado y usado desde otro navegador, es rechazado inmediatamente.
-- **Network Proxy Security (Next.js 16)**: Uso de la convención de `proxy.ts` para validación de sesiones y protección de rutas en el borde (`/dashboard`) antes del renderizado.
-- **Revocación por JTI + Redis**: Cada login genera un ID único (`jti`). Al hacer **Logout**, el token es invalidado instantáneamente en el lado del servidor mediante una lista negra en Redis.
-- **Protección Brute-Force (Fail2Ban)**: Bloqueo automático de IP tras 5 intentos fallidos de login durante 15 minutos.
+- **Full-Stack Request Shield (Phase 9)**: Capa de defensa proactiva en Next.js (Edge) y FastAPI (Middleware) que bloquea ráfagas de escaneo automatizado y probes de vulnerabilidades (`.php`, `.asp`, `.env`, path traversal) con un **403 Forbidden** inmediato.
 - **Auditoría VIP**: Registro inmutable que incluye IP, navegador y nivel de severidad (INFO, WARNING, CRITICAL) para cada acción.
 - **Mensajes de Error Opacos (Hardened Auth)**: Todos los fallos de autenticación devuelven un genérico "Invalid credentials", evitando fugas de información sobre la existencia de usuarios o validez de tokens a atacantes.
 - **Ofuscación de Upstream**: Los errores de la API de Ajax se filtran para eliminar URLs internas o IDs técnicos, devolviendo mensajes seguros para el cliente final.
@@ -239,11 +237,15 @@ docker-compose exec app python -m pytest backend/tests
 
 ### Fase 7: Analytics Dashboard (✅ Completada)
 - ✅ Instalación e integración de `recharts`.
-- ✅ Gráfico de Tendencias de Seguridad (últimas 24h).
-- ✅ Distribución de Señal (Excellent/Good/Poor).
-- ✅ Monitoreo de Salud de Batería.
-- ✅ Fix de tipos en `DeviceTelemetry.tsx`.
-- ✅ Build de producción verificado.
+- ✅ Gráfico de Tendencias de Seguridad (Situado centralmente en el Dashboard).
+- ✅ Distribución de Señal & Salud de Batería.
+- ✅ Fix de tipos y Build de producción.
+
+### Fase 9: Security Hardening (✅ Completada)
+- ✅ Implementación de "Request Shield" en Next.js Middleware.
+- ✅ Implementación de "Request Shield" en FastAPI Backend.
+- ✅ Bloqueo proactivo de scanners de vulnerabilidades.
+- ✅ Protección de archivos sensibles y traversals.
 
 ### Fase 2: Dashboard Frontend (✅ Funcional - Modo Dev)
 - ✅ Panel de Control en Next.js (Dashboard funcional).

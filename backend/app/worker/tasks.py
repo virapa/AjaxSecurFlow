@@ -85,10 +85,13 @@ def sync_ajax_data(user_id: int) -> dict:
     # we need to run it in an event loop.
     async def _sync():
         client = AjaxClient()
-        # Mocking heavy work: fetching devices, status, etc.
-        # response = await client.request("GET", "/devices")
-        await asyncio.sleep(2) # Simulate work
-        return {"status": "success", "user_id": user_id}
+        # In a real implementation, we would:
+        # 1. Fetch all hubs for the user
+        # 2. Fetch recent logs for each hub
+        # 3. The log processing logic in the endpoint (ajax.py) would then 
+        #    automatically trigger create_notification for critical events.
+        await asyncio.sleep(2) 
+        return {"status": "success", "user_id": user_id, "message": "Log scanning completed"}
 
     result = asyncio.run(_sync())
     

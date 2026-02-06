@@ -32,5 +32,11 @@ export const notificationService = {
      */
     markAllAsRead: async (): Promise<{ status: string; marked_read: number }> => {
         return apiClient.post<{ status: string; marked_read: number }>('/notifications/mark-all-read', {})
+    },
+    /**
+     * Get unread count and the 5 most recent notifications.
+     */
+    getSummary: async (): Promise<{ unread_count: number; notifications: Notification[] }> => {
+        return apiClient.get('/notifications/summary')
     }
 }
