@@ -70,6 +70,7 @@ const DeviceDetailModal: React.FC<{
         { key: 'group_id', label: 'ID Grupo' },
         { key: 'model', label: 'Modelo' },
         { key: 'color', label: 'Color' },
+        { key: 'bypassState', label: 'Bypass' },
     ]
 
     // Get text color based on field and offline status
@@ -149,7 +150,9 @@ const DeviceDetailModal: React.FC<{
                                                         ? `${value}%`
                                                         : key === 'temperature' && value !== null
                                                             ? `${value}°C`
-                                                            : formatValue(value)
+                                                            : key === 'bypassState' && Array.isArray(value)
+                                                                ? (value.length > 0 ? value.join(', ') : '—')
+                                                                : formatValue(value)
                                                 }
                                             </span>
                                         </div>

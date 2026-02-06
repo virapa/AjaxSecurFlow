@@ -8,6 +8,7 @@ export interface EventLog {
     event_desc: string
     user_name?: string
     device_name?: string
+    transition?: string
 }
 
 export interface EventLogResponse {

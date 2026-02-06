@@ -97,6 +97,7 @@ class DeviceDetail(DeviceBase):
     
     # CMS/Technical
     cms_index: Optional[int] = Field(None, validation_alias=AliasChoices("cms_index", "cmsDeviceIndex"))
+    bypassState: Optional[List[str]] = None
     malfunctions: List[str] = []
     
     # Legacy compatibility fields
@@ -138,6 +139,7 @@ class EventLog(BaseModel):
     event_desc: str = Field(..., validation_alias=AliasChoices("event_desc", "eventTag", "eventTypeV2", "eventType"), serialization_alias="event_desc")
     user_name: Optional[str] = Field(None, validation_alias=AliasChoices("user_name", "sourceObjectName"), serialization_alias="user_name")
     device_name: Optional[str] = Field(None, validation_alias=AliasChoices("device_name", "sourceObjectName"), serialization_alias="device_name")
+    transition: Optional[str] = None
     
     # Technical fields for deep debugging
     eventTag: Optional[str] = None

@@ -10,6 +10,7 @@ export interface Device {
     signal_level?: string
     temperature?: number
     malfunctions: string[]
+    bypassState?: string[]
 }
 
 /**

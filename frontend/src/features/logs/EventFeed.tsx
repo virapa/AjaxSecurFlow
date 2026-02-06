@@ -13,6 +13,20 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId }) => {
     const [isLoading, setIsLoading] = useState(true)
     const [mounted, setMounted] = useState(false)
 
+    // Helper to translate/refine event descriptions
+    const getEventDescription = (log: EventLog): string => {
+        const desc = log.event_desc || ''
+        // Check for transition-based bypass events
+        if (desc.includes('TamperBypassOn') || desc.includes('BypassOn')) {
+            if (log.transition === 'RECOVERED') {
+                return 'Restablecimiento de anulación'
+            }
+            // Covers TRIGGERED or undefined
+            return 'Anulación'
+        }
+        return desc
+    }
+
     useEffect(() => {
         setMounted(true)
         if (!hubId) {
@@ -79,7 +93,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId }) => {
                         <div>
                             <div className="flex justify-between items-start mb-1">
                                 <h4 className={`text-[13px] font-bold ${log.event_desc.includes('Motion') ? 'text-red-400' : 'text-white'}`}>
-                                    {log.event_desc}
+                                    {getEventDescription(log)}
                                 </h4>
                                 <span className="text-[9px] font-mono text-gray-600">
                                     {new Date(log.timestamp).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} {new Date(log.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
