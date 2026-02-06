@@ -36,8 +36,10 @@ export const HubList: React.FC<HubListProps> = ({
         try {
             setIsActionLoading(hubId)
             await hubService.setArmState(hubId, newState)
-            // Manual refresh after successful command
-            setTimeout(refreshHubs, 500)
+            // Wait for 1.5s for the physical system to complete the transition
+            await new Promise(resolve => setTimeout(resolve, 1500))
+            // Manual refresh after successful command to confirm the state change
+            await refreshHubs()
         } catch (err) {
             console.error('Failed to change arm state', err)
         } finally {

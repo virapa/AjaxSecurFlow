@@ -6,7 +6,7 @@ from backend.app.api.deps import get_ajax_client
 
 # Mock data
 MOCK_HUBS = [{"id": "000000", "name": "Success Hub", "role": "MASTER"}]
-MOCK_LOGS = {"logs": [{"eventId": "ev1", "hubId": "000000", "eventCode": "M_12", "timestamp": 1672574400}], "total_count": 1}
+MOCK_LOGS = {"logs": [{"eventId": "ev1", "hubId": "000000", "eventCode": "M_12", "eventTag": "Arm", "timestamp": 1672574400}], "total_count": 1}
 
 @pytest.fixture
 def mock_ajax_client_override():

@@ -136,7 +136,7 @@ const DeviceDetailModal: React.FC<{
                         <>
                             <div className="space-y-3">
                                 {displayFields.map(({ key, label }) => {
-                                    const value = displayDevice[key]
+                                    const value = (displayDevice as any)[key]
                                     if (value === undefined) return null
 
                                     return (

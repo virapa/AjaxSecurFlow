@@ -7,7 +7,7 @@ from backend.app.api.v1.auth import get_current_user
 from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
 from backend.app.services.billing_service import is_subscription_active
-from backend.app.services.rate_limiter import RateLimiter
+from backend.app.services.global_rate_limiter import global_ajax_rate_limiter
 from backend.app.services import audit_service
 from backend.app.schemas import ajax as schemas
 from backend.app.schemas.auth import ErrorMessage
@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Rate limiter: 100 requests per minute per user for Ajax API endpoints
-rate_limiter = RateLimiter(key_prefix="ajax_api", limit=100, window=60)
+# Global rate limiter: 100 requests per minute TOTAL across all users
+rate_limiter = global_ajax_rate_limiter
 
 from backend.app.api.v1.utils import handle_ajax_error
 import httpx

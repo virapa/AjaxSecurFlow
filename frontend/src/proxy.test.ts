@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { describe, it, expect, vi } from 'vitest'
-import middleware from './middleware'
+import middleware from './proxy'
 
 // Mock NextURL to avoid internal issues
 vi.mock('next/server', async () => {

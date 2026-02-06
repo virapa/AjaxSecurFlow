@@ -19,8 +19,30 @@ def mock_settings():
 def ajax_client():
     client = AjaxClient()
     # Mock redis inside the client to avoid real connection attempt
-    client.redis = AsyncMock() 
-    return client
+    client.redis = AsyncMock()
+    
+    # Mock cache to always "miss" so existing tests logic remains valid
+    # and doesn't consume redis mock side_effects unexpectedly
+    mock_cache = MagicMock()
+    mock_cache.get = AsyncMock(return_value=None)
+    mock_cache.set = AsyncMock(return_value=True)
+    
+    # Mock get_or_fetch to bypass cache and call the fetch function directly
+    async def mock_get_or_fetch(key, ttl, fetch_func):
+        return await fetch_func()
+    mock_cache.get_or_fetch = AsyncMock(side_effect=mock_get_or_fetch)
+    
+    # Helper methods for keys
+    mock_cache.key_hubs.return_value = "cache:hubs"
+    mock_cache.key_hub.return_value = "cache:hub"
+    mock_cache.key_devices.return_value = "cache:devices"
+    mock_cache.key_device.return_value = "cache:device"
+    mock_cache.key_rooms.return_value = "cache:rooms"
+    mock_cache.key_groups.return_value = "cache:groups"
+    
+    # Patch _get_cache to return our mock_cache instead of creating a real one
+    with patch.object(client, '_get_cache', new_callable=AsyncMock, return_value=mock_cache):
+        yield client
 
 @pytest.mark.asyncio
 async def test_get_hubs_enriched_parallel(ajax_client):
@@ -32,7 +54,7 @@ async def test_get_hubs_enriched_parallel(ajax_client):
     hubs_list = [{"hubId": "hub1"}, {"hubId": "hub2"}]
     
     with patch.object(ajax_client, 'request', new_callable=AsyncMock) as mock_request, \
-         patch.object(ajax_client, 'get_hub_details', new_callable=AsyncMock) as mock_details:
+         patch.object(ajax_client, '_fetch_hub_details_uncached', new_callable=AsyncMock) as mock_details:
         
         mock_request.return_value = hubs_list
         mock_details.side_effect = [
@@ -145,7 +167,8 @@ async def test_login_success(ajax_client):
 @pytest.mark.asyncio
 async def test_request_uses_userId_in_path(ajax_client):
     mock_redis = ajax_client.redis
-    mock_redis.get.side_effect = ["ajax_user_123", "cached_token"]
+    # Need values for: user id, session token, per-user rate limit counter
+    mock_redis.get.side_effect = ["ajax_user_123", "cached_token", "0"] 
     
     mock_success = MagicMock()
     mock_success.status_code = 200

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException, Path
 from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.services.ajax_client import AjaxClient
-from backend.app.services.rate_limiter import RateLimiter
+from backend.app.services.global_rate_limiter import global_ajax_rate_limiter
 from backend.app.services import audit_service, billing_service
 from backend.app.schemas.auth import ErrorMessage
 from backend.app.api.v1.auth import get_current_user
@@ -12,7 +12,8 @@ from backend.app.api.deps import get_db, get_ajax_client
 from urllib.parse import unquote
 
 router = APIRouter()
-rate_limiter = RateLimiter(key_prefix="ajax_proxy", limit=100, window=60)
+# Global rate limiter: shares the same 100 req/min pool with /ajax endpoints
+rate_limiter = global_ajax_rate_limiter
 
 @router.get("/{path:path}", summary="Generic Ajax API Proxy (GET)")
 @router.post("/{path:path}", summary="Generic Ajax API Proxy (POST)")

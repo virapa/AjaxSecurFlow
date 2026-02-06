@@ -5,6 +5,7 @@ from typing import Optional, Dict, Any, List
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from backend.app.core.config import settings
+from backend.app.services.ajax_cache import AjaxCacheService
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -21,11 +22,19 @@ class AjaxClient:
     
     def __init__(self, redis_client: Optional[redis.Redis] = None):
         self.redis = redis_client
+        self._cache: Optional[AjaxCacheService] = None
         # Initialize HTTP client with base URL from settings
         self.client = httpx.AsyncClient(
             base_url=settings.AJAX_API_BASE_URL, 
             timeout=15.0
         )
+    
+    async def _get_cache(self) -> AjaxCacheService:
+        """Get or initialize cache service."""
+        if not self._cache:
+            redis_client = await self._get_redis()
+            self._cache = AjaxCacheService(redis_client)
+        return self._cache
 
     async def _get_redis(self) -> redis.Redis:
         if not self.redis:
@@ -274,7 +283,17 @@ class AjaxClient:
         Get hubs for user with enriched detail.
         The base Ajax list endpoint only returns IDs, so we fetch details 
         for each hub to provide a rich dashboard experience.
+        Results are cached for performance.
         """
+        cache = await self._get_cache()
+        cache_key = cache.key_hubs(user_email)
+        
+        # Check cache first
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
+        # Cache miss - fetch from API
         import asyncio
         user_id = await self._ensure_user_id(user_email)
         hubs_list = await self.request(user_email, "GET", f"/user/{user_id}/hubs")
@@ -283,7 +302,7 @@ class AjaxClient:
             return []
             
         # Fetch details for each hub in parallel for efficiency
-        tasks = [self.get_hub_details(user_email, h.get('hubId')) for h in hubs_list if h.get('hubId')]
+        tasks = [self._fetch_hub_details_uncached(user_email, h.get('hubId')) for h in hubs_list if h.get('hubId')]
         details = await asyncio.gather(*tasks, return_exceptions=True)
         
         enriched_hubs = []
@@ -291,28 +310,36 @@ class AjaxClient:
             detail = details[i]
             if isinstance(detail, Exception):
                 logger.error(f"Failed to fetch details for hub {hub_summary.get('hubId')}: {detail}")
-                # Fallback to basic info
                 hub_data = hub_summary
             else:
-                # Merge summary and detail
                 hub_data = {**hub_summary, **detail}
             
-            # Ensure 'online' status is calculated if missing (Backend logic for Frontend)
             if hub_data.get('online') is None:
-                # If there are active communication channels, the hub is online
                 active_channels = hub_data.get('activeChannels', [])
-                # Also, if we have a state (ARMED/DISARMED), it means it's communicating
                 has_state = hub_data.get('state') is not None
                 hub_data['online'] = len(active_channels) > 0 or has_state
                 
             enriched_hubs.append(hub_data)
-            
+        
+        # Cache the result
+        await cache.set(cache_key, enriched_hubs, settings.CACHE_TTL_HUBS)
         return enriched_hubs
-
-    async def get_hub_details(self, user_email: str, hub_id: str) -> Dict[str, Any]:
-        """Get hub detail."""
+    
+    async def _fetch_hub_details_uncached(self, user_email: str, hub_id: str) -> Dict[str, Any]:
+        """Internal method to fetch hub details without caching (used by get_hubs)."""
         user_id = await self._ensure_user_id(user_email)
         return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}")
+
+    async def get_hub_details(self, user_email: str, hub_id: str) -> Dict[str, Any]:
+        """Get hub detail with caching."""
+        cache = await self._get_cache()
+        cache_key = cache.key_hub(user_email, hub_id)
+        
+        return await cache.get_or_fetch(
+            key=cache_key,
+            ttl=settings.CACHE_TTL_HUB_DETAIL,
+            fetch_func=lambda: self._fetch_hub_details_uncached(user_email, hub_id)
+        )
 
     async def get_hub_logs(self, user_email: str, hub_id: str, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
         """Get hub event logs."""
@@ -321,15 +348,27 @@ class AjaxClient:
         return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/logs", params=params)
 
     async def get_hub_groups(self, user_email: str, hub_id: str) -> Dict[str, Any]:
-        """Get hub security groups."""
-        user_id = await self._ensure_user_id(user_email)
-        return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/groups")
+        """Get hub security groups with caching."""
+        cache = await self._get_cache()
+        cache_key = cache.key_groups(user_email, hub_id)
+        
+        async def fetch():
+            user_id = await self._ensure_user_id(user_email)
+            return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/groups")
+        
+        return await cache.get_or_fetch(cache_key, settings.CACHE_TTL_GROUPS, fetch)
 
     async def get_hub_rooms(self, user_email: str, hub_id: str) -> List[Dict[str, Any]]:
-        """Get list of rooms for a specific hub."""
-        user_id = await self._ensure_user_id(user_email)
-        response = await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/rooms")
-        return response if isinstance(response, list) else response.get("rooms", [])
+        """Get list of rooms for a specific hub with caching."""
+        cache = await self._get_cache()
+        cache_key = cache.key_rooms(user_email, hub_id)
+        
+        async def fetch():
+            user_id = await self._ensure_user_id(user_email)
+            response = await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/rooms")
+            return response if isinstance(response, list) else response.get("rooms", [])
+        
+        return await cache.get_or_fetch(cache_key, settings.CACHE_TTL_ROOMS, fetch)
 
     async def get_room_details(self, user_email: str, hub_id: str, room_id: str) -> Dict[str, Any]:
         """Get detailed info for a specific room."""
@@ -337,13 +376,21 @@ class AjaxClient:
         return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/rooms/{room_id}")
 
     async def get_hub_devices(self, user_email: str, hub_id: str) -> List[Dict[str, Any]]:
-        """Get hub devices with enriched state, flattened for easy use."""
+        """Get hub devices with enriched state, flattened for easy use. Cached."""
+        cache = await self._get_cache()
+        cache_key = cache.key_devices(user_email, hub_id)
+        
+        # Check cache first
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
+        # Cache miss - fetch from API
         user_id = await self._ensure_user_id(user_email)
         endpoint = f"/user/{user_id}/hubs/{hub_id}/devices?enrich=true"
         logger.info(f"Requesting devices from Ajax: {endpoint}")
         raw_response = await self.request(user_email, "GET", endpoint)
         
-        # Raw response is a list of {deviceId: ..., properties: {...}}
         if not isinstance(raw_response, list):
             logger.warning(f"Unexpected response type for devices: {type(raw_response)}")
             return []
@@ -351,7 +398,6 @@ class AjaxClient:
         logger.info(f"Received {len(raw_response)} devices from Ajax API")
         flattened = []
         for item in raw_response:
-            # When enrich=true, Ajax might return 'id' instead of 'deviceId' at the root
             device_id = item.get("deviceId") or item.get("id")
             properties = item.get("properties", {})
             
@@ -359,14 +405,11 @@ class AjaxClient:
                 logger.warning(f"Device item missing ID: {item}")
                 continue
                 
-            # Merge deviceId into the properties dict to flatten
-            # Ensure properties has base fields if missing
             flattened_item = {
                 "deviceId": device_id,
                 **properties
             }
             
-            # Additional fallback for commonly used fields at root in enriched responses
             if "deviceName" in item and "deviceName" not in flattened_item:
                 flattened_item["deviceName"] = item["deviceName"]
             if "deviceType" in item and "deviceType" not in flattened_item:
@@ -375,16 +418,27 @@ class AjaxClient:
                 flattened_item["online"] = item["online"]
                 
             flattened.append(flattened_item)
-            
+        
+        # Cache the result
+        await cache.set(cache_key, flattened, settings.CACHE_TTL_DEVICES)
         return flattened
 
     async def get_device_details(self, user_email: str, hub_id: str, device_id: str) -> Dict[str, Any]:
-        """Get details for a specific device."""
-        user_id = await self._ensure_user_id(user_email)
-        return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/devices/{device_id}")
+        """Get details for a specific device with caching."""
+        cache = await self._get_cache()
+        cache_key = cache.key_device(user_email, hub_id, device_id)
+        
+        async def fetch():
+            user_id = await self._ensure_user_id(user_email)
+            return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/devices/{device_id}")
+        
+        return await cache.get_or_fetch(cache_key, settings.CACHE_TTL_DEVICE_DETAIL, fetch)
 
     async def set_arm_state(self, user_email: str, hub_id: str, arm_state: int, group_id: Optional[str] = None) -> Dict[str, Any]:
-        """Set arm state for hub or group using the correct Swagger endpoint."""
+        """Set arm state for hub or group using the correct Swagger endpoint.
+        
+        After successful state change, invalidates relevant caches.
+        """
         user_id = await self._ensure_user_id(user_email)
         
         # Map integer state to Swagger command strings
@@ -405,8 +459,22 @@ class AjaxClient:
             
         payload = {
             "command": command_str,
-            "ignoreProblems": True  # Common practice to ensure arming even if there are non-critical warnings
+            "ignoreProblems": True
         }
         
-        # According to Swagger, this is a PUT request
-        return await self.request(user_email, "PUT", endpoint, json=payload)
+        # Execute the command
+        result = await self.request(user_email, "PUT", endpoint, json=payload)
+        
+        # Invalidate cache after successful state change
+        try:
+            cache = await self._get_cache()
+            # Invalidate hub detail (contains state)
+            await cache.invalidate(cache.key_hub(user_email, hub_id))
+            # Invalidate hub list (contains state summary)
+            await cache.invalidate(cache.key_hubs(user_email))
+            logger.info(f"Cache invalidated for hub {hub_id} after arm state change")
+        except Exception as e:
+            logger.warning(f"Failed to invalidate cache after arm state change: {e}")
+        
+        return result
+

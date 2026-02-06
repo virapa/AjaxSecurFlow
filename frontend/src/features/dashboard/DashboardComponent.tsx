@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { HubList } from '@/features/hubs/HubList'
 import { DeviceTelemetry } from '@/features/devices/DeviceTelemetry'
 import { EventFeed } from '@/features/logs/EventFeed'
+import { AnalyticsDashboard } from './AnalyticsDashboard'
 import { hubService, Hub } from '@/features/hubs/hub.service'
 import { authService } from '@/features/auth/auth.service'
 
@@ -202,6 +203,9 @@ export const DashboardComponent: React.FC = () => {
                             progress={user?.subscription_active ? 100 : 0}
                         />
                     </div>
+
+                    {/* Analytics Dashboard Section */}
+                    <AnalyticsDashboard hubId={selectedHub?.id} />
 
                     <div className="grid grid-cols-12 gap-8">
                         {/* Middle Section: Hubs & Telemetry */}

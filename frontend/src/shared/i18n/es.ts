@@ -178,6 +178,19 @@ export const es = {
             title: 'Flujo de Eventos',
             live: 'En Vivo',
             empty: 'No hay eventos recientes'
+        },
+        analytics: {
+            title: 'Reporte de Inteligencia',
+            trends: 'Tendencias de Seguridad (24h)',
+            signals: 'Distribución de Señal',
+            battery: 'Salud de Batería',
+            eventsPerSite: 'Eventos por Sitio',
+            noData: 'Datos insuficientes para análisis',
+            excellent: 'Excelente',
+            good: 'Buena',
+            poor: 'Pobre',
+            batteryLow: 'Batería Baja',
+            batteryOk: 'Batería OK'
         }
     }
 }

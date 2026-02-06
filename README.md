@@ -14,8 +14,10 @@ El proyecto utiliza tecnologías modernas y robustas, siguiendo los estándares 
 - **Pagos y SaaS**: Stripe SDK (Gestión de suscripciones y webhooks)
 - **Gestión de Configuración**: Pydantic V2 & Settings (Validación estricta)
 - **Seguridad**: Bcrypt (Hashing moderno), PyJWT (Tokens), SHA256 (Ajax Auth), Endurecimiento de Errores (Opaque Errors)
+- **Frontend**: Next.js 16 (Turbopack), React 19, TailwindCSS 4
+- **Visualización**: Recharts (Gráficos industriales de seguridad)
 - **Infraestructura**: Docker & Docker Compose (Contenerización completa)
-- **Testing y Calidad**: Pytest (46 tests), Bandit (Seguridad), pip-audit (Vulnerabilidades: 0 encontradas)
+- **Testing y Calidad**: Pytest (63 tests), Vitest (45 tests), Bandit (Seguridad), pip-audit (Vulnerabilidades: 0)
 
 ## 3. Estructura del Proyecto
 El proyecto sigue una **Clean Architecture** (Arquitectura Cebolla) estricta:
@@ -58,7 +60,7 @@ El sistema expone información detallada y estructurada de todo el ecosistema Aj
 - **Telemetría**: Información de batería, señal, firmware e IP de hubs y dispositivos.
 - **Gestión de Espacios (Rooms)**: Mapeo y visualización de la estructura física del sistema.
 - **Perfiles Enriquecidos**: Sincronización automática de datos de usuario (teléfono, idioma, nombre, imagen) desde la API de Ajax.
-- **Control de Seguridad**: Interfaz unificada para cambiar estados de armado.
+- **Control de Seguridad**: Interfaz unificada para cambiar estados de armado con flujo de confirmación determinista (1.5s delay de sincronización física).
 
 #### Detalle de Hubs y Dispositivos
 - `GET /api/v1/ajax/hubs/{hub_id}`
@@ -83,8 +85,34 @@ El sistema incluye un proxy genérico e inteligente que permite la extensibilida
 - **Inyección Automática**: El proxy gestiona e inyecta automáticamente las credenciales necesarias (`X-Api-Key` y `X-Session-Token`) recuperándolas de Redis.
 - **Control Industrial**: Todas las peticiones a través del proxy pasan por:
     - **Validación de Suscripción**: Bloqueo automático si el usuario no tiene un plan activo en Stripe.
-    - **Rate Limiting**: Protección contra abusos (100 req/min).
+    - **Rate Limiting Global**: Protección contra abusos (100 req/min compartidos globalmente).
+    - **Caching Inteligente**: Respuestas cacheadas en Redis para reducir llamadas redundantes.
     - **Auditoría**: Registro en la base de datos de cada acción, path y resultado.
+
+### 4.4 Rate Limiting Global
+El sistema implementa un **limitador de tasa global** para proteger el límite de la API de Ajax (100 req/min):
+
+- **Contador Único**: Todas las peticiones de todos los usuarios comparten un único contador en Redis.
+- **Ventana Deslizante**: El contador se reinicia cada 60 segundos.
+- **Cola Asíncrona**: Si el límite se alcanza, las peticiones se encolan (máximo 30s de espera).
+- **Fail-Open**: Si Redis no está disponible, las peticiones continúan (resiliencia).
+- **Respuesta 503**: Si una petición excede el tiempo de espera, devuelve `Service Temporarily Unavailable` con header `Retry-After`.
+
+### 4.5 Sistema de Caché Redis
+Para optimizar el rendimiento y reducir las llamadas a la API de Ajax, el sistema cachea las respuestas:
+
+| Dato | TTL por Defecto | Variable de Entorno |
+|------|-----------------|---------------------|
+| Lista de Hubs | 30 min | `CACHE_TTL_HUBS` |
+| Detalle de Hub | 2 min | `CACHE_TTL_HUB_DETAIL` |
+| Lista de Dispositivos | 10 min | `CACHE_TTL_DEVICES` |
+| Detalle de Dispositivo | 30 seg | `CACHE_TTL_DEVICE_DETAIL` |
+| Habitaciones | 10 min | `CACHE_TTL_ROOMS` |
+| Grupos | 10 min | `CACHE_TTL_GROUPS` |
+
+**Invalidación Automática**:
+- Al ejecutar comandos de armar/desarmar, el caché del hub se invalida automáticamente.
+- Los logs de eventos **nunca se cachean** para garantizar datos frescos.
 
 ## 5. Aseguramiento de Calidad (QA) & Seguridad
 Este proyecto implementa controles de calidad de grado militar:
@@ -99,6 +127,7 @@ Este proyecto implementa controles de calidad de grado militar:
 ### Seguridad de Grado Industrial (Security by Design)
 El sistema implementa capas de defensa activa para proteger las sesiones de usuario:
 - **JWT Fingerprinting (UA Hash)**: El token está vinculado al `User-Agent` del cliente que inició sesión. Si el token es robado y usado desde otro navegador, es rechazado inmediatamente.
+- **Network Proxy Security (Next.js 16)**: Uso de la convención de `proxy.ts` para validación de sesiones y protección de rutas en el borde (`/dashboard`) antes del renderizado.
 - **Revocación por JTI + Redis**: Cada login genera un ID único (`jti`). Al hacer **Logout**, el token es invalidado instantáneamente en el lado del servidor mediante una lista negra en Redis.
 - **Protección Brute-Force (Fail2Ban)**: Bloqueo automático de IP tras 5 intentos fallidos de login durante 15 minutos.
 - **Auditoría VIP**: Registro inmutable que incluye IP, navegador y nivel de severidad (INFO, WARNING, CRITICAL) para cada acción.
@@ -199,13 +228,22 @@ docker-compose exec app python -m pytest backend/tests
 - ✅ Perfiles de usuario enriquecidos con datos reales de Ajax.
 - ✅ Telemetría Enriquecida (Estados de batería, señal, hardware detalle).
 - ✅ Proxy Genérico Catch-all (Extensibilidad total).
-- ✅ Rate Limiting por usuario en Redis.
 - ✅ Motor de Suscripciones con Stripe.
 - ✅ Suite de Tests Unitarios e Integración (100% Pass).
 - ✅ Auditoría de Seguridad (Bandit) y limpieza de historial de secretos.
 - ✅ Auditoría Inmutable de transacciones.
 - ✅ Sistema de Vouchers B2B (Activación Offline).
 - ✅ Sistema de Notificaciones In-App y Alertas por Email.
+- ✅ Rate Limiting Global con Cola Asíncrona (100 req/min compartido).
+- ✅ Sistema de Caching Redis con TTLs configurables.
+
+### Fase 7: Analytics Dashboard (✅ Completada)
+- ✅ Instalación e integración de `recharts`.
+- ✅ Gráfico de Tendencias de Seguridad (últimas 24h).
+- ✅ Distribución de Señal (Excellent/Good/Poor).
+- ✅ Monitoreo de Salud de Batería.
+- ✅ Fix de tipos en `DeviceTelemetry.tsx`.
+- ✅ Build de producción verificado.
 
 ### Fase 2: Dashboard Frontend (✅ Funcional - Modo Dev)
 - ✅ Panel de Control en Next.js (Dashboard funcional).
