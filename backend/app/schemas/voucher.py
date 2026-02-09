@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime
+import datetime
+from datetime import datetime as dt_datetime
 from typing import Optional
 
 class VoucherRedeem(BaseModel):
@@ -8,11 +9,12 @@ class VoucherRedeem(BaseModel):
 class VoucherDetailed(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    id: int
     code: str
     duration_days: int
     is_redeemed: bool
-    redeemed_at: Optional[datetime] = None
-    created_at: Optional[datetime] = None
+    redeemed_at: Optional[dt_datetime] = None
+    created_at: Optional[dt_datetime] = None
 
 class VoucherCreate(BaseModel):
     duration_days: int = Field(30, ge=1, le=365)

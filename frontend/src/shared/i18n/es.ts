@@ -100,8 +100,9 @@ export const es = {
         title: 'Panel Principal',
         searchPlaceholder: 'Buscar dispositivos, hubs o registros...',
         systemStatus: {
-            secure: 'Sistema Seguro',
-            attention: 'Atención Requerida'
+            secure: 'Sistemas Online',
+            attention: 'Atención Requerida',
+            degraded: 'Sistema Degradado'
         },
         nav: {
             dashboard: 'Escritorio',

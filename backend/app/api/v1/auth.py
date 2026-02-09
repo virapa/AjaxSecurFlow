@@ -1,4 +1,6 @@
-from datetime import datetime, timezone, timedelta
+import logging
+import datetime
+from datetime import datetime as dt_datetime, timezone
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -16,6 +18,8 @@ from backend.app.services import audit_service, security_service, notification_s
 from backend.app.schemas.auth import Token, TokenRefreshRequest, ErrorMessage, LoginRequest
 
 from fastapi.security import APIKeyHeader
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -299,7 +303,7 @@ async def refresh_token(
             raise HTTPException(status_code=401, detail="Invalid credentials")
             
         # 2. Blacklist the used refresh token (Rotation)
-        now = datetime.now(timezone.utc).timestamp()
+        now = dt_datetime.now(timezone.utc).timestamp()
         ttl = int(exp - now)
         if ttl > 0:
             await redis_client.set(f"token_blacklist:{jti}", "1", ex=ttl)
@@ -366,7 +370,7 @@ async def logout(
         
         if jti and exp:
             # Calculate TTL for the blacklist entry
-            now = datetime.now(timezone.utc).timestamp()
+            now = dt_datetime.now(timezone.utc).timestamp()
             ttl = int(exp - now)
             if ttl > 0:
                 await redis_client.set(f"token_blacklist:{jti}", "1", ex=ttl)

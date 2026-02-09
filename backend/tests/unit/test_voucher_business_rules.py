@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime as dt_datetime, timezone, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from backend.app.services import voucher_service, billing_service
 from backend.app.domain.models import User, Voucher
@@ -53,12 +53,12 @@ def test_get_effective_plan_transitions():
     Test the logic of reverting to free when time expires.
     """
     # 1. Expired voucher + No stripe = FREE
-    past_date = datetime.now(timezone.utc) - timedelta(days=1)
+    past_date = dt_datetime.now(timezone.utc) - timedelta(days=1)
     user_expired = User(subscription_status="inactive", subscription_expires_at=past_date)
     assert billing_service.get_effective_plan(user_expired) == "free"
 
     # 2. Active voucher = PREMIUM
-    future_date = datetime.now(timezone.utc) + timedelta(days=1)
+    future_date = dt_datetime.now(timezone.utc) + timedelta(days=1)
     user_active_voucher = User(subscription_status="inactive", subscription_expires_at=future_date, subscription_plan="premium")
     assert billing_service.get_effective_plan(user_active_voucher) == "premium"
 

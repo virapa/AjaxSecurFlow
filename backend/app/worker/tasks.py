@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import stripe
+import datetime
+from datetime import datetime as dt_datetime
 from backend.app.worker.celery_app import celery_app
 from backend.app.services.ajax_client import AjaxClient
 from backend.app.core.db import async_session_factory
@@ -42,10 +44,10 @@ async def _cleanup_expired_subscriptions_logic() -> int:
     Returns:
         int: Number of records updated.
     """
-    from datetime import datetime, timezone
+    from datetime import datetime as dt_datetime, timezone
     from sqlalchemy import update, and_
     
-    now = datetime.now(timezone.utc)
+    now = dt_datetime.now(timezone.utc)
     async with async_session_factory() as session:
         # Target 'active' users whose expiration has passed.
         stmt = update(User).where(
@@ -255,6 +257,7 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
             return {"status": "processed", "id": event_id}
 
     try:
+        # Standard synchronous entry point for Celeste/Celery worker
         return asyncio.run(_handle())
     except Exception as e:
         logger.error(f"Error processing webhook {event_id}: {str(e)}")

@@ -1,6 +1,7 @@
 import secrets
 import string
-from datetime import datetime, timezone, timedelta
+import datetime
+from datetime import datetime as dt_datetime, timezone, timedelta
 from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,21 +70,22 @@ async def redeem_voucher(db: AsyncSession, user: User, code: str) -> bool:
         # Limit reached
         return False
 
-    # 2. Find and Validate Voucher
-    stmt = select(Voucher).where(Voucher.code == code, Voucher.is_redeemed == False)
+    # 2. Find and Validate Voucher (with Row-Level Lock)
+    stmt = select(Voucher).where(Voucher.code == code).with_for_update()
     result = await db.execute(stmt)
     voucher = result.scalar_one_or_none()
     
-    if not voucher:
+    if not voucher or voucher.is_redeemed:
+        # Invalid or already redeemed
         return False
         
     # 3. Mark voucher as redeemed
     voucher.is_redeemed = True
     voucher.redeemed_by_id = user.id
-    voucher.redeemed_at = datetime.now(timezone.utc)
+    voucher.redeemed_at = dt_datetime.now(timezone.utc)
     
     # 4. Extend/Activate user subscription
-    now = datetime.now(timezone.utc)
+    now = dt_datetime.now(timezone.utc)
     
     base_date = now
     if user.subscription_expires_at and user.subscription_expires_at > now:

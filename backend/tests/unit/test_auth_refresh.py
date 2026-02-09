@@ -5,7 +5,7 @@ import jwt
 from httpx import AsyncClient
 from backend.app.main import app
 from unittest.mock import AsyncMock, patch
-from datetime import datetime, timedelta, timezone
+from datetime import datetime as dt_datetime, timezone, timedelta
 from backend.app.api.deps import get_db, get_redis
 
 @pytest_asyncio.fixture

@@ -18,7 +18,11 @@ def test_process_stripe_webhook_update_sub():
         mock_event.id = "evt_123"
         mock_event_ctor.return_value = mock_event
         
-        mock_run.return_value = {"status": "processed", "id": "evt_123"}
+        # Custom side effect to close the coroutine and avoid unawaited warning
+        def side_effect(coro):
+            coro.close()
+            return {"status": "processed", "id": "evt_123"}
+        mock_run.side_effect = side_effect
         
         result = process_stripe_webhook(event_dict, "test_corr_id")
         
@@ -36,7 +40,10 @@ def test_process_stripe_webhook_idempotency():
         mock_event.id = "evt_duplicate"
         mock_event_ctor.return_value = mock_event
         
-        mock_run.return_value = {"status": "skipped", "reason": "idempotent"}
+        def side_effect(coro):
+            coro.close()
+            return {"status": "skipped", "reason": "idempotent"}
+        mock_run.side_effect = side_effect
         
         result = process_stripe_webhook(event_dict)
         assert result["status"] == "skipped"

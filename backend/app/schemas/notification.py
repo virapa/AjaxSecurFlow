@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
+import datetime
 from typing import Optional, List
 
 class NotificationBase(BaseModel):
@@ -13,7 +13,7 @@ class NotificationRead(NotificationBase):
     
     id: int
     is_read: bool
-    created_at: datetime
+    created_at: datetime.datetime
 
 class NotificationSummary(BaseModel):
     unread_count: int

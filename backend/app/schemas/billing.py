@@ -1,6 +1,8 @@
+from __future__ import annotations
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
-from datetime import datetime
+import datetime
+from datetime import datetime as dt_datetime
 
 class CheckoutSessionCreate(BaseModel):
     price_id: str = Field(..., description="Stripe Price ID to subscribe to")
@@ -16,7 +18,7 @@ class BillingHistoryItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    date: datetime
+    date: dt_datetime
     type: str # 'voucher' | 'payment'
     description: str
     amount: Optional[str] = None

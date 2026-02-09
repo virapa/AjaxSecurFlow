@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta, timezone
+import datetime
+from datetime import datetime as dt_datetime, timedelta, timezone
 from typing import Optional, Any, Union
 import jwt # PyJWT
 import bcrypt
@@ -33,7 +34,7 @@ def _create_token(
     uah: Optional[str] = None,
     uip: Optional[str] = None
 ) -> str:
-    expire = datetime.now(timezone.utc) + expires_delta
+    expire = dt_datetime.now(timezone.utc) + expires_delta
     to_encode = {
         "exp": expire, 
         "sub": str(subject),

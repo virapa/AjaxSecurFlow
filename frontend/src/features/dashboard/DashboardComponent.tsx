@@ -27,6 +27,7 @@ export const DashboardComponent: React.FC = () => {
     const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number>(0)
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
+    const [isRefreshing, setIsRefreshing] = useState(false)
 
     const fetchProfile = async () => {
         try {
@@ -60,6 +61,24 @@ export const DashboardComponent: React.FC = () => {
             setUnreadNotificationsCount(summary.unread_count)
         } catch (err) {
             console.error('Failed to fetch notifications summary:', err)
+        }
+    }
+
+    const handleManualRefresh = async () => {
+        setIsRefreshing(true)
+        try {
+            // Re-fetch all critical data
+            await Promise.all([
+                fetchProfile(),
+                fetchHubs(),
+                fetchNotificationsSummary()
+            ])
+            // Artificial delay for visual feedback if it was too fast
+            await new Promise(resolve => setTimeout(resolve, 600))
+        } catch (err) {
+            console.error('Manual refresh failed:', err)
+        } finally {
+            setIsRefreshing(false)
         }
     }
 
@@ -148,13 +167,40 @@ export const DashboardComponent: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <div className="px-4 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 flex items-center gap-2">
-                            <span className={`h-1.5 w-1.5 rounded-full ${activeHubsCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                            <span className={`text-[10px] font-bold uppercase tracking-widest ${activeHubsCount > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                {activeHubsCount > 0 ? t.dashboard.systemStatus.secure : t.dashboard.systemStatus.attention}
-                            </span>
+                        <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-2">
+                            {(() => {
+                                const allOnline = activeHubsCount === totalHubsCount && totalHubsCount > 0;
+                                const someOffline = activeHubsCount < totalHubsCount && totalHubsCount > 0;
+
+                                if (allOnline) {
+                                    return (
+                                        <>
+                                            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-green-400">
+                                                {t.dashboard.systemStatus.secure}
+                                            </span>
+                                        </>
+                                    );
+                                } else {
+                                    return (
+                                        <>
+                                            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-red-500">
+                                                {t.dashboard.systemStatus.attention}
+                                            </span>
+                                        </>
+                                    );
+                                }
+                            })()}
                         </div>
-                        <button onClick={() => { fetchHubs(); fetchNotificationsSummary(); }} className="text-gray-500 hover:text-white transition-colors">🔄</button>
+                        <button
+                            onClick={handleManualRefresh}
+                            disabled={isRefreshing}
+                            className={`text-gray-500 hover:text-white transition-all transform active:scale-95 ${isRefreshing ? 'opacity-50' : ''}`}
+                            title={t.dashboard.nav.dashboard}
+                        >
+                            <span className={`inline-block ${isRefreshing ? 'animate-spin' : ''}`}>🔄</span>
+                        </button>
                         <div className="h-10 w-[1px] bg-white/10 mx-2" />
 
                         {/* User Profile with Dropdown */}
@@ -177,7 +223,24 @@ export const DashboardComponent: React.FC = () => {
                                     </div>
                                     <p className="text-[9px] font-medium text-gray-500 text-left">{t.dashboard.profile.role}</p>
                                 </div>
-                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-xs shadow-lg">👤</div>
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-xs shadow-lg overflow-hidden">
+                                    {user?.ajax_info?.imageUrls?.small ? (
+                                        <img
+                                            src={user.ajax_info.imageUrls.small}
+                                            alt="Profile"
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.style.display = 'none';
+                                                if (target.parentElement) {
+                                                    target.parentElement.textContent = '👤';
+                                                }
+                                            }}
+                                        />
+                                    ) : (
+                                        '👤'
+                                    )}
+                                </div>
                             </button>
 
                             {/* Dropdown Menu */}

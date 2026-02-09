@@ -1,5 +1,5 @@
 import stripe
-from datetime import datetime, timezone
+import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.core.config import settings
@@ -11,7 +11,7 @@ from backend.app.worker.tasks import process_stripe_webhook
 from backend.app.schemas.billing import CheckoutSessionResponse, WebhookResponse, CheckoutSessionCreate, BillingHistoryItem
 from backend.app.schemas.voucher import VoucherRedeem, VoucherCreate, VoucherDetailed
 from backend.app.schemas.auth import ErrorMessage
-from backend.app.services import voucher_service, notification_service
+from backend.app.services import voucher_service, notification_service, billing_service
 
 router = APIRouter()
 
@@ -63,46 +63,9 @@ async def get_billing_history(
     db: AsyncSession = Depends(get_db)
 ) -> list[BillingHistoryItem]:
     """
-    Fetches and merges voucher history and Stripe invoice history.
+    Retrieves a combined list of voucher redemptions and Stripe payments for the current user.
     """
-    history = []
-    
-    # 1. Fetch Vouchers from local DB
-    vouchers = await voucher_service.get_user_voucher_history(db, current_user.id)
-    for v in vouchers:
-        history.append(BillingHistoryItem(
-            id=f"vouch_{v.id}",
-            date=v.redeemed_at or v.created_at,
-            type="voucher",
-            description=f"Canje de código: {v.code}",
-            status="Aplicado",
-            amount=f"{v.duration_days} Días"
-        ))
-        
-    # 2. Fetch Invoices from Stripe if customer exists
-    if current_user.stripe_customer_id:
-        try:
-            invoices = stripe.Invoice.list(customer=current_user.stripe_customer_id, limit=10)
-            for inv in invoices.data:
-                # inv.amount_paid is in cents
-                amount_formatted = f"{(inv.amount_paid / 100):.2f} {inv.currency.upper()}"
-                history.append(BillingHistoryItem(
-                    id=f"inv_{inv.id}",
-                    date=datetime.fromtimestamp(inv.created, tz=timezone.utc),
-                    type="payment",
-                    description=inv.lines.data[0].description if inv.lines.data else "Suscripción AjaxSecurFlow",
-                    amount=amount_formatted,
-                    status="Pagado" if inv.paid else "Pendiente",
-                    download_url=inv.invoice_pdf
-                ))
-        except Exception as e:
-            # We don't want to crash the whole history if Stripe fails, just log it
-            import logging
-            logging.getLogger(__name__).error(f"Failed to fetch Stripe invoices: {e}")
-
-    # 3. Sort by date (newest first)
-    history.sort(key=lambda x: x.date, reverse=True)
-    return history
+    return await billing_service.get_unified_history(db, current_user)
 
 @router.post(
     "/webhook",

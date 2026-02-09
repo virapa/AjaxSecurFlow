@@ -1,4 +1,5 @@
-from datetime import datetime
+import datetime
+from datetime import datetime as dt_datetime
 from typing import Optional
 from sqlalchemy import String, Boolean, Integer, DateTime, JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -25,11 +26,11 @@ class User(Base):
     subscription_id: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
     subscription_status: Mapped[Optional[str]] = mapped_column(String, nullable=True) # active, past_due, etc.
     subscription_plan: Mapped[str] = mapped_column(String, default="free")
-    subscription_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    subscription_expires_at: Mapped[Optional[dt_datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    created_at: Mapped[dt_datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[dt_datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
 class AuditLog(Base):
     """
@@ -55,14 +56,14 @@ class AuditLog(Base):
     latency_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     correlation_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    timestamp: Mapped[dt_datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 class ProcessedStripeEvent(Base):
     __tablename__ = "processed_stripe_events"
     
     id: Mapped[str] = mapped_column(String, primary_key=True) # Stripe Event ID
     event_type: Mapped[str] = mapped_column(String, index=True)
-    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    processed_at: Mapped[dt_datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 class Voucher(Base):
     """
@@ -76,9 +77,9 @@ class Voucher(Base):
     
     is_redeemed: Mapped[bool] = mapped_column(Boolean, default=False)
     redeemed_by_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    redeemed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    redeemed_at: Mapped[Optional[dt_datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[dt_datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 class Notification(Base):
     """
@@ -96,4 +97,4 @@ class Notification(Base):
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     link: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Optional URL for action
     
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[dt_datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
