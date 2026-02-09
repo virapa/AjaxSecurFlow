@@ -19,6 +19,7 @@ class UserRead(BaseModel):
     is_active: bool = Field(True, description="Whether the user account is active")
     subscription_plan: SubscriptionPlan = Field(SubscriptionPlan.FREE, description="Plan identifier")
     subscription_active: bool = Field(False, description="True if the plan is currently valid and paid")
+    subscription_expires_at: Optional[datetime] = Field(None, description="When the current plan expires")
     billing_status: Optional[str] = Field(None, description="Technical status (active, trialing, past_due, inactive)")
     ajax_info: Optional[AjaxUserInfo] = None
     

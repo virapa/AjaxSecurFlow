@@ -187,6 +187,51 @@ export const es = {
             poor: 'Pobre',
             batteryLow: 'Batería Baja',
             batteryOk: 'Batería OK'
+        },
+        billing: {
+            title: 'Facturación',
+            header: 'Suscripción',
+            description: 'Gestiona tu plan de seguridad de grado industrial y los detalles de facturación de forma segura.',
+            expiration: 'Fecha de Expiración',
+            nextRenewal: 'Próxima Renovación',
+            noExpiration: 'Sin fecha de expiración',
+            statusActive: 'Plan Activo',
+            statusExpired: 'Plan Expirado',
+            portal: {
+                title: 'Portal de Facturación',
+                description: 'Tus pagos se procesan a través de una pasarela segura. Gestiona facturas y métodos de pago.',
+                button: 'Abrir Portal de Facturación'
+            },
+            voucher: {
+                title: 'Canjear código',
+                placeholder: 'CÓDIGO - XXXX - XXXX',
+                button: 'Canjear y Aplicar',
+                processing: 'Procesando...',
+                hint: 'Introduce tu código de activación industrial de 12 caracteres.',
+                success: 'Código validado y aplicado con éxito.',
+                error: 'Error al validar el código.'
+            },
+            history: {
+                title: 'Historial de Transacciones',
+                lastEntries: 'Últimas 10 operaciones',
+                cols: {
+                    date: 'Fecha',
+                    type: 'Tipo',
+                    description: 'Descripción',
+                    amount: 'Importe / Beneficio',
+                    status: 'Estado'
+                },
+                types: {
+                    payment: 'Pago 💳',
+                    voucher: 'Canje 🎫'
+                },
+                download: 'Descargar Factura (PDF)',
+                viewAll: 'Ver Todas las Transacciones'
+            },
+            footer: {
+                encrypted: 'Encriptado SSL',
+                rights: '© 2024 AjaxSecurFlow Industrial Security Management. Todos los derechos reservados.'
+            }
         }
     }
 }

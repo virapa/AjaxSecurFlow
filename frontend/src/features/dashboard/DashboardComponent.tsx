@@ -120,16 +120,14 @@ export const DashboardComponent: React.FC = () => {
                     </div>
 
                     <nav className="space-y-1">
-                        <NavItem icon="📊" label={t.dashboard.nav.dashboard} active />
-                        <NavItem icon="📱" label={t.dashboard.nav.devices} />
-                        <NavItem icon="🔔" label={t.dashboard.nav.notifications} badge={unreadNotificationsCount > 0 ? unreadNotificationsCount.toString() : undefined} />
-                        <NavItem icon="💳" label={t.dashboard.nav.subscription} />
+                        <NavItem icon="📊" label={t.dashboard.nav.dashboard} href="/dashboard" active />
+                        <NavItem icon="💳" label={t.dashboard.nav.subscription} href="/billing" />
                     </nav>
                 </div>
 
                 <div className="mt-auto p-8 space-y-1">
-                    <NavItem icon="⚙️" label={t.dashboard.nav.settings} />
-                    <NavItem icon="🎧" label={t.dashboard.nav.support} />
+                    <NavItem icon="⚙️" label={t.dashboard.nav.settings} href="#" />
+                    <NavItem icon="🎧" label={t.dashboard.nav.support} href="#" />
                 </div>
             </aside>
 
@@ -166,8 +164,18 @@ export const DashboardComponent: React.FC = () => {
                                 className="flex items-center gap-3 hover:bg-white/5 p-2 rounded-2xl transition-all"
                             >
                                 <div className="text-right hidden sm:block">
-                                    <p className="text-xs font-bold text-white">{t.dashboard.profile.adminUser}</p>
-                                    <p className="text-[9px] font-medium text-gray-500">{t.dashboard.profile.role}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-xs font-bold text-white">{t.dashboard.profile.adminUser}</p>
+                                        <div className="relative">
+                                            <span className="text-sm">🔔</span>
+                                            {unreadNotificationsCount > 0 && (
+                                                <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-600 border border-[#020617] flex items-center justify-center text-[7px] font-bold text-white">
+                                                    {unreadNotificationsCount}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <p className="text-[9px] font-medium text-gray-500 text-left">{t.dashboard.profile.role}</p>
                                 </div>
                                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-xs shadow-lg">👤</div>
                             </button>
@@ -216,6 +224,7 @@ export const DashboardComponent: React.FC = () => {
                             trend={user?.subscription_active ? t.dashboard.stats.active : t.dashboard.stats.expired}
                             color={user?.subscription_active ? 'indigo' : 'yellow'}
                             special={t.dashboard.stats.manageBilling}
+                            specialHref="/billing"
                             progress={user?.subscription_active ? 100 : 0}
                         />
                     </div>
@@ -265,8 +274,8 @@ export const DashboardComponent: React.FC = () => {
 
 /** Helper Components for Cleaner Main Logic **/
 
-const NavItem = ({ icon, label, active = false, badge }: { icon: string, label: string, active?: boolean, badge?: string }) => (
-    <Link href="#" className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all group ${active ? 'bg-blue-500/10 text-blue-400 border border-blue-500/10' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
+const NavItem = ({ icon, label, href, active = false, badge }: { icon: string, label: string, href: string, active?: boolean, badge?: string }) => (
+    <Link href={href} className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all group ${active ? 'bg-blue-500/10 text-blue-400 border border-blue-500/10' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
         <div className="flex items-center gap-3">
             <span className={`text-base ${active ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'}`}>{icon}</span>
             <span className="text-sm font-bold tracking-tight">{label}</span>
@@ -277,7 +286,7 @@ const NavItem = ({ icon, label, active = false, badge }: { icon: string, label: 
     </Link>
 )
 
-const StatCard = ({ label, value, trend, color, special, progress = 65 }: any) => (
+const StatCard = ({ label, value, trend, color, special, specialHref, progress = 65 }: any) => (
     <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 mb-4">{label}</p>
         <div className="flex items-baseline gap-3 mb-4">
@@ -295,7 +304,13 @@ const StatCard = ({ label, value, trend, color, special, progress = 65 }: any) =
             />
         </div>
         {special && (
-            <button className="mt-4 text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors">{special}</button>
+            specialHref ? (
+                <Link href={specialHref} className="mt-4 block text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors">
+                    {special}
+                </Link>
+            ) : (
+                <button className="mt-4 text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors">{special}</button>
+            )
         )}
     </div>
 )

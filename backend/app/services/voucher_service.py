@@ -96,3 +96,10 @@ async def redeem_voucher(db: AsyncSession, user: User, code: str) -> bool:
     await db.commit()
     await db.refresh(user)
     return True
+async def get_user_voucher_history(db: AsyncSession, user_id: int) -> List[Voucher]:
+    """
+    Retrieves the redemption history for a specific user.
+    """
+    stmt = select(Voucher).where(Voucher.redeemed_by_id == user_id).order_by(Voucher.redeemed_at.desc())
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

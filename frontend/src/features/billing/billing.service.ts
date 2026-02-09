@@ -23,5 +23,12 @@ export const billingService = {
         return apiClient.post<{ url: string }>('/billing/create-checkout-session', {
             price_id: priceId
         })
+    },
+
+    /**
+     * Retrieves the unified billing history (payments and vouchers).
+     */
+    getBillingHistory: async (): Promise<any[]> => {
+        return apiClient.get<any[]>('/billing/history')
     }
 }
