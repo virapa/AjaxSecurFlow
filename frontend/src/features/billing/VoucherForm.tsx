@@ -26,8 +26,9 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ onSuccess }) => {
             setStatus({ type: 'success', message: t.dashboard.billing.voucher.success })
             setVoucherCode('')
             await onSuccess()
-        } catch (err: any) {
-            setStatus({ type: 'error', message: err.message || t.dashboard.billing.voucher.error })
+        } catch (err: unknown) {
+            const error = err as Error;
+            setStatus({ type: 'error', message: error.message || t.dashboard.billing.voucher.error })
         } finally {
             setIsProcessing(false)
         }

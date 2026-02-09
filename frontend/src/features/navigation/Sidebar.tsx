@@ -49,7 +49,8 @@ export const Sidebar: React.FC = () => {
                 <NavItem
                     icon="🎧"
                     label={t.dashboard.nav.support}
-                    href="#"
+                    href="/support"
+                    active={pathname === '/support'}
                 />
             </div>
         </aside>

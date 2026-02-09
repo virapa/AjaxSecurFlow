@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import { apiClient } from './api-client'
 
 describe('API Client Infrastructure', () => {
@@ -8,7 +8,7 @@ describe('API Client Infrastructure', () => {
 
     it('should make a GET request to the correct URL with credentials', async () => {
         const mockResponse = { data: 'test' }
-            ; (fetch as any).mockResolvedValue({
+            ; (fetch as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => mockResponse,
             })
@@ -30,7 +30,7 @@ describe('API Client Infrastructure', () => {
 
     it('should make a POST request with a body and credentials', async () => {
         const mockBody = { name: 'John' }
-            ; (fetch as any).mockResolvedValue({
+            ; (fetch as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ success: true }),
             })

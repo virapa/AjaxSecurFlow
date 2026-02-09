@@ -21,8 +21,9 @@ export const NotificationInbox: React.FC = () => {
                 setIsLoading(true)
                 const data = await notificationService.getNotifications()
                 setNotifications(data)
-            } catch (err: any) {
-                setError(err.message || t.dashboard.stats.systemDegraded)
+            } catch (err: unknown) {
+                const error = err as Error
+                setError(error.message || t.dashboard.stats.systemDegraded)
             } finally {
                 setIsLoading(false)
             }

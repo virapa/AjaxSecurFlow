@@ -250,6 +250,26 @@ export const es = {
                 rights: '© 2024 AjaxSecurFlow Industrial Security Management. Todos los derechos reservados.'
             }
         }
+    },
+    support: {
+        title: 'Soporte Técnico',
+        description: '¿Tienes alguna duda, has encontrado un bug o necesitas ayuda? Envíanos un mensaje y nuestro equipo te responderá lo antes posible.',
+        form: {
+            subject: 'Asunto de la consulta',
+            category: 'Categoría',
+            message: 'Tu mensaje',
+            emailConfirmation: 'Enviarme una copia por correo',
+            submit: 'Enviar consulta',
+            sending: 'Enviando...',
+            success: 'Consulta enviada correctamente. Revisa tu correo para la confirmación.',
+            error: 'No se pudo enviar la consulta. Por favor, inténtalo de nuevo.',
+            categories: {
+                bug: 'Reportar un Error (Bug)',
+                question: 'Duda General',
+                feedback: 'Sugerencia / Feedback',
+                other: 'Otro'
+            }
+        }
     }
 }
 

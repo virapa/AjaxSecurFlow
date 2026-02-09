@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Card } from '@/shared/components/Card'
 import { Input } from '@/shared/components/Input'
 import { Button } from '@/shared/components/Button'
@@ -28,8 +29,9 @@ const LoginPage: React.FC = () => {
         try {
             await authService.login(email, password)
             router.push('/dashboard')
-        } catch (err: any) {
-            setError(err.message || `${t.auth.errorTitle}. ${t.auth.errorDetail}`)
+        } catch (err: unknown) {
+            const error = err as Error
+            setError(error.message || `${t.auth.errorTitle}. ${t.auth.errorDetail}`)
         } finally {
             setIsLoading(false)
         }
@@ -57,9 +59,11 @@ const LoginPage: React.FC = () => {
                     header={
                         <div className="text-center space-y-4 pt-4">
                             <div className="flex justify-center flex-col items-center gap-4">
-                                <img
+                                <Image
                                     src="/images/ajax-logo-login.png"
                                     alt="AJAX Systems"
+                                    width={100}
+                                    height={32}
                                     className="h-8 w-auto object-contain brightness-200"
                                 />
                                 <div className="h-px w-12 bg-blue-500/50" />

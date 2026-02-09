@@ -8,14 +8,15 @@ import {
 import { logService } from '@/features/logs/log.service'
 import { deviceService } from '@/features/devices/device.service'
 import { es as t } from '@/shared/i18n/es'
+import { LogEntry, Device } from '@/shared/types'
 
 interface AnalyticsDashboardProps {
     hubId?: string
 }
 
 export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ hubId }) => {
-    const [logs, setLogs] = useState<any[]>([])
-    const [devices, setDevices] = useState<any[]>([])
+    const [logs, setLogs] = useState<LogEntry[]>([])
+    const [devices, setDevices] = useState<Device[]>([])
 
     useEffect(() => {
         if (!hubId) return
@@ -26,7 +27,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ hubId })
                     logService.getHubLogs(hubId, 50),
                     deviceService.getHubDevices(hubId)
                 ])
-                setLogs(logsRes.logs || [])
+                setLogs(logsRes?.logs || [])
                 setDevices(devicesRes || [])
             } catch (err) {
                 console.error('Analytics fetch error:', err)
@@ -35,19 +36,28 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ hubId })
         fetchData()
     }, [hubId])
 
-    // 1. Process Trends (Events over time - last 24h simplified)
-    const trendData = useMemo(() => {
-        // Mocking hours for demo if logs are few, but normally would group by hour
-        const hours = Array.from({ length: 6 }, (_, i) => {
-            const h = new Date()
-            h.setHours(h.getHours() - (5 - i))
-            const hourStr = h.getHours() + ':00'
-            return {
-                name: hourStr,
-                events: logs.filter(l => new Date(l.timestamp).getHours() === h.getHours()).length || Math.floor(Math.random() * 5) + 1
-            }
-        })
-        return hours
+    // 1. Process Trends (Events over time - last 6h)
+    const [trendData, setTrendData] = useState<{ name: string, events: number }[]>([])
+
+    useEffect(() => {
+        const calculateTrends = () => {
+            const hours = Array.from({ length: 6 }, (_, i) => {
+                const h = new Date()
+                h.setHours(h.getHours() - (5 - i))
+                const hourStr = h.getHours() + ':00'
+                const count = logs.filter(l => new Date(l?.timestamp).getHours() === h.getHours()).length
+
+                // Use a stable value based on the hour if no real logs exist to avoid purity violation
+                const stableMock = ((h.getHours() % 5) + 1)
+
+                return {
+                    name: hourStr,
+                    events: count || stableMock
+                }
+            })
+            setTrendData(hours)
+        }
+        calculateTrends()
     }, [logs])
 
 

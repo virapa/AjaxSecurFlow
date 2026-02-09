@@ -1,14 +1,15 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
+import Image from 'next/image'
 import { Sidebar } from '@/features/navigation/Sidebar'
 import { authService } from '@/features/auth/auth.service'
 import { notificationService } from '@/features/notifications/notification.service'
 import { es as t } from '@/shared/i18n/es'
+import { User } from '@/shared/types'
 
 export const ProfileComponent: React.FC = () => {
-    const [user, setUser] = useState<any>(null)
+    const [user, setUser] = useState<User | null>(null)
     const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number>(0)
     const [emailNotifications, setEmailNotifications] = useState(true)
     const [isLoading, setIsLoading] = useState(true)
@@ -22,7 +23,7 @@ export const ProfileComponent: React.FC = () => {
                     authService.getProfile(),
                     notificationService.getSummary()
                 ])
-                setUser(profile)
+                setUser(profile as User)
                 setUnreadNotificationsCount(notifSummary.unread_count)
                 // Mocking notification preference for now
                 setEmailNotifications(true)
@@ -74,7 +75,13 @@ export const ProfileComponent: React.FC = () => {
                         </div>
                         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-xs shadow-lg overflow-hidden">
                             {user?.ajax_info?.imageUrls?.small ? (
-                                <img src={user.ajax_info.imageUrls.small} alt="Profile" className="w-full h-full object-cover" />
+                                <Image
+                                    src={user.ajax_info.imageUrls.small}
+                                    alt="Profile"
+                                    width={40}
+                                    height={40}
+                                    className="w-full h-full object-cover"
+                                />
                             ) : (
                                 '👤'
                             )}
@@ -89,7 +96,13 @@ export const ProfileComponent: React.FC = () => {
                         <div className="relative flex flex-col md:flex-row items-center gap-8">
                             <div className="h-24 w-24 rounded-3xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center text-4xl shadow-2xl">
                                 {user?.ajax_info?.imageUrls?.medium ? (
-                                    <img src={user.ajax_info.imageUrls.medium} alt="Profile" className="w-full h-full object-cover rounded-2xl" />
+                                    <Image
+                                        src={user.ajax_info.imageUrls.medium}
+                                        alt="Profile"
+                                        width={96}
+                                        height={96}
+                                        className="w-full h-full object-cover rounded-2xl"
+                                    />
                                 ) : (
                                     '👤'
                                 )}

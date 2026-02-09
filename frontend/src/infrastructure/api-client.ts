@@ -1,8 +1,4 @@
-/**
- * Infrastructure Layer: API Client
- * This client provides a thin wrapper over the native Fetch API.
- * It handles token storage and injection for authenticated requests.
- */
+import { User, Hub, Device, LogEntry } from '@/shared/types'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -52,7 +48,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
             if (response.status === 404) {
                 // Silently handle 404s for optional features (like hub logs)
                 console.log(`[API] Resource not found (404) at ${endpoint}. Returning null.`)
-                return null as any
+                return null as unknown as T
             }
 
             console.error(`[API] Request failed with status ${response.status} at ${endpoint}`)
@@ -68,8 +64,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
         console.log(`[API] Success: data received for ${endpoint}`)
 
         // If we are logging in, store the token
-        if (endpoint === '/auth/token' && (data as any).access_token && typeof window !== 'undefined') {
-            const newToken = (data as any).access_token
+        if (endpoint === '/auth/token' && (data as { access_token?: string }).access_token && typeof window !== 'undefined') {
+            const newToken = (data as { access_token: string }).access_token
             console.log('[API] Login detected, saving token...')
             localStorage.setItem('ajax_access_token', newToken)
             // Set cookie so middleware can see it
@@ -87,21 +83,21 @@ export const apiClient = {
     get: <T>(endpoint: string, options?: RequestInit) =>
         request<T>(endpoint, { ...options, method: 'GET' }),
 
-    post: <T>(endpoint: string, body: any, options?: RequestInit) =>
+    post: <T>(endpoint: string, body: unknown, options?: RequestInit) =>
         request<T>(endpoint, {
             ...options,
             method: 'POST',
             body: JSON.stringify(body)
         }),
 
-    put: <T>(endpoint: string, body: any, options?: RequestInit) =>
+    put: <T>(endpoint: string, body: unknown, options?: RequestInit) =>
         request<T>(endpoint, {
             ...options,
             method: 'PUT',
             body: JSON.stringify(body)
         }),
 
-    patch: <T>(endpoint: string, body?: any, options?: RequestInit) =>
+    patch: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
         request<T>(endpoint, {
             ...options,
             method: 'PATCH',

@@ -38,7 +38,6 @@ export default function middleware(request: NextRequest) {
 
     // 2. Authentication Flow
     const accessToken = request.cookies.get('access_token')
-    const isPublicRoute = pathname === '/login' || pathname === '/'
     const isDashboardRoute = pathname.startsWith('/dashboard')
 
     // Case 1: Unauthenticated user trying to access the dashboard

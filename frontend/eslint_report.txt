@@ -1,0 +1,97 @@
+﻿
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\auth\LoginPage.tsx
+  31:23  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  60:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\auth\ProfileComponent.tsx
+   4:8   warning  'Link' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  11:38  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  77:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  92:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\billing\BillingComponent.tsx
+  4:8  warning  'Link' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\billing\VoucherForm.tsx
+  29:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\billing\components\BillingSubComponents.tsx
+  64:11  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  78:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\dashboard\AnalyticsDashboard.tsx
+   5:29   warning  'YAxis' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   6:5    warning  'PieChart' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+   6:15   warning  'Pie' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   6:20   warning  'Cell' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+  17:38   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  18:12   warning  'devices' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+  18:44   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  47:114  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\dashboard\AnalyticsDashboard.tsx:47:114
+  45 |             return {
+  46 |                 name: hourStr,
+> 47 |                 events: logs.filter(l => new Date(l.timestamp).getHours() === h.getHours()).length || Math.floor(Math.random() * 5) + 1
+     |                                                                                                                  ^^^^^^^^^^^^^ Cannot call impure function
+  48 |             }
+  49 |         })
+  50 |         return hours  react-hooks/purity
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\dashboard\DashboardComponent.tsx
+   22:11  warning  'router' is assigned a value but never used                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+   27:38  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   39:23  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   54:23  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   94:8   warning  React Hook useEffect has a missing dependency: 'fetchHubs'. Either include it or remove the dependency array                                                                                                                                                                             react-hooks/exhaustive-deps
+  165:39  warning  'someOffline' is assigned a value but never used                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  224:41  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  252:63  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  282:93  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  364:88  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\devices\DeviceTelemetry.tsx
+   17:20  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   36:22  warning  'err' is defined but never used           @typescript-eslint/no-unused-vars
+   56:33  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   82:48  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  145:69  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  244:27  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\hubs\HubList.tsx
+  22:5  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\logs\EventFeed.tsx
+  52:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\features\notifications\NotificationInbox.tsx
+  24:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\infrastructure\api-client.test.ts
+  11:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\infrastructure\api-client.ts
+   55:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   71:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   72:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   90:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   97:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  104:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\proxy.test.ts
+   9:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  75:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  86:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  97:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\rpalacios.SATYATEC\APPs\git-proyects\AjaxSecurFlow\frontend\src\proxy.ts
+  41:11  warning  'isPublicRoute' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+Ô£û 53 problems (36 errors, 17 warnings)
+

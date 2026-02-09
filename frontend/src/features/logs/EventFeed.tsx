@@ -49,7 +49,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId }) => {
                 // Support both legacy list and new wrapped object
                 const logsData = Array.isArray(response) ? response : (response.logs || [])
                 setLogs(logsData)
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('[EventFeed] Error fetching logs:', err)
                 setLogs([])
             } finally {

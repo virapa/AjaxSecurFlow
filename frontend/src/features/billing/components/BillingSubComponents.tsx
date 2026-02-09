@@ -1,6 +1,7 @@
 import React from 'react';
 import { BillingHistoryItem } from '../types';
 import { es as t } from '@/shared/i18n/es';
+import { User } from '@/shared/types';
 
 interface HistoryTableProps {
     history: BillingHistoryItem[];
@@ -61,7 +62,12 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ history }) => {
 };
 
 interface BillingStatsProps {
-    user: any;
+    user: {
+        subscription_active: boolean;
+        subscription_plan?: string;
+        subscription_id?: string;
+        subscription_expires_at?: string;
+    } | null;
 }
 
 export const BillingStats: React.FC<BillingStatsProps> = ({ user }) => {
@@ -75,7 +81,7 @@ export const BillingStats: React.FC<BillingStatsProps> = ({ user }) => {
                         </p>
                         <h3 className="text-3xl font-black tracking-tight">
                             {user?.subscription_active
-                                ? (t.dashboard.stats as any)[user.subscription_plan] || user.subscription_plan
+                                ? (t.dashboard.stats as Record<string, string>)[user.subscription_plan || ''] || user.subscription_plan
                                 : t.dashboard.stats.free}
                         </h3>
                     </div>

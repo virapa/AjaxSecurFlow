@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, Mock } from 'vitest'
 import middleware from './proxy'
 
 // Mock NextURL to avoid internal issues
@@ -11,8 +11,8 @@ vi.mock('next/server', async () => {
             static redirect = vi.fn((url) => ({ url, redirected: true }))
             static next = vi.fn(() => ({ next: true }))
             status: number
-            constructor(body: any, init: any) {
-                this.status = init?.status
+            constructor(body: unknown, init: { status?: number }) {
+                this.status = init?.status || 200
             }
         },
     }
@@ -72,7 +72,7 @@ describe('Auth Middleware', () => {
                 headers: { get: vi.fn().mockReturnValue(null) },
             } as unknown as NextRequest
 
-            const res = middleware(req) as any
+            const res = middleware(req) as { status: number }
 
             expect(res.status).toBe(403)
         })
@@ -83,7 +83,7 @@ describe('Auth Middleware', () => {
                 headers: { get: vi.fn().mockReturnValue(null) },
             } as unknown as NextRequest
 
-            const res = middleware(req) as any
+            const res = middleware(req) as { status: number }
 
             expect(res.status).toBe(403)
         })
@@ -94,7 +94,7 @@ describe('Auth Middleware', () => {
                 headers: { get: vi.fn().mockReturnValue(null) },
             } as unknown as NextRequest
 
-            const res = middleware(req) as any
+            const res = middleware(req) as { status: number }
 
             expect(res.status).toBe(403)
         })

@@ -14,7 +14,7 @@ interface DeviceTelemetryProps {
 }
 
 interface DeviceDetails extends Device {
-    [key: string]: any
+    [key: string]: unknown
 }
 
 // Modal Component for Device Details - fetches details on demand
@@ -32,10 +32,10 @@ const DeviceDetailModal: React.FC<{
         const fetchDetails = async () => {
             try {
                 const data = await deviceService.getDeviceDetails(hubId, device.id)
-                setDetails({ ...device, ...data })
+                setDetails({ ...device, ...data } as DeviceDetails)
             } catch (err) {
                 console.warn(`[DeviceDetailModal] Failed to fetch details for ${device.id}`)
-                setDetails(device)
+                setDetails(device as DeviceDetails)
             } finally {
                 setIsLoading(false)
             }
@@ -53,7 +53,7 @@ const DeviceDetailModal: React.FC<{
     }, [onClose])
 
     // Format value for display
-    const formatValue = (value: any): string => {
+    const formatValue = (value: unknown): string => {
         if (value === null || value === undefined) return '—'
         if (typeof value === 'boolean') return value ? 'Sí' : 'No'
         if (typeof value === 'object') return JSON.stringify(value, null, 2)
@@ -79,7 +79,7 @@ const DeviceDetailModal: React.FC<{
     ]
 
     // Get text color based on field and offline status
-    const getValueColor = (key: string, value: any): string => {
+    const getValueColor = (key: string, value: unknown): string => {
         if (key === 'online') {
             return value === true ? 'text-green-400' : value === false ? 'text-red-400' : 'text-gray-400'
         }
@@ -241,7 +241,7 @@ export const DeviceTelemetry = forwardRef<DeviceTelemetryRef, DeviceTelemetryPro
                 console.log(`[DeviceTelemetry] Fetching devices for hub: ${hubId}`)
                 const data = await deviceService.getHubDevices(hubId)
                 setDevices(data || [])
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error(`[DeviceTelemetry] Failed to fetch devices:`, err)
                 setDevices([])
             } finally {

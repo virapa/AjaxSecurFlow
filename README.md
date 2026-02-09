@@ -112,7 +112,19 @@ Para optimizar el rendimiento y reducir las llamadas a la API de Ajax, el sistem
 
 **Invalidación Automática**:
 - Al ejecutar comandos de armar/desarmar, el caché del hub se invalida automáticamente.
+- Al ejecutar comandos de armar/desarmar, el caché del hub se invalida automáticamente.
 - Los logs de eventos **nunca se cachean** para garantizar datos frescos.
+
+### 4.6 Módulo de Soporte y Contacto
+El sistema incluye un canal de comunicación seguro y auditado para asistencia técnica:
+- **Endpoint**: `POST /api/v1/support/contact`.
+- **Flujo de Comunicación**:
+    - **Admins**: Reciben una alerta inmediata por email con el detalle del problema (Bug, Feedback, Pregunta) y datos de contexto del usuario.
+    - **Usuarios**: Reciben un correo de confirmación automático (opcional) con el resumen de su solicitud.
+- **Seguridad**:
+    - **Protección contra Inyección**: Todo el contenido (Asunto, Mensaje) es sanitizado (`html.escape`) antes de procesarse.
+    - **Rate Limiting Estricto**: Limitado a 5 peticiones por hora por usuario para prevenir spam.
+    - **Validación de Datos**: Restricciones de longitud para evitar payloads maliciosos.
 
 ## 5. Aseguramiento de Calidad (QA) & Seguridad
 Este proyecto implementa controles de calidad de grado militar:
@@ -121,8 +133,11 @@ Este proyecto implementa controles de calidad de grado militar:
 -   **Q&A Policies**: Código 100% documentado con Docstrings (Google format), Tipado estricto (Type Hints) y manejo de errores estandarizado.
 -   **Security Scanning**:
     -   `bandit`: Análisis estático para detectar vulnerabilidades en el código Python.
-    -   `pip-audit`: Escaneo de dependencias. Actualmente **0 vulnerabilidades detectadas** tras la remediación de `starlette` (actualización a `fastapi==0.128.1`).
--   **Modern Hashing**: Uso de `bcrypt` (v4.0+) nativo, eliminando dependencias obsoletas como `passlib`.
+    -   `pip-audit`: Escaneo de dependencias. Actualmente **0 vulnerabilidades detectadas**.
+-   **Modern Hashing**: Uso de `bcrypt` (v4.0+) nativo.
+-   **Hardened Input Validation**:
+    -   **HTML Injection Protection**: Sanitización automática de inputs en formularios de soporte.
+    -   **Constraints**: Validación estricta de longitud y tipo de datos en todos los esquemas Pydantic.
 
 ### Seguridad de Grado Industrial (Security by Design)
 El sistema implementa capas de defensa activa para proteger las sesiones de usuario:
@@ -245,7 +260,14 @@ docker-compose exec app python -m pytest backend/tests
 - ✅ Implementación de "Request Shield" en Next.js Middleware.
 - ✅ Implementación de "Request Shield" en FastAPI Backend.
 - ✅ Bloqueo proactivo de scanners de vulnerabilidades.
-- ✅ Protección de archivos sensibles y traversals.
+-   ✅ Protección de archivos sensibles y traversals.
+
+### Fase 10: Support System (✅ Completada)
+- ✅ Diseño de API y Esquemas de Soporte.
+- ✅ Integración con Servicio de Email (SMTP/Mailgun).
+- ✅ Frontend: Formulario de Soporte con validación y Feedback visual.
+- ✅ Navegación Unificada (Sidebar en todas las vistas).
+- ✅ Security Hardening: Rate Limiting y Sanitización de Inputs.
 
 ### Fase 2: Dashboard Frontend (✅ Funcional - Modo Dev)
 - ✅ Panel de Control en Next.js (Dashboard funcional).

@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Sidebar } from '@/features/navigation/Sidebar'
 import { useRouter } from 'next/navigation'
 import { HubList } from '@/features/hubs/HubList'
@@ -19,7 +20,6 @@ import { es as t } from '@/shared/i18n/es'
  * High-performance industrial dashboard matching the reference design.
  */
 export const DashboardComponent: React.FC = () => {
-    const router = useRouter()
     const [hubs, setHubs] = useState<Hub[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -32,16 +32,16 @@ export const DashboardComponent: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('')
     const telemetryRef = useRef<DeviceTelemetryRef>(null)
 
-    const fetchProfile = async () => {
+    const fetchProfile = useCallback(async () => {
         try {
             const data = await authService.getProfile()
             setUser(data)
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Failed to fetch profile:', err)
         }
-    }
+    }, [])
 
-    const fetchHubs = async () => {
+    const fetchHubs = useCallback(async () => {
         try {
             const data = await hubService.getHubs()
             setHubs(data)
@@ -51,21 +51,22 @@ export const DashboardComponent: React.FC = () => {
                 setSelectedHub(data[0])
             }
             // Note: We don't update selectedHub on refresh to avoid resetting user's selection
-        } catch (err: any) {
-            setError(err.message || t.dashboard.stats.systemDegraded)
+        } catch (err: unknown) {
+            const error = err as Error
+            setError(error.message || t.dashboard.stats.systemDegraded)
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [selectedHub])
 
-    const fetchNotificationsSummary = async () => {
+    const fetchNotificationsSummary = useCallback(async () => {
         try {
             const summary = await notificationService.getSummary()
             setUnreadNotificationsCount(summary.unread_count)
         } catch (err) {
             console.error('Failed to fetch notifications summary:', err)
         }
-    }
+    }, [])
 
     const handleManualRefresh = async () => {
         setIsRefreshing(true)
@@ -91,7 +92,7 @@ export const DashboardComponent: React.FC = () => {
         fetchNotificationsSummary()
         // Removed polling - hubs are loaded once on mount
         // User can refresh page if they want updated data
-    }, [])
+    }, [fetchProfile, fetchHubs, fetchNotificationsSummary])
 
 
     // Click outside handler for user menu
@@ -162,7 +163,6 @@ export const DashboardComponent: React.FC = () => {
                         <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-2">
                             {(() => {
                                 const allOnline = activeHubsCount === totalHubsCount && totalHubsCount > 0;
-                                const someOffline = activeHubsCount < totalHubsCount && totalHubsCount > 0;
 
                                 if (allOnline) {
                                     return (
@@ -221,9 +221,11 @@ export const DashboardComponent: React.FC = () => {
                                 </div>
                                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-xs shadow-lg overflow-hidden">
                                     {user?.ajax_info?.imageUrls?.small ? (
-                                        <img
+                                        <Image
                                             src={user.ajax_info.imageUrls.small}
                                             alt="Profile"
+                                            width={40}
+                                            height={40}
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
                                                 const target = e.target as HTMLImageElement;
@@ -361,7 +363,17 @@ export const DashboardComponent: React.FC = () => {
 /** Helper Components for Cleaner Main Logic **/
 
 
-const StatCard = ({ label, value, trend, color, special, specialHref, progress = 65 }: any) => (
+interface StatCardProps {
+    label: string;
+    value: string | number;
+    trend?: string;
+    color?: string;
+    special?: string;
+    specialHref?: string;
+    progress?: number;
+}
+
+const StatCard = ({ label, value, trend, color, special, specialHref, progress = 65 }: StatCardProps) => (
     <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 mb-4">{label}</p>
         <div className="flex items-baseline gap-3 mb-4">
