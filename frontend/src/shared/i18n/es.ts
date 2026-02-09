@@ -114,7 +114,7 @@ export const es = {
             logout: 'Cerrar Sesión'
         },
         profile: {
-            adminUser: 'Usuario Administrador',
+            adminUser: 'Usuario no definido',
             role: 'Ajax Systems Pro'
         },
         stats: {
@@ -155,6 +155,22 @@ export const es = {
                 nightMode: '🌙 Modo Noche'
             }
         },
+        profilePage: {
+            title: 'Perfil de Usuario',
+            personalInfo: 'Información Personal',
+            notifications: 'Configuración de Notificaciones',
+            emailNotifications: 'Notificaciones por Email',
+            emailDescription: 'Recibe alertas críticas de seguridad directamente en tu bandeja de entrada.',
+            saveChanges: 'Guardar Cambios',
+            success: 'Perfil actualizado correctamente',
+            labels: {
+                firstName: 'Nombre',
+                lastName: 'Apellidos',
+                email: 'Correo Electrónico',
+                phone: 'Teléfono',
+                role: 'Rol de Sistema'
+            }
+        },
         notifications: {
             empty: 'No tienes notificaciones en este momento.'
         },
@@ -179,7 +195,7 @@ export const es = {
         },
         analytics: {
             title: 'Reporte de Inteligencia',
-            trends: 'Tendencias de Seguridad (24h)',
+            trends: 'Eventos (6h)',
             battery: 'Salud de Batería',
             eventsPerSite: 'Eventos por Sitio',
             noData: 'Datos insuficientes para análisis',
@@ -192,7 +208,7 @@ export const es = {
         billing: {
             title: 'Facturación',
             header: 'Suscripción',
-            description: 'Gestiona tu plan de seguridad de grado industrial y los detalles de facturación de forma segura.',
+            description: 'Gestiona tu plan de seguridad y los detalles de facturación de forma segura.',
             expiration: 'Fecha de Expiración',
             nextRenewal: 'Próxima Renovación',
             noExpiration: 'Sin fecha de expiración',

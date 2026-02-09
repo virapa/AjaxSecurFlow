@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { Sidebar } from '@/features/navigation/Sidebar'
 import { useRouter } from 'next/navigation'
 import { HubList } from '@/features/hubs/HubList'
-import { DeviceTelemetry } from '@/features/devices/DeviceTelemetry'
+import { DeviceTelemetry, DeviceTelemetryRef } from '@/features/devices/DeviceTelemetry'
 import { EventFeed } from '@/features/logs/EventFeed'
 import { AnalyticsDashboard } from './AnalyticsDashboard'
 import { hubService, Hub } from '@/features/hubs/hub.service'
@@ -28,6 +29,8 @@ export const DashboardComponent: React.FC = () => {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
     const [isRefreshing, setIsRefreshing] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const telemetryRef = useRef<DeviceTelemetryRef>(null)
 
     const fetchProfile = async () => {
         try {
@@ -127,28 +130,7 @@ export const DashboardComponent: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-blue-500/30">
-            {/* Sidebar (Corporate/Industrial) */}
-            <aside className="w-64 border-r border-white/5 bg-[#020617] flex flex-col sticky top-0 h-screen shrink-0">
-                <div className="p-8">
-                    <div className="flex items-center gap-3 mb-12">
-                        <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-xl shadow-blue-500/10">A</div>
-                        <div>
-                            <span className="block text-lg font-bold tracking-tight text-white leading-none">AjaxSecurFlow</span>
-                            <span className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-600">Industrial Security</span>
-                        </div>
-                    </div>
-
-                    <nav className="space-y-1">
-                        <NavItem icon="📊" label={t.dashboard.nav.dashboard} href="/dashboard" active />
-                        <NavItem icon="💳" label={t.dashboard.nav.subscription} href="/billing" />
-                    </nav>
-                </div>
-
-                <div className="mt-auto p-8 space-y-1">
-                    <NavItem icon="⚙️" label={t.dashboard.nav.settings} href="#" />
-                    <NavItem icon="🎧" label={t.dashboard.nav.support} href="#" />
-                </div>
-            </aside>
+            <Sidebar />
 
             {/* Main Content Area */}
             <main className="flex-1 bg-[#020617]">
@@ -161,8 +143,18 @@ export const DashboardComponent: React.FC = () => {
                             <input
                                 type="text"
                                 placeholder={t.dashboard.searchPlaceholder}
-                                className="bg-white/5 border border-white/10 rounded-xl pl-12 pr-6 py-2.5 text-xs w-[320px] focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-gray-600"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="bg-white/5 border border-white/10 rounded-xl pl-12 pr-10 py-2.5 text-xs w-[320px] focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-gray-600"
                             />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors text-xs"
+                                >
+                                    ✕
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -211,7 +203,9 @@ export const DashboardComponent: React.FC = () => {
                             >
                                 <div className="text-right hidden sm:block">
                                     <div className="flex items-center gap-2">
-                                        <p className="text-xs font-bold text-white">{t.dashboard.profile.adminUser}</p>
+                                        <p className="text-xs font-bold text-white">
+                                            {user?.ajax_info?.firstName || t.dashboard.profile.adminUser}
+                                        </p>
                                         <div className="relative">
                                             <span className="text-sm">🔔</span>
                                             {unreadNotificationsCount > 0 && (
@@ -221,7 +215,9 @@ export const DashboardComponent: React.FC = () => {
                                             )}
                                         </div>
                                     </div>
-                                    <p className="text-[9px] font-medium text-gray-500 text-left">{t.dashboard.profile.role}</p>
+                                    <p className="text-[9px] font-medium text-gray-500 text-left">
+                                        {user?.ajax_info?.login || t.dashboard.profile.role}
+                                    </p>
                                 </div>
                                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-xs shadow-lg overflow-hidden">
                                     {user?.ajax_info?.imageUrls?.small ? (
@@ -246,7 +242,7 @@ export const DashboardComponent: React.FC = () => {
                             {/* Dropdown Menu */}
                             {isUserMenuOpen && (
                                 <div className="absolute right-0 top-full mt-2 w-48 bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl z-50 py-2 overflow-hidden animate-in fade-in zoom-in duration-200">
-                                    <Link href="#" className="flex items-center gap-2 px-4 py-3 text-xs font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+                                    <Link href="/profile" className="flex items-center gap-2 px-4 py-3 text-xs font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
                                         <span>⚙️</span> {t.dashboard.nav.settings}
                                     </Link>
                                     <div className="h-px bg-white/5 my-1" />
@@ -298,7 +294,12 @@ export const DashboardComponent: React.FC = () => {
                             <div>
                                 <div className="flex justify-between items-end mb-6">
                                     <h3 className="text-xl font-bold tracking-tight">{t.dashboard.hubs.title}</h3>
-                                    <button className="text-[11px] font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-widest">{t.dashboard.hubs.viewAll}</button>
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        className="text-[11px] font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-widest"
+                                    >
+                                        {t.dashboard.hubs.viewAll}
+                                    </button>
                                 </div>
                                 <HubList
                                     hubs={hubs}
@@ -307,6 +308,7 @@ export const DashboardComponent: React.FC = () => {
                                     onSelectHub={setSelectedHub}
                                     refreshHubs={fetchHubs}
                                     selectedHubId={selectedHub?.id}
+                                    searchQuery={searchQuery}
                                 />
                             </div>
 
@@ -316,17 +318,38 @@ export const DashboardComponent: React.FC = () => {
                                         {t.dashboard.telemetry.title} {selectedHub ? `(${selectedHub.name})` : ''}
                                     </h3>
                                     <div className="flex gap-2">
-                                        <button className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-xs">🎚️</button>
-                                        <button className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-xs">📥</button>
+                                        <button
+                                            onClick={() => telemetryRef.current?.exportToCSV()}
+                                            className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-xs hover:bg-white/10 transition-colors"
+                                            title="Exportar Reporte CSV"
+                                        >
+                                            📥
+                                        </button>
                                     </div>
                                 </div>
-                                <DeviceTelemetry hubId={selectedHub?.id} />
+                                {selectedHub ? (
+                                    <DeviceTelemetry
+                                        ref={telemetryRef}
+                                        hubId={selectedHub.id}
+                                        searchQuery={searchQuery}
+                                    />
+                                ) : (
+                                    <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl p-12 text-center text-gray-500 italic text-xs">
+                                        Seleccione hub para mas detalles
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         {/* Right Section: Event Feed */}
                         <div className="col-span-12 lg:col-span-4 h-full">
-                            <EventFeed hubId={selectedHub?.id} />
+                            {selectedHub ? (
+                                <EventFeed hubId={selectedHub.id} />
+                            ) : (
+                                <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl p-8 text-center text-gray-500 italic text-xs h-full flex items-center justify-center min-h-[400px]">
+                                    Seleccione hub para mas detalles
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -337,17 +360,6 @@ export const DashboardComponent: React.FC = () => {
 
 /** Helper Components for Cleaner Main Logic **/
 
-const NavItem = ({ icon, label, href, active = false, badge }: { icon: string, label: string, href: string, active?: boolean, badge?: string }) => (
-    <Link href={href} className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all group ${active ? 'bg-blue-500/10 text-blue-400 border border-blue-500/10' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-        <div className="flex items-center gap-3">
-            <span className={`text-base ${active ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'}`}>{icon}</span>
-            <span className="text-sm font-bold tracking-tight">{label}</span>
-        </div>
-        {badge && (
-            <span className="h-5 w-5 rounded-full bg-red-600 text-[10px] font-bold text-white flex items-center justify-center border-2 border-[#020617]">{badge}</span>
-        )}
-    </Link>
-)
 
 const StatCard = ({ label, value, trend, color, special, specialHref, progress = 65 }: any) => (
     <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md">

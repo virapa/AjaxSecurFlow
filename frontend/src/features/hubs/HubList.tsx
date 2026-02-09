@@ -13,6 +13,7 @@ interface HubListProps {
     onSelectHub: (hub: Hub) => void
     refreshHubs: () => void
     selectedHubId?: string
+    searchQuery?: string
 }
 
 export const HubList: React.FC<HubListProps> = ({
@@ -21,7 +22,8 @@ export const HubList: React.FC<HubListProps> = ({
     error,
     onSelectHub,
     refreshHubs,
-    selectedHubId
+    selectedHubId,
+    searchQuery = ''
 }) => {
     const [isActionLoading, setIsActionLoading] = useState<string | null>(null)
     const [mounted, setMounted] = useState(false)
@@ -66,9 +68,14 @@ export const HubList: React.FC<HubListProps> = ({
         )
     }
 
+    const filteredHubs = hubs.filter(hub =>
+        (hub.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (hub.hub_subtype || '').toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {hubs.map((hub) => (
+            {filteredHubs.map((hub) => (
                 <div
                     key={hub.id}
                     className="relative group cursor-pointer"

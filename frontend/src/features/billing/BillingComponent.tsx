@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { Sidebar } from '@/features/navigation/Sidebar'
 import { billingService } from './billing.service'
 import { authService } from '@/features/auth/auth.service'
 import { notificationService } from '@/features/notifications/notification.service'
@@ -59,36 +60,7 @@ export const BillingComponent: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-blue-500/30">
-            {/* Sidebar */}
-            <aside className="w-64 border-r border-white/5 bg-[#020617] flex flex-col sticky top-0 h-screen shrink-0">
-                <div className="p-8">
-                    <div className="flex items-center gap-3 mb-12">
-                        <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-xl shadow-blue-500/10">A</div>
-                        <div>
-                            <span className="block text-lg font-bold tracking-tight text-white leading-none">AjaxSecurFlow</span>
-                            <span className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-600">Industrial Security</span>
-                        </div>
-                    </div>
-
-                    <nav className="space-y-1">
-                        <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 hover:text-white hover:bg-white/5 transition-all group">
-                            <span className="text-base opacity-50 group-hover:opacity-100">📊</span>
-                            <span className="text-sm font-bold tracking-tight">{t.dashboard.nav.dashboard}</span>
-                        </Link>
-                        <Link href="/billing" className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/10 transition-all">
-                            <span className="text-base opacity-100">💳</span>
-                            <span className="text-sm font-bold tracking-tight">{t.dashboard.nav.subscription}</span>
-                        </Link>
-                    </nav>
-                </div>
-
-                <div className="mt-auto p-8 space-y-1">
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 hover:text-white hover:bg-white/5 transition-all cursor-pointer">
-                        <span className="text-base opacity-50">⚙️</span>
-                        <span className="text-sm font-bold tracking-tight">{t.dashboard.nav.settings}</span>
-                    </div>
-                </div>
-            </aside>
+            <Sidebar />
 
             {/* Main Content */}
             <main className="flex-1 bg-[#020617] overflow-y-auto">

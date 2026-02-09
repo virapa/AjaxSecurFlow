@@ -71,7 +71,7 @@ export const BillingStats: React.FC<BillingStatsProps> = ({ user }) => {
                 <div className="flex items-start justify-between mb-4">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black uppercase tracking-widest text-gray-600 flex items-center gap-2">
-                            <span className="text-blue-500">🛡️</span> Current Plan
+                            <span className="text-blue-500">🛡️</span> {t.dashboard.stats.planStatus}
                         </p>
                         <h3 className="text-3xl font-black tracking-tight">
                             {user?.subscription_active

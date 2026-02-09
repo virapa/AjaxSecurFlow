@@ -1,11 +1,16 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useImperativeHandle, forwardRef } from 'react'
 import { deviceService, Device } from './device.service'
 import { es as t } from '@/shared/i18n/es'
 
+export interface DeviceTelemetryRef {
+    exportToCSV: () => void
+}
+
 interface DeviceTelemetryProps {
     hubId?: string
+    searchQuery?: string
 }
 
 interface DeviceDetails extends Device {
@@ -177,11 +182,51 @@ const DeviceDetailModal: React.FC<{
     )
 }
 
-export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
+export const DeviceTelemetry = forwardRef<DeviceTelemetryRef, DeviceTelemetryProps>(({ hubId, searchQuery = '' }, ref) => {
     const [devices, setDevices] = useState<Device[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [mounted, setMounted] = useState(false)
     const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
+
+    // Expose export function to parent
+    useImperativeHandle(ref, () => ({
+        exportToCSV: () => {
+            if (!devices.length) return
+
+            const filtered = devices.filter(device =>
+                (device.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (device.device_type || '').toLowerCase().includes(searchQuery.toLowerCase())
+            )
+
+            if (!filtered.length) return
+
+            // CSV Header
+            const headers = ['Nombre', 'Tipo', 'Estado', 'Batería', 'Señal', 'ID']
+            const rows = filtered.map(d => [
+                d.name || 'Sin nombre',
+                d.device_type || 'Unknown',
+                d.online ? 'Online' : 'Offline',
+                d.battery_level !== undefined ? `${d.battery_level}%` : '—',
+                d.signal_level !== undefined ? d.signal_level : '—',
+                d.id
+            ])
+
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(r => r.map(field => `"${field}"`).join(','))
+            ].join('\n')
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.setAttribute('href', url)
+            link.setAttribute('download', `AjaxSecurFlow_Report_${hubId || 'Direct'}_${new Date().toISOString().split('T')[0]}.csv`)
+            link.style.visibility = 'hidden'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        }
+    }))
 
     useEffect(() => {
         setMounted(true)
@@ -232,55 +277,68 @@ export const DeviceTelemetry: React.FC<DeviceTelemetryProps> = ({ hubId }) => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                        {devices.length > 0 ? devices.map((device) => {
-                            const isOffline = device.online === false
-                            return (
-                                <tr key={device.id} className={`hover:bg-white/[0.02] transition-colors group ${isOffline ? 'opacity-70' : ''}`}>
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${isOffline ? 'bg-gray-500/10 grayscale' : 'bg-blue-500/10 text-blue-400'}`}>
-                                                {device.device_type?.includes('Motion') || device.device_type?.includes('MotionProtect') ? '📡' :
-                                                    device.device_type?.includes('Door') || device.device_type?.includes('DoorProtect') ? '🚪' :
-                                                        device.device_type?.includes('Space') || device.device_type?.includes('Control') ? '🎮' :
-                                                            device.device_type?.includes('Relay') || device.device_type?.includes('WallSwitch') ? '💡' :
-                                                                device.device_type?.includes('Fire') || device.device_type?.includes('Smoke') ? '🔥' :
-                                                                    device.device_type?.includes('Siren') ? '🔔' :
-                                                                        device.device_type?.includes('Keyboard') || device.device_type?.includes('KeyPad') ? '⌨️' : '📦'}
-                                            </div>
-                                            <div>
-                                                <div className={`text-sm font-bold ${isOffline ? 'text-gray-500' : 'text-white'}`}>{device.name || 'Sin nombre'}</div>
-                                                <div className="text-[10px] text-gray-600 font-medium">{device.device_type}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`h-2 w-2 rounded-full ${device.online === true ? 'bg-green-500 animate-pulse' : device.online === false ? 'bg-red-500' : 'bg-gray-500'}`} />
-                                            <span className={`text-xs font-bold ${device.online === true ? 'text-green-400' : device.online === false ? 'text-red-400' : 'text-gray-500'}`}>
-                                                {device.online === true ? 'Online' : device.online === false ? 'Offline' : '—'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5 text-right">
-                                        <button
-                                            onClick={() => setSelectedDevice(device)}
-                                            className="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-tighter bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg"
-                                        >
-                                            {t.dashboard.telemetry.labels.details}
-                                        </button>
-                                    </td>
-                                </tr>
+                        {(() => {
+                            const filteredDevices = devices.filter(device =>
+                                (device.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                (device.device_type || '').toLowerCase().includes(searchQuery.toLowerCase())
                             )
-                        }) : (
-                            <tr>
-                                <td colSpan={3} className="px-6 py-20 text-center text-gray-700 italic text-[10px] uppercase tracking-widest">
-                                    {t.dashboard.telemetry.empty}
-                                </td>
-                            </tr>
-                        )}
+
+                            if (filteredDevices.length === 0) {
+                                return (
+                                    <tr>
+                                        <td colSpan={3} className="px-6 py-20 text-center text-gray-700 italic text-[10px] uppercase tracking-widest">
+                                            {t.dashboard.telemetry.empty}
+                                        </td>
+                                    </tr>
+                                )
+                            }
+
+                            return filteredDevices.map((device) => {
+                                const isOffline = device.online === false
+                                return (
+                                    <tr key={device.id} className={`hover:bg-white/[0.02] transition-colors group ${isOffline ? 'opacity-70' : ''}`}>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${isOffline ? 'bg-gray-500/10 grayscale' : 'bg-blue-500/10 text-blue-400'}`}>
+                                                    {device.device_type?.includes('Motion') || device.device_type?.includes('MotionProtect') ? '📡' :
+                                                        device.device_type?.includes('Door') || device.device_type?.includes('DoorProtect') ? '🚪' :
+                                                            device.device_type?.includes('Space') || device.device_type?.includes('Control') ? '🎮' :
+                                                                device.device_type?.includes('Relay') || device.device_type?.includes('WallSwitch') ? '💡' :
+                                                                    device.device_type?.includes('Fire') || device.device_type?.includes('Smoke') ? '🔥' :
+                                                                        device.device_type?.includes('Siren') ? '🔔' :
+                                                                            device.device_type?.includes('Keyboard') || device.device_type?.includes('KeyPad') ? '⌨️' : '📦'}
+                                                </div>
+                                                <div>
+                                                    <div className={`text-sm font-bold ${isOffline ? 'text-gray-500' : 'text-white'}`}>{device.name || 'Sin nombre'}</div>
+                                                    <div className="text-[10px] text-gray-600 font-medium">{device.device_type}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`h-2 w-2 rounded-full ${device.online === true ? 'bg-green-500 animate-pulse' : device.online === false ? 'bg-red-500' : 'bg-gray-500'}`} />
+                                                <span className={`text-xs font-bold ${device.online === true ? 'text-green-400' : device.online === false ? 'text-red-400' : 'text-gray-500'}`}>
+                                                    {device.online === true ? 'Online' : device.online === false ? 'Offline' : '—'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5 text-right">
+                                            <button
+                                                onClick={() => setSelectedDevice(device)}
+                                                className="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-tighter bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg"
+                                            >
+                                                {t.dashboard.telemetry.labels.details}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                )
+                            })
+                        })()}
                     </tbody>
                 </table>
             </div>
         </>
     )
-}
+})
+
+DeviceTelemetry.displayName = 'DeviceTelemetry'
