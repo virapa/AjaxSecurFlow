@@ -108,6 +108,13 @@ export const HubList: React.FC<HubListProps> = ({
                                 {hub.state === 'ARMED' ? t.dashboard.hubs.status.armed :
                                     hub.state === 'NIGHT_MODE' ? t.dashboard.hubs.status.night : t.dashboard.hubs.status.disarmed}
                             </div>
+
+                            {/* Limited Functions Badge for non-PRO/MASTER users */}
+                            {hub.role && hub.role !== 'MASTER' && hub.role !== 'PRO' && (
+                                <div className="absolute top-4 left-4 px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[8px] font-black uppercase tracking-widest animate-pulse shadow-lg shadow-amber-500/10">
+                                    ⚠️ {t.dashboard.hubs.limitedFunctions}
+                                </div>
+                            )}
                         </div>
 
                         {/* Mid Section: Telemetry Highlights */}

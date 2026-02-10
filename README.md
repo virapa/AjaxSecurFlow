@@ -68,6 +68,7 @@ El sistema expone información detallada y estructurada de todo el ecosistema Aj
 - `GET /api/v1/ajax/hubs/{hub_id}/devices/{device_id}`
 - `GET /api/v1/ajax/hubs/{hub_id}/rooms` (Listado completo de habitaciones)
 - `GET /api/v1/ajax/hubs/{hub_id}/rooms/{room_id}` (Detalle de habitación específica)
+- `GET /api/v1/ajax/hubs/{hub_id}/role` (Consulta de Rol: MASTER/PRO/USER)
 
 #### Control de Seguridad (Armado/Desarmado)
 El proxy expone una interfaz unificada para el control de estados:

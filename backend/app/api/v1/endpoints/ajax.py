@@ -403,6 +403,72 @@ async def read_hub_logs(
         502: {"model": ErrorMessage, "description": "Upstream Ajax API error"}
     }
 )
+@router.post("/hubs/{hub_id}/command", response_model=schemas.CommandResponse)
+async def send_hub_command(
+    hub_id: str = Path(..., description="ID of the Hub to control", example="0004C602"),
+    command: schemas.HubCommandRequest = Body(..., description="Arming command details"),
+    current_user: User = Depends(get_current_user),
+    ajax_client: AjaxClient = Depends(get_ajax_client),
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
+):
+    """
+    Send a command to the Ajax Hub (Arm, Disarm, Night Mode).
+    """
+    if not is_subscription_active(current_user):
+        raise HTTPException(status_code=403, detail="Active subscription required")
+
+    await verify_hub_access(current_user.email, hub_id, ajax_client)
+    
+    user_id = await ajax_client._get_ajax_user_id(current_user.email)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User not linked to Ajax")
+
+    try:
+        result = await ajax_client.send_command(
+            user_email=current_user.email,
+            user_id=user_id,
+            hub_id=hub_id,
+            command=command.arm_state,
+            group_id=command.group_id
+        )
+
+        if not result:
+            raise HTTPException(status_code=500, detail="Command failed")
+
+        return {"success": True, "message": "Command sent successfully"}
+    except Exception as e:
+        handle_ajax_error(e)
+
+@router.get("/hubs/{hub_id}/role", response_model=schemas.UserHubBinding)
+async def get_hub_role(
+    hub_id: str = Path(..., description="ID of the Hub to query role from", example="0004C602"),
+    current_user: User = Depends(get_current_user),
+    ajax_client: AjaxClient = Depends(get_ajax_client),
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(rate_limiter),
+):
+    """
+    Check the current user's role in the specified hub (MASTER, PRO, USER).
+    This role determines access levels (e.g., viewing logs).
+    """
+    if not is_subscription_active(current_user):
+        raise HTTPException(status_code=403, detail="Active subscription required")
+
+    # We verify hub access implicitly by checking if binding exists
+    user_id = await ajax_client._get_ajax_user_id(current_user.email)
+    if not user_id:
+         raise HTTPException(status_code=400, detail="User not linked to Ajax")
+
+    try:
+        binding = await ajax_client.get_user_hub_binding(current_user.email, user_id, hub_id)
+        if not binding:
+             raise HTTPException(status_code=404, detail="Hub binding not found or access denied")
+        
+        return binding
+    except Exception as e:
+        handle_ajax_error(e)
+
 async def set_hub_arm_state(
     request: Request,
     hub_id: str = Path(..., description="ID of the Hub to control", example="0004C602"),

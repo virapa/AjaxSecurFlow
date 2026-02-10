@@ -150,9 +150,22 @@ class EventLog(BaseModel):
 
 class EventLogResponse(BaseModel):
     logs: List[EventLog] = []
+    logs: List[EventLog] = []
     total_count: int = 0
 
-from enum import IntEnum
+from enum import IntEnum, Enum
+
+# --- Hub Binding Role ---
+class HubBindingRole(str, Enum):
+    MASTER = "MASTER"
+    USER = "USER"
+    PRO = "PRO"
+
+class UserHubBinding(BaseModel):
+    hub_id: str = Field(..., validation_alias=AliasChoices("hubId", "hub_id"))
+    hub_binding_role: HubBindingRole = Field(..., validation_alias=AliasChoices("hubBindingRole", "hub_binding_role"))
+
+# --- Commands ---
 
 # --- Commands ---
 class ArmState(IntEnum):

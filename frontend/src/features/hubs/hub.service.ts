@@ -23,6 +23,7 @@ export interface Hub {
     firmware_version?: string
     battery?: HubBattery
     gsm?: HubGSM
+    role?: 'MASTER' | 'PRO' | 'USER'
 }
 
 /**

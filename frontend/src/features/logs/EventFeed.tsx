@@ -6,12 +6,15 @@ import { es as t } from '@/shared/i18n/es'
 
 interface EventFeedProps {
     hubId?: string
+    role?: 'MASTER' | 'PRO' | 'USER'
 }
 
-export const EventFeed: React.FC<EventFeedProps> = ({ hubId }) => {
+export const EventFeed: React.FC<EventFeedProps> = ({ hubId, role }) => {
     const [logs, setLogs] = useState<EventLog[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [mounted, setMounted] = useState(false)
+
+    const isPro = role === 'MASTER' || role === 'PRO'
 
     // Helper to translate/refine event descriptions
     const getEventDescription = (log: EventLog): string => {
@@ -74,7 +77,22 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId }) => {
             </div>
 
             <div className="flex-1 space-y-8 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-white/5">
-                {logs.length > 0 ? logs.map((log) => (
+                {!isPro ? (
+                    <div className="relative pl-10 py-6 border-b border-white/5 mb-6 group transition-opacity opacity-70 hover:opacity-100">
+                        {/* Fake Timeline Connector to make it look inline */}
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-[22px] w-[22px] rounded-full border border-[#0f172a] bg-amber-500/10 text-amber-500 flex items-center justify-center z-10 shadow-lg shadow-amber-500/5">
+                            <span className="text-[11px]">🔐</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-amber-400/80">
+                                {t.dashboard.events.nonProUser}
+                            </span>
+                            <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest max-w-[280px]">
+                                {t.dashboard.events.nonProHint}
+                            </span>
+                        </div>
+                    </div>
+                ) : logs.length > 0 ? logs.map((log) => (
                     <div key={log.id} className="relative pl-10">
                         {/* Timeline Connector Dot */}
                         <div className={`absolute left-0 top-1.5 h-[22px] w-[22px] rounded-full border border-[#0f172a] flex items-center justify-center z-10 ${log.event_desc.includes('imiento') || log.event_desc.includes('Motion') ? 'bg-red-500/20 text-red-500' :

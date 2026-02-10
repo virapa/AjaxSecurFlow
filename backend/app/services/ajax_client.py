@@ -148,6 +148,27 @@ class AjaxClient:
             logger.error(f"Error during Ajax credential validation: {e}")
             raise
 
+    async def get_user_hub_binding(self, user_email: str, user_id: str, hub_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the role of a user in a specific hub.
+        GET /user/{user_id}/hubs/{hub_id}/users/{user_id}
+        """
+        try:
+            # We use the generic request method which handles auth/refresh
+            response = await self.request(
+                user_email, 
+                "GET", 
+                f"/user/{user_id}/hubs/{hub_id}/users/{user_id}"
+            )
+            return response
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return None
+            raise
+        except Exception as e:
+            logger.error(f"Error fetching user hub binding for {user_email}: {e}")
+            raise
+
     async def refresh_session(self, user_email: str) -> str:
         """
         Obtain a new session token using the cached refresh token.

@@ -153,7 +153,8 @@ export const es = {
                 armTotal: '🛡️ Armado Total',
                 disarm: '🔓 Desarmar',
                 nightMode: '🌙 Modo Noche'
-            }
+            },
+            limitedFunctions: 'Funciones Limitadas'
         },
         profilePage: {
             title: 'Perfil de Usuario',
@@ -191,7 +192,9 @@ export const es = {
         events: {
             title: 'Flujo de Eventos',
             live: 'En Vivo',
-            empty: 'No hay eventos recientes'
+            empty: 'No hay eventos recientes',
+            nonProUser: 'Acceso Restringido: Permisos Insuficientes',
+            nonProHint: 'Para visualizar el historial de eventos en este panel, debe tener privilegios de ADMINISTRADOR o PRO asignados a su cuenta dentro de la aplicación oficial AJAX SECURITY (Ajustes del Hub > Usuarios).'
         },
         analytics: {
             title: 'Reporte de Inteligencia',

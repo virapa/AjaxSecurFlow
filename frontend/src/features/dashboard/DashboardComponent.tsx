@@ -346,7 +346,7 @@ export const DashboardComponent: React.FC = () => {
                         {/* Right Section: Event Feed */}
                         <div className="col-span-12 lg:col-span-4 h-full">
                             {selectedHub ? (
-                                <EventFeed hubId={selectedHub.id} />
+                                <EventFeed hubId={selectedHub.id} role={selectedHub.role} />
                             ) : (
                                 <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl p-8 text-center text-gray-500 italic text-xs h-full flex items-center justify-center min-h-[400px]">
                                     Seleccione hub para mas detalles
