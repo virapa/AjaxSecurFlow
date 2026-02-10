@@ -8,7 +8,7 @@ from backend.app.services.ajax_client import AjaxClient
 from backend.app.core.db import async_session_factory
 from backend.app.crud import user as crud_user
 from backend.app.domain.models import User, ProcessedStripeEvent
-from backend.app.services import audit_service, notification_service, email_service
+from backend.app.services import audit_service, notification_service, email_service, billing_service
 from sqlalchemy import select
 
 @celery_app.task(name="tasks.send_transactional_email")
@@ -143,23 +143,31 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
                     user = await session.get(User, int(internal_user_id))
                     if user:
                         user_id = user.id
+                        price_id = data.metadata.get("price_id")
+                        plan_name = billing_service.get_plan_from_price_id(price_id) if price_id else "premium"
+                        
                         await crud_user.update_user_subscription(
-                            session, user, subscription_id, "active", stripe_customer_id
+                            session, user.id, "active", plan_name, subscription_id
                         )
-                        logger.info(f"Linked User {user.email} to Stripe Customer {stripe_customer_id}")
+                        # Ensure customer ID is also saved if not present
+                        if not user.stripe_customer_id:
+                            user.stripe_customer_id = stripe_customer_id
+                            await session.commit()
+                            
+                        logger.info(f"Linked User {user.email} to Stripe Customer {stripe_customer_id} (Plan: {plan_name})")
                         await notification_service.create_notification(
                             db=session,
                             user_id=user.id,
                             title="Suscripción Activada",
-                            message="¡Bienvenido! Tu suscripción ha sido activada correctamente.",
+                            message=f"¡Bienvenido! Tu suscripción {plan_name.upper()} ha sido activada correctamente.",
                             notification_type="success"
                         )
                         # Point 2: Send Warm Welcome Email
                         send_transactional_email.delay(
                             user.email,
                             "¡Bienvenido a AjaxSecurFlow!",
-                            f"<h1>Hola {user.email}</h1><p>Tu suscripción Premium ha sido activada correctamente. Ya puedes acceder a todas las funciones avanzadas.</p>",
-                            f"Hola {user.email}, tu suscripción Premium ha sido activada correctamente."
+                            f"<h1>Hola {user.email}</h1><p>Tu suscripción {plan_name.upper()} ha sido activada correctamente. Ya puedes acceder a las funciones correspondientes.</p>",
+                            f"Hola {user.email}, tu suscripción {plan_name.upper()} ha sido activada correctamente."
                         )
 
             elif event_type in ["customer.subscription.created", "customer.subscription.updated"]:
@@ -170,8 +178,20 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
                 user = await crud_user.get_user_by_stripe_customer_id(session, customer_id)
                 if user:
                     user_id = user.id
+                    
+                    # Extract plan from subscription items
+                    price_id = None
+                    try:
+                        items = data.get("items", {}).get("data", [])
+                        if items:
+                            price_id = items[0].get("price", {}).get("id")
+                    except:
+                        pass
+                        
+                    plan_name = billing_service.get_plan_from_price_id(price_id) if price_id else user.subscription_plan
+                    
                     await crud_user.update_user_subscription(
-                        session, user, subscription_id, status
+                        session, user.id, status, plan_name, subscription_id
                     )
                     if status == "active":
                         await notification_service.create_notification(
@@ -195,7 +215,7 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
                 if user:
                     user_id = user.id
                     await crud_user.update_user_subscription(
-                        session, user, "", "canceled"
+                        session, user.id, "canceled", "free", ""
                     )
                     await notification_service.create_notification(
                         db=session,

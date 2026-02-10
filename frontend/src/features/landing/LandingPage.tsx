@@ -140,7 +140,7 @@ export const LandingPage: React.FC = () => {
                 <h2 className="text-xs font-bold uppercase tracking-widest text-blue-500 mb-4">{t.landing.pricing.tag}</h2>
                 <h3 className="text-4xl font-extrabold tracking-tight mb-16">{t.landing.pricing.title}</h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
                     {t.landing.pricing.plans.map((plan, idx) => (
                         <div
                             key={idx}
@@ -176,7 +176,7 @@ export const LandingPage: React.FC = () => {
                                 variant={plan.recommended ? 'primary' : 'ghost'}
                                 className={`w-full ${!plan.recommended ? 'border border-white/10 hover:bg-white/5' : ''}`}
                             >
-                                {plan.recommended ? t.common.contactSales : t.common.startFree}
+                                {t.common.getStarted}
                             </Button>
                         </div>
                     ))}

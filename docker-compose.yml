@@ -1,86 +1,92 @@
 services:
-  app:
+  # Backend API (FastAPI)
+  backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: ajax_proxy_app
+    container_name: ajax_proxy_backend
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379/0
-      - AJAX_API_BASE_URL=${AJAX_API_BASE_URL}
-      - AJAX_API_KEY=${AJAX_API_KEY}
-      - AJAX_LOGIN=${AJAX_LOGIN}
-      - AJAX_PASSWORD=${AJAX_PASSWORD}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - STRIPE_PUBLIC_KEY=${STRIPE_PUBLIC_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY}
     depends_on:
-      - postgres
+      - db
       - redis
-    volumes:
-      - .:/app
-    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - ajax_network
+    restart: always
 
+  # Celery Worker
   worker:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: ajax_proxy_worker
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379/0
-      - AJX_API_KEY=${AJAX_API_KEY}
-      - AJAX_LOGIN=${AJAX_LOGIN}
-      - AJAX_PASSWORD=${AJAX_PASSWORD}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
+      - db
       - redis
-      - postgres
-    volumes:
-      - ./backend:/app/backend
     command: celery -A backend.app.worker.celery_app worker --loglevel=info -B
+    networks:
+      - ajax_network
+    restart: always
 
-  postgres:
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://api.tu-dominio.com/api/v1 # Cambiar por tu dominio real
+    container_name: ajax_proxy_frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env.local
+    depends_on:
+      - backend
+    networks:
+      - ajax_network
+    restart: always
+
+  # Database (PostgreSQL)
+  db:
     image: postgres:15-alpine
     container_name: ajax_proxy_db
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    ports:
-      - "5432:5432"
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-ajax_proxy}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ajax_network
+    restart: always
 
+  # Cache & Message Broker (Redis)
   redis:
     image: redis:7-alpine
     container_name: ajax_proxy_redis
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - ajax_network
+    restart: always
 
-  pytest:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: ajax_proxy_test
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}_test
-      - REDIS_URL=redis://redis:6379/1
-    depends_on:
-      - postgres
-      - redis
-    volumes:
-      - ./backend:/app/backend
-    command: pytest backend/tests
+networks:
+  ajax_network:
+    driver: bridge
 
 volumes:
   postgres_data:

@@ -39,14 +39,29 @@ async def create_checkout_session(
         raise HTTPException(status_code=501, detail="Stripe not configured")
 
     try:
+        # Determine Price ID from Plan Type
+        price_id = None
+        if payload.plan_type == "basic":
+            price_id = settings.STRIPE_PRICE_ID_BASIC
+        elif payload.plan_type == "pro":
+            price_id = settings.STRIPE_PRICE_ID_PRO
+        elif payload.plan_type == "premium":
+            price_id = settings.STRIPE_PRICE_ID_PREMIUM
+            
+        if not price_id:
+            raise HTTPException(status_code=400, detail=f"Invalid or unconfigured plan type: {payload.plan_type}")
+
         checkout_session = stripe.checkout.Session.create(
             customer=current_user.stripe_customer_id,
             payment_method_types=["card"],
-            line_items=[{"price": payload.price_id, "quantity": 1}],
+            line_items=[{"price": price_id, "quantity": 1}],
             mode="subscription",
             success_url=f"http://localhost:3000/success?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url="http://localhost:3000/cancel",
-            metadata={"user_id": current_user.id}
+            metadata={
+                "user_id": current_user.id,
+                "price_id": price_id
+            }
         )
         return {"url": checkout_session.url}
     except Exception as e:

@@ -18,11 +18,11 @@ export const billingService = {
 
     /**
      * Creates a Stripe Checkout session.
-     * @param priceId The Stripe price ID for the plan.
+     * @param planType The plan identifier (basic, pro, premium)
      */
-    createCheckoutSession: async (priceId: string): Promise<CheckoutSessionResponse> => {
+    createCheckoutSession: async (planType: string): Promise<CheckoutSessionResponse> => {
         return apiClient.post<CheckoutSessionResponse>('/billing/create-checkout-session', {
-            price_id: priceId
+            plan_type: planType
         })
     },
 

@@ -16,6 +16,7 @@ build/
 .idea/
 .agent/
 .antigravity/
+.cursorrules
 
 # Logs and temp files
 # Ignore specific test result patterns but keep requirements.txt safe

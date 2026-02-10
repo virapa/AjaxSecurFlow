@@ -71,6 +71,7 @@ interface BillingStatsProps {
 }
 
 export const BillingStats: React.FC<BillingStatsProps> = ({ user }) => {
+    // ... (rest of BillingStats)
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-[#0f172a]/60 border border-white/5 rounded-3xl p-8 backdrop-blur-md relative overflow-hidden group">
@@ -111,6 +112,62 @@ export const BillingStats: React.FC<BillingStatsProps> = ({ user }) => {
                     {user?.subscription_active ? t.dashboard.billing.statusActive : t.dashboard.billing.statusExpired}
                 </p>
             </div>
+        </div>
+    );
+};
+
+interface PricingTableProps {
+    currentPlan: string;
+    onSubscribe: (plan: string) => void;
+}
+
+export const PricingTable: React.FC<PricingTableProps> = ({ currentPlan, onSubscribe }) => {
+    const plans = ['free', 'basic', 'pro', 'premium'] as const;
+    const icons = { free: '🌱', basic: '🛡️', pro: '⚡', premium: '👑' };
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {plans.map((plan) => {
+                const isCurrent = currentPlan?.toLowerCase() === plan;
+                const tiers = t.dashboard.billing.tiers as any;
+                const planData = tiers[plan];
+
+                return (
+                    <div key={plan} className={`relative bg-[#0f172a]/40 border ${isCurrent ? 'border-blue-500 bg-blue-500/5' : 'border-white/5'} rounded-3xl p-6 flex flex-col transition-all hover:border-white/10 group`}>
+                        {isCurrent && (
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg shadow-blue-600/20">
+                                {tiers.current}
+                            </div>
+                        )}
+                        <div className="mb-6">
+                            <span className="text-3xl mb-4 block drop-shadow-lg">{icons[plan]}</span>
+                            <h4 className="text-lg font-black tracking-tight">{planData.name}</h4>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mt-1">
+                                {planData.description}
+                            </p>
+                        </div>
+                        <ul className="space-y-3 mb-8 flex-1">
+                            {planData.features.map((feature: string, i: number) => (
+                                <li key={i} className="flex items-center gap-2 text-[11px] text-gray-400 font-medium">
+                                    <span className="text-blue-500/50">✓</span> {feature}
+                                </li>
+                            ))}
+                        </ul>
+                        <button
+                            onClick={() => plan !== 'free' && !isCurrent && onSubscribe(plan)}
+                            disabled={plan === 'free' || isCurrent}
+                            className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isCurrent
+                                    ? 'bg-blue-500/10 text-blue-400 cursor-default'
+                                    : plan === 'free'
+                                        ? 'bg-white/5 text-gray-500 cursor-default'
+                                        : 'bg-white text-black hover:bg-gray-200 active:scale-95'
+                                }`}
+                        >
+                            {isCurrent ? tiers.current : tiers.subscribe}
+                        </button>
+                    </div>
+                );
+            })}
         </div>
     );
 };

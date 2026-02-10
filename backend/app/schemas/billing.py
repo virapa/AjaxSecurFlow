@@ -5,7 +5,7 @@ import datetime
 from datetime import datetime as dt_datetime
 
 class CheckoutSessionCreate(BaseModel):
-    price_id: str = Field(..., description="Stripe Price ID to subscribe to")
+    plan_type: str = Field(..., description="Target plan (basic, pro, premium)")
 
 class CheckoutSessionResponse(BaseModel):
     url: str = Field(..., description="Stripe Checkout URL to redirect the user to")

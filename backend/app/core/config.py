@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     STRIPE_PUBLIC_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[SecretStr] = None
     
+    # Stripe Price IDs for the 4 tiers
+    STRIPE_PRICE_ID_BASIC: Optional[str] = None
+    STRIPE_PRICE_ID_PRO: Optional[str] = None
+    STRIPE_PRICE_ID_PREMIUM: Optional[str] = None
+    
     # Celery (Task Queue)
     CELERY_BROKER_URL: Optional[str] = None # Defaults to Redis
     CELERY_RESULT_BACKEND: Optional[str] = None

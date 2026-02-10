@@ -1,3 +1,49 @@
+const PLAN_TIERS = {
+    free: {
+        name: 'Free',
+        price: '$0',
+        period: '/ para siempre',
+        description: 'Exploración básica para usuarios individuales.',
+        features: ['1 Hub Ajax', 'Visualización de Hubs', 'Soporte Comunitario']
+    },
+    basic: {
+        name: 'Basic',
+        price: '$9',
+        period: '/ mes',
+        description: 'Monitoreo esencial con telemetría en vivo.',
+        features: ['Todo lo del plan Free', 'Dispositivos Ilimitados', 'Telemetría RT', 'Historial de Eventos', 'Estado de Batería']
+    },
+    pro: {
+        name: 'Pro',
+        price: '$19',
+        period: '/ mes',
+        description: 'Control total y automatización avanzada.',
+        recommended: 'RECOMENDADO',
+        features: [
+            'Todo lo del plan Basic',
+            'Control de Armado',
+            'Modo Noche',
+            'Notificaciones Críticas',
+            'Soporte Prioritario',
+            'Gestión de Usuarios'
+        ]
+    },
+    premium: {
+        name: 'Premium',
+        price: '$49',
+        period: '/ mes',
+        description: 'Integración industrial y proxy total.',
+        features: [
+            'Todo lo del plan Pro',
+            'Generic Proxy API',
+            'Webhooks Avanzados',
+            'Exportación de Datos',
+            'Acceso Pro Max',
+            'SLA Garantizado'
+        ]
+    }
+};
+
 /**
  * Spanish (ES) Translations
  */
@@ -53,28 +99,10 @@ export const es = {
             tag: 'Planes de Precios',
             title: 'Escala tu Seguridad',
             plans: [
-                {
-                    name: 'Uso Personal',
-                    price: '$0',
-                    period: '/ para siempre',
-                    desc: 'Perfecto para propietarios individuales que prueban el gateway.',
-                    features: ['1 Dispositivo Activo', 'Telemetría Básica (Sin refresco)', 'Soporte de la Comunidad (Discord)']
-                },
-                {
-                    name: 'Pro Industrial',
-                    recommended: 'RECOMENDADO PARA PROFESIONALES',
-                    price: 'Personalizado',
-                    period: '/ basado en volumen',
-                    desc: 'Diseñado para instaladores que gestionan múltiples sitios de alta gama.',
-                    features: [
-                        'Hubs y Dispositivos Ilimitados',
-                        'Flujo de Telemetría en Tiempo Real',
-                        'Acceso Avanzado a API y Webhooks',
-                        'Pagos Integrados con Stripe',
-                        'Soporte de Cupones AJAX-XXX-X',
-                        'Soporte SLA Prioritario 24/7'
-                    ]
-                }
+                { ...PLAN_TIERS.free, desc: PLAN_TIERS.free.description },
+                { ...PLAN_TIERS.basic, desc: PLAN_TIERS.basic.description },
+                { ...PLAN_TIERS.pro, desc: PLAN_TIERS.pro.description },
+                { ...PLAN_TIERS.premium, desc: PLAN_TIERS.premium.description }
             ]
         },
         footer: {
@@ -247,6 +275,30 @@ export const es = {
                 },
                 download: 'Descargar Factura (PDF)',
                 viewAll: 'Ver Todas las Transacciones'
+            },
+            tiers: {
+                free: {
+                    name: PLAN_TIERS.free.name,
+                    description: PLAN_TIERS.free.description,
+                    features: PLAN_TIERS.free.features
+                },
+                basic: {
+                    name: PLAN_TIERS.basic.name,
+                    description: PLAN_TIERS.basic.description,
+                    features: PLAN_TIERS.basic.features
+                },
+                pro: {
+                    name: PLAN_TIERS.pro.name,
+                    description: PLAN_TIERS.pro.description,
+                    features: PLAN_TIERS.pro.features
+                },
+                premium: {
+                    name: PLAN_TIERS.premium.name,
+                    description: PLAN_TIERS.premium.description,
+                    features: PLAN_TIERS.premium.features
+                },
+                subscribe: 'Suscribirse',
+                current: 'Plan Actual'
             },
             footer: {
                 encrypted: 'Encriptado SSL',

@@ -14,28 +14,66 @@ logger = logging.getLogger(__name__)
 
 def is_subscription_active(user: User) -> bool:
     """
-    Helper to check if a user has an active premium subscription or is in dev mode.
+    Helper to check if a user has any paid subscription or is in dev mode.
     """
     if settings.ENABLE_DEVELOPER_MODE:
         return True
-    return get_effective_plan(user) == "premium"
+    return get_effective_plan(user) != "free"
 
 def get_effective_plan(user: User) -> str:
     """
-    Determines the effective plan (free/premium) based on subscription status and expiration.
-    Used by tests and UI to show the real current state.
+    Determines the effective plan (free, basic, pro, premium) 
+    based on subscription status and local state.
     """
     now = dt_datetime.now(timezone.utc)
     
-    # 1. Stripe Active
+    # Check for active Stripe subscription
     if user.subscription_status in ["active", "trialing"]:
-        return "premium"
+        return user.subscription_plan
         
-    # 2. Local Voucher Active
+    # Check for local voucher access (treated as premium for legacy support)
     if user.subscription_expires_at and user.subscription_expires_at > now:
         return "premium"
         
     return "free"
+
+def get_plan_from_price_id(price_id: str) -> str:
+    """
+    Maps a Stripe Price ID to a plan name.
+    """
+    if price_id == settings.STRIPE_PRICE_ID_BASIC:
+        return "basic"
+    if price_id == settings.STRIPE_PRICE_ID_PRO:
+        return "pro"
+    if price_id == settings.STRIPE_PRICE_ID_PREMIUM:
+        return "premium"
+    return "free"
+
+def can_access_feature(user: User, feature: str) -> bool:
+    """
+    Granular permission check based on the user's plan.
+    
+    Tiers:
+    - free: list_hubs
+    - basic: list_hubs, read_telemetry, read_logs
+    - pro: basic + send_commands
+    - premium: pro + access_proxy
+    """
+    if settings.ENABLE_DEVELOPER_MODE:
+        return True
+        
+    plan = get_effective_plan(user)
+    
+    # Hierarchy definition
+    permissions = {
+        "free": ["list_hubs"],
+        "basic": ["list_hubs", "read_telemetry", "read_logs"],
+        "pro": ["list_hubs", "read_telemetry", "read_logs", "send_commands"],
+        "premium": ["list_hubs", "read_telemetry", "read_logs", "send_commands", "access_proxy"]
+    }
+    
+    allowed = permissions.get(plan, ["list_hubs"])
+    return feature in allowed
 
 async def get_unified_history(db: AsyncSession, user: User) -> List[BillingHistoryItem]:
     """

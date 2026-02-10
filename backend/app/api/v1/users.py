@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.api.deps import get_db, get_ajax_client
-from backend.app.crud import user as crud_user
+from backend.app.domain.crud import user as crud_user
 from backend.app.schemas.user import UserCreate, UserRead
 from backend.app.schemas.auth import ErrorMessage
 from backend.app.api.v1.auth import get_current_user

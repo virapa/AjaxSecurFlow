@@ -35,12 +35,10 @@ async def proxy_ajax_request(
     - Automatically manages session tokens and background refreshes.
     """
     # SaaS Enforcement: Validate Subscription
-    if not billing_service.is_subscription_active(current_user):
-        # We allow free plan users if they are below a certain quota, 
-        # but for this industrial version, let's require active subscription.
+    if not billing_service.can_access_feature(current_user, "access_proxy"):
         raise HTTPException(
             status_code=403, 
-            detail="Active subscription required to access Proxy API."
+            detail="PREMIUM subscription required to access Proxy API."
         )
 
     

@@ -6,7 +6,7 @@ from backend.app.api.deps import get_db, get_ajax_client
 from backend.app.api.v1.auth import get_current_user
 from backend.app.domain.models import User
 from backend.app.services.ajax_client import AjaxClient, AjaxAuthError
-from backend.app.services.billing_service import is_subscription_active
+from backend.app.services.billing_service import is_subscription_active, can_access_feature
 from backend.app.services.global_rate_limiter import global_ajax_rate_limiter
 from backend.app.services import audit_service, notification_service
 from backend.app.schemas import ajax as schemas
@@ -71,7 +71,7 @@ async def read_hubs(
     """
     Retrieve the list of all hubs associated with the authenticated user.
     """
-    if not is_subscription_active(current_user):
+    if not can_access_feature(current_user, "list_hubs"):
         raise HTTPException(status_code=403, detail="Active subscription required")
     
     try:
@@ -99,8 +99,8 @@ async def read_hub_detail(
     """
     Get detailed information for a specific hub.
     """
-    if not is_subscription_active(current_user):
-        raise HTTPException(status_code=403, detail="Active subscription required")
+    if not can_access_feature(current_user, "read_telemetry"):
+        raise HTTPException(status_code=403, detail="BASIC or higher subscription required")
         
     await verify_hub_access(current_user.email, hub_id, client)
         
@@ -141,8 +141,8 @@ async def read_hub_groups(
     """
     Retrieve security groups and partitions for a specific hub.
     """
-    if not is_subscription_active(current_user):
-        raise HTTPException(status_code=403, detail="Active subscription required")
+    if not can_access_feature(current_user, "read_telemetry"):
+        raise HTTPException(status_code=403, detail="BASIC or higher subscription required")
 
     await verify_hub_access(current_user.email, hub_id, client)
 
@@ -171,8 +171,8 @@ async def read_hub_rooms(
     """
     Retrieve the list of rooms configured for a specific hub.
     """
-    if not is_subscription_active(current_user):
-        raise HTTPException(status_code=403, detail="Active subscription required")
+    if not can_access_feature(current_user, "read_telemetry"):
+        raise HTTPException(status_code=403, detail="BASIC or higher subscription required")
 
     await verify_hub_access(current_user.email, hub_id, client)
 
@@ -202,8 +202,8 @@ async def read_room_detail(
     """
     Get all details for a specific room within a hub.
     """
-    if not is_subscription_active(current_user):
-        raise HTTPException(status_code=403, detail="Active subscription required")
+    if not can_access_feature(current_user, "read_telemetry"):
+        raise HTTPException(status_code=403, detail="BASIC or higher subscription required")
 
     await verify_hub_access(current_user.email, hub_id, client)
 
@@ -236,8 +236,8 @@ async def read_hub_devices(
     """
     Fetch all devices currently linked to the specified hub.
     """
-    if not is_subscription_active(current_user):
-        raise HTTPException(status_code=403, detail="Active subscription required")
+    if not can_access_feature(current_user, "read_telemetry"):
+        raise HTTPException(status_code=403, detail="BASIC or higher subscription required")
 
     await verify_hub_access(current_user.email, hub_id, client)
 
@@ -267,8 +267,8 @@ async def read_device_detail(
     """
     Get all technical and telemetry data for a specific device.
     """
-    if not is_subscription_active(current_user):
-        raise HTTPException(status_code=403, detail="Active subscription required")
+    if not can_access_feature(current_user, "read_telemetry"):
+        raise HTTPException(status_code=403, detail="BASIC or higher subscription required")
         
     await verify_hub_access(current_user.email, hub_id, client)
         
@@ -312,8 +312,8 @@ async def read_hub_logs(
     Retrieve event logs and history for a specific hub with pagination support.
     Returns a wrapped object with logs and total count.
     """
-    if not is_subscription_active(current_user):
-        raise HTTPException(status_code=403, detail="Active subscription required")
+    if not can_access_feature(current_user, "read_logs"):
+        raise HTTPException(status_code=403, detail="BASIC or higher subscription required")
 
     await verify_hub_access(current_user.email, hub_id, client)
 
@@ -415,8 +415,8 @@ async def send_hub_command(
     """
     Send a command to the Ajax Hub (Arm, Disarm, Night Mode).
     """
-    if not is_subscription_active(current_user):
-        raise HTTPException(status_code=403, detail="Active subscription required")
+    if not can_access_feature(current_user, "send_commands"):
+        raise HTTPException(status_code=403, detail="PRO or higher subscription required")
 
     await verify_hub_access(current_user.email, hub_id, ajax_client)
     
@@ -452,7 +452,7 @@ async def get_hub_role(
     Check the current user's role in the specified hub (MASTER, PRO, USER).
     This role determines access levels (e.g., viewing logs).
     """
-    if not is_subscription_active(current_user):
+    if not can_access_feature(current_user, "list_hubs"):
         raise HTTPException(status_code=403, detail="Active subscription required")
 
     # We verify hub access implicitly by checking if binding exists
@@ -481,8 +481,8 @@ async def set_hub_arm_state(
     """
     Set the arming state for a specific hub or security group.
     """
-    if not is_subscription_active(current_user):
-        raise HTTPException(status_code=403, detail="Active subscription required")
+    if not can_access_feature(current_user, "send_commands"):
+        raise HTTPException(status_code=403, detail="PRO or higher subscription required")
 
     await verify_hub_access(current_user.email, hub_id, client)
 

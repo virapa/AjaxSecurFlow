@@ -8,7 +8,7 @@ import { authService } from '@/features/auth/auth.service'
 import { notificationService } from '@/features/notifications/notification.service'
 import { es as t } from '@/shared/i18n/es'
 import { BillingHistoryItem, UserBillingInfo } from './types'
-import { BillingStats, HistoryTable } from './components/BillingSubComponents'
+import { BillingStats, HistoryTable, PricingTable } from './components/BillingSubComponents'
 import { VoucherForm } from './VoucherForm'
 
 /**
@@ -50,7 +50,18 @@ export const BillingComponent: React.FC = () => {
         return () => clearInterval(interval)
     }, [fetchData])
 
+    const handleSubscribe = async (plan: string) => {
+        try {
+            const { url } = await billingService.createCheckoutSession(plan)
+            window.location.href = url
+        } catch (error) {
+            console.error('Error creating checkout session:', error)
+            alert('Error al iniciar el proceso de pago. Por favor, inténtelo de nuevo.')
+        }
+    }
+
     if (isLoading && !user) {
+        // ... (rest of loading state)
         return (
             <div className="min-h-screen bg-[#020617] flex items-center justify-center">
                 <div className="h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -88,6 +99,11 @@ export const BillingComponent: React.FC = () => {
                     </div>
 
                     <BillingStats user={user} />
+
+                    <PricingTable
+                        currentPlan={user?.subscription_plan || 'free'}
+                        onSubscribe={handleSubscribe}
+                    />
 
                     <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl overflow-hidden flex flex-col md:flex-row items-stretch">
                         <div className="w-full md:w-1/3 bg-blue-600 flex items-center justify-center p-12 min-h-[160px]">
