@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient
 from unittest.mock import AsyncMock, patch
 from backend.app.main import app
-from backend.app.api.v1.auth import get_current_user
+from backend.app.modules.auth.service import get_current_user
 
 @pytest.mark.asyncio
 async def test_read_user_me_dynamic_plan():
@@ -21,7 +21,7 @@ async def test_read_user_me_dynamic_plan():
     # Mock AjaxClient to avoid network calls
     mock_ajax = AsyncMock()
     mock_ajax.get_user_info.return_value = {"ajax_id": "123"}
-    from backend.app.api.deps import get_ajax_client
+    from backend.app.shared.infrastructure.ajax.deps import get_ajax_client
     app.dependency_overrides[get_ajax_client] = lambda: mock_ajax
 
     from httpx import ASGITransport

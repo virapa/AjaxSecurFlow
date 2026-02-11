@@ -1,0 +1,93 @@
+services:
+  # Backend API (FastAPI)
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: ajax_proxy_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=
+      - POSTGRES_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    networks:
+      - ajax_network
+    restart: always
+
+  # Celery Worker
+  worker:
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: ajax_proxy_worker
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=
+      - POSTGRES_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    command: celery -A backend.app.worker.celery_app worker --loglevel=info -B
+    networks:
+      - ajax_network
+    restart: always
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/frontend/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    container_name: ajax_proxy_frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../frontend/.env.local
+    depends_on:
+      - backend
+    networks:
+      - ajax_network
+    restart: always
+
+  # Database (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    container_name: ajax_proxy_db
+    env_file:
+      - ../.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ajax_network
+    restart: always
+
+  # Cache & Message Broker (Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: ajax_proxy_redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - ajax_network
+    restart: always
+
+networks:
+  ajax_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

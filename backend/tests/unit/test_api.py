@@ -5,9 +5,11 @@ from httpx import AsyncClient
 from backend.app.main import app
 from unittest.mock import AsyncMock, patch
 from backend.app.core.config import settings
-from backend.app.api.deps import get_db, get_ajax_client, get_redis
-from backend.app.services.ajax_client import AjaxAuthError
-from backend.app.domain.models import User
+from backend.app.shared.infrastructure.database.session import get_db
+from backend.app.shared.infrastructure.ajax.deps import get_ajax_client
+from backend.app.shared.infrastructure.redis.deps import get_redis
+from backend.app.modules.ajax.service import AjaxAuthError
+from backend.app.modules.auth.models import User
 
 @pytest_asyncio.fixture
 async def client():
@@ -51,9 +53,9 @@ def mock_rate_limiter():
 @pytest.mark.asyncio
 async def test_auth_login(client, mock_db):
     """Test login with unified identity (Ajax)."""
-    with patch("backend.app.crud.audit.create_audit_log") as mock_log_req, \
-         patch("backend.app.crud.user.get_user_by_email") as mock_get_user, \
-         patch("backend.app.api.v1.auth.security_service") as mock_sec:
+    with patch("backend.app.modules.security.service.log_action") as mock_log_req, \
+         patch("backend.app.modules.auth.service.get_user_by_email") as mock_get_user, \
+         patch("backend.app.modules.auth.service.security_service") as mock_sec:
         
         mock_log_req.return_value = AsyncMock()
         
@@ -86,10 +88,10 @@ async def test_auth_login(client, mock_db):
 @pytest.mark.asyncio
 async def test_auth_login_new_user_provisioning(client, mock_db):
     """Test login with new user that needs auto-provisioning."""
-    with patch("backend.app.crud.audit.create_audit_log") as mock_log_req, \
-         patch("backend.app.crud.user.get_user_by_email") as mock_get_user, \
-         patch("backend.app.crud.user.create_user") as mock_create_user, \
-         patch("backend.app.api.v1.auth.security_service") as mock_sec:
+    with patch("backend.app.modules.security.service.log_action") as mock_log_req, \
+         patch("backend.app.modules.auth.service.get_user_by_email") as mock_get_user, \
+         patch("backend.app.modules.auth.service.create_user") as mock_create_user, \
+         patch("backend.app.modules.auth.service.security_service") as mock_sec:
         
         mock_log_req.return_value = AsyncMock()
         
@@ -125,8 +127,8 @@ async def test_auth_login_new_user_provisioning(client, mock_db):
 @pytest.mark.asyncio
 async def test_auth_login_invalid(client, mock_db):
     """Test login failure with unified identity."""
-    with patch("backend.app.crud.audit.create_audit_log") as mock_log_req, \
-         patch("backend.app.api.v1.auth.security_service") as mock_sec:
+    with patch("backend.app.modules.security.service.log_action") as mock_log_req, \
+         patch("backend.app.modules.auth.service.security_service") as mock_sec:
         
         mock_log_req.return_value = AsyncMock()
         
@@ -160,14 +162,16 @@ async def test_proxy_endpoint_success(client, mock_ajax_client, mock_rate_limite
     mock_user.email = "admin@example.com"
     mock_user.subscription_status = "active"
     
-    with patch("backend.app.api.v1.auth.crud_user.get_user_by_email") as mock_get_user, \
-         patch("backend.app.api.v1.auth.security_service") as mock_sec, \
-         patch("backend.app.api.v1.proxy.billing_service.is_subscription_active") as mock_sub, \
-         patch("backend.app.crud.audit.create_audit_log") as mock_log:
+    with patch("backend.app.modules.auth.service.get_user_by_email") as mock_get_user, \
+         patch("backend.app.modules.auth.service.security_service") as mock_sec, \
+         patch("backend.app.modules.billing.service.is_subscription_active") as mock_sub, \
+         patch("backend.app.modules.billing.service.can_access_feature") as mock_feature, \
+         patch("backend.app.modules.security.service.log_action") as mock_log:
         
         # 1. Setup Auth Mocks
         mock_get_user.return_value = mock_user
         mock_sub.return_value = True
+        mock_feature.return_value = True
         mock_log.return_value = AsyncMock()
         mock_sec.check_ip_lockout = AsyncMock(return_value=False)
         mock_sec.reset_login_failures = AsyncMock()

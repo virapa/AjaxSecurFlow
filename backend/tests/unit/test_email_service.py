@@ -1,17 +1,19 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from backend.app.services.email_service import send_email
+from backend.app.modules.notifications.service import send_email
+from backend.app.core.config import settings
 
 @pytest.fixture
 def mock_settings():
-    with patch("backend.app.services.email_service.settings") as mock:
-        mock.SMTP_HOST = "smtp.mock.com"
-        mock.SMTP_PORT = 587
-        mock.SMTP_TLS = True
+    with patch("backend.app.modules.notifications.service.settings") as mock:
+        mock.SMTP_HOST = "localhost"
+        mock.SMTP_PORT = 1025
         mock.SMTP_USER = "user"
-        mock.SMTP_PASSWORD.get_secret_value.return_value = "password"
+        mock.SMTP_PASSWORD = MagicMock()
+        mock.SMTP_PASSWORD.get_secret_value.return_value = "pass"
         mock.SMTP_FROM_NAME = "AjaxSecurFlow"
         mock.SMTP_FROM_EMAIL = "noreply@mock.com"
+        mock.SMTP_TLS = True
         yield mock
 
 def test_send_email_success(mock_settings):
@@ -34,7 +36,7 @@ def test_send_email_success(mock_settings):
         assert args[1] == "test@user.com"
 
 def test_send_email_no_config():
-    with patch("backend.app.services.email_service.settings") as mock_settings:
+    with patch("backend.app.modules.notifications.service.settings") as mock_settings:
         mock_settings.SMTP_HOST = None
         
         result = send_email("t@e.com", "S", "H")

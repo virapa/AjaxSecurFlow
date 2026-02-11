@@ -1,8 +1,11 @@
 import pytest
 from datetime import datetime as dt_datetime, timezone, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
-from backend.app.services import voucher_service, billing_service
-from backend.app.domain.models import User, Voucher
+from backend.app.modules.billing import service as billing_service
+# Note: voucher_service logic was merged into billing_service in the modular architecture
+from backend.app.modules.billing import service as voucher_service
+from backend.app.modules.auth.models import User
+from backend.app.modules.billing.models import Voucher
 
 @pytest.mark.asyncio
 async def test_voucher_redemption_limit():

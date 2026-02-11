@@ -7,6 +7,7 @@ import { authService } from '@/features/auth/auth.service'
 import { notificationService } from '@/features/notifications/notification.service'
 import { es as t } from '@/shared/i18n/es'
 import { User } from '@/shared/types'
+import { DashboardHeader } from '@/features/navigation/DashboardHeader'
 
 export const ProfileComponent: React.FC = () => {
     const [user, setUser] = useState<User | null>(null)
@@ -59,35 +60,11 @@ export const ProfileComponent: React.FC = () => {
 
             {/* Main Content */}
             <main className="flex-1 bg-[#020617] overflow-y-auto">
-                <header className="h-20 border-b border-white/5 px-10 flex items-center justify-between sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-xl">
-                    <h2 className="text-lg font-bold tracking-tight">{t.dashboard.profilePage.title}</h2>
-                    <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-2">
-                            <p className="text-xs font-bold text-white">{user?.ajax_info?.login}</p>
-                            <div className="relative">
-                                <span className="text-sm text-gray-500">🔔</span>
-                                {unreadNotificationsCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-600 border border-[#020617] flex items-center justify-center text-[7px] font-bold text-white">
-                                        {unreadNotificationsCount}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-xs shadow-lg overflow-hidden">
-                            {user?.ajax_info?.imageUrls?.small ? (
-                                <Image
-                                    src={user.ajax_info.imageUrls.small}
-                                    alt="Profile"
-                                    width={40}
-                                    height={40}
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                '👤'
-                            )}
-                        </div>
-                    </div>
-                </header>
+                <DashboardHeader
+                    title={t.dashboard.profilePage.title}
+                    user={user}
+                    unreadNotificationsCount={unreadNotificationsCount}
+                />
 
                 <div className="p-10 max-w-4xl mx-auto space-y-10">
                     {/* Hero Section */}

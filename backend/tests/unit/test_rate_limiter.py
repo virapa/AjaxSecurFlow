@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from fastapi import HTTPException, Request
-from backend.app.services.rate_limiter import RateLimiter
+from backend.app.shared.infrastructure.redis.rate_limiter import RateLimiter
 
 @pytest.mark.asyncio
 async def test_rate_limiter_allow():

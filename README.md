@@ -14,28 +14,30 @@ El proyecto utiliza tecnologías modernas y robustas, siguiendo los estándares 
 - **Pagos y SaaS**: Stripe SDK (Gestión de suscripciones y webhooks)
 - **Gestión de Configuración**: Pydantic V2 & Settings (Validación estricta)
 - **Seguridad**: Bcrypt (Hashing moderno), PyJWT (Tokens), SHA256 (Ajax Auth), Endurecimiento de Errores (Opaque Errors)
-- **Frontend**: Next.js 16 (Turbopack), React 19, TailwindCSS 4
+- **Frontend**: Next.js 16.1.6 (Turbopack), React 19.2.3, TailwindCSS 4
 - **Visualización**: Recharts (Gráficos industriales de seguridad)
 - **Infraestructura**: Docker & Docker Compose (Contenerización completa)
-- **Testing y Calidad**: Pytest (63 tests), Vitest (45 tests), Bandit (Seguridad), pip-audit (Vulnerabilidades: 0)
+- **Testing y Calidad**: Pytest (77 tests: 100% Pass), Vitest (45 tests), Bandit (Seguridad), pip-audit (Vulnerabilidades: 0)
 
 ## 3. Estructura del Proyecto
-El proyecto sigue una **Clean Architecture** (Arquitectura Cebolla) estricta:
+El proyecto sigue una arquitectura de **Monolito Modular** estricta, separando la infraestructura compartida de los servicios de dominio vertical:
 
 ```text
 /
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/         # Endpoints (Adaptadores Primarios)
-│   │   ├── core/           # Configuración (Settings), Seguridad, DB
-│   │   ├── domain/         # Modelos de Datos (SQLAlchemy)
-│   │   ├── schemas/        # DTOs y Validación (Pydantic V2)
-│   │   ├── services/       # Lógica de Negocio (AjaxClient, Billing)
-│   │   └── worker/         # Tareas Background
-│   ├── tests/              # Pruebas Unitarias e Integración
-├── scripts/                # Utilidades y Scripts de mantenimiento
-├── context/                # Documentación de Contexto y Arquitectura
-└── docker-compose.yml      # Orquestación de Contenedores
+│   │   ├── core/           # Configuración global y Settings
+│   │   ├── modules/        # Slices Verticales (Auth, Ajax, Billing, Security, etc.)
+│   │   ├── shared/         # Infraestructura compartida (DB, Redis, Utils)
+│   │   └── worker/         # Tareas Background (Celery)
+│   ├── tests/              # Pruebas Unitarias e Integración (Pytest)
+├── docker/                 # Orquestación Centralizada
+│   ├── docker-compose.yml
+│   ├── backend/            # Dockerfile y configuración Backend
+│   └── frontend/           # Dockerfile y configuración Frontend
+├── frontend/               # Aplicación Next.js 16
+├── scripts/                # Utilidades de mantenimiento
+└── README.md
 ```
 
 ## 4. Arquitectura del Sistema
@@ -113,7 +115,6 @@ Para optimizar el rendimiento y reducir las llamadas a la API de Ajax, el sistem
 
 **Invalidación Automática**:
 - Al ejecutar comandos de armar/desarmar, el caché del hub se invalida automáticamente.
-- Al ejecutar comandos de armar/desarmar, el caché del hub se invalida automáticamente.
 - Los logs de eventos **nunca se cachean** para garantizar datos frescos.
 
 ### 4.6 Módulo de Soporte y Contacto
@@ -182,18 +183,17 @@ El sistema implementa capas de defensa activa para proteger las sesiones de usua
    ```
 
 ### Ejecución
-Para iniciar todos los servicios (API, Base de Datos, Redis):
+Para iniciar todos los servicios (API, Base de Datos, Redis) desde la raíz del proyecto:
 
 ```bash
-docker-compose up -d --build
+docker compose -f docker/docker-compose.yml up -d --build
 ```
 
 ### Inicialización de Base de Datos
-Una vez que los contenedores estén corriendo, es necesario aplicar las migraciones para crear las tablas:
+Una vez que los contenedores estén corriendo, aplica las migraciones:
 
 ```bash
-# Ejecutar migraciones
-docker-compose run --rm app alembic upgrade head
+docker compose -f docker/docker-compose.yml run --rm backend alembic upgrade head
 ```
 
 ### 4.4 Gestión de Planes y Suscripciones (SaaS Logic)
@@ -228,10 +228,10 @@ Una vez iniciados los servicios, la documentación interactiva y técnica está 
 - **Redoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc) (Para referencia técnica detallada)
 
 ### Ejecución de Tests
-Para ejecutar la suite de pruebas:
+Para ejecutar la suite de pruebas en el entorno de contenedores:
 
 ```bash
-docker-compose exec app python -m pytest backend/tests
+docker compose -f docker/docker-compose.yml exec backend python -m pytest tests
 ```
 
 ## 7. Roadmap y Estado del Proyecto
@@ -251,10 +251,24 @@ docker-compose exec app python -m pytest backend/tests
 - ✅ Rate Limiting Global con Cola Asíncrona (100 req/min compartido).
 - ✅ Sistema de Caching Redis con TTLs configurables.
 
+### Fase 2: Dashboard Frontend (✅ Completada)
+- ✅ Panel de Control en Next.js (Dashboard funcional).
+- ✅ Visualización de dispositivos en tiempo real.
+- ✅ Gestión de suscripciones para el usuario final (Página de Billing).
+- ✅ Integración de alertas en tiempo real.
+- ✅ Modo Desarrollo (Bypass Stripe) operativo.
+- ✅ **Localización**: Traducción de logs de eventos al Español (frontend-side).
+- ✅ **Navegación Unificada**: Cabecera común y consistente (`DashboardHeader`) en todas las vistas (Dashboard, Profile, Billing, Support).
+- ✅ **Páginas completas**:
+    -   **Dashboard**: Monitorización, Gráficos de tendencias, Status del sistema.
+    -   **Profile**: Información del usuario y ajustes.
+    -   **Billing**: Gestión de planes y canjeo de Vouchers.
+    -   **Support**: Formulario de contacto integrado.
+
 ### Fase 7: Analytics Dashboard (✅ Completada)
 - ✅ Instalación e integración de `recharts`.
 - ✅ Gráfico de Tendencias de Seguridad (Situado centralmente en el Dashboard).
-- ✅ Distribución de Señal & Salud de Batería.
+- ✅ Distribución de Señal & Salud de Batería (Gráficos circulares).
 - ✅ Fix de tipos y Build de producción.
 
 ### Fase 9: Security Hardening (✅ Completada)
@@ -270,9 +284,12 @@ docker-compose exec app python -m pytest backend/tests
 - ✅ Navegación Unificada (Sidebar en todas las vistas).
 - ✅ Security Hardening: Rate Limiting y Sanitización de Inputs.
 
-### Fase 2: Dashboard Frontend (✅ Funcional - Modo Dev)
-- ✅ Panel de Control en Next.js (Dashboard funcional).
-- ✅ Visualización de dispositivos en tiempo real.
-- ✅ Gestión de suscripciones para el usuario final.
-- ✅ Integración de alertas en tiempo real.
-- ✅ Modo Desarrollo (Bypass Stripe) operativo.
+### Fase 11: Modular Monolith Refactoring (✅ Completada)
+- ✅ Migración de lógica dispersa a módulos verticales (`auth`, `ajax`, `billing`, `security`).
+- ✅ Consolidación de infraestructura compartida (`shared/infrastructure`).
+- ✅ Estandarización de Mocks y mejora de estabilidad de tests de integración.
+
+### Fase 12: Docker Cleanup & Architecture (✅ Completada)
+- ✅ Centralización de archivos Docker en carpeta `docker/`.
+- ✅ Optimización de contextos de construcción y rutas relativas.
+- ✅ Limpieza de scripts de diagnóstico y protección de secretos.

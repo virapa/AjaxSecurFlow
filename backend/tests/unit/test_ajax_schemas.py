@@ -1,6 +1,6 @@
 
 import pytest
-from backend.app.schemas.ajax import DeviceDetail
+from backend.app.modules.ajax.schemas import DeviceDetail
 
 def test_device_detail_bypass_state():
     """Verify that DeviceDetail schema correctly parses the bypassState field."""

@@ -10,6 +10,7 @@ import { es as t } from '@/shared/i18n/es'
 import { BillingHistoryItem, UserBillingInfo } from './types'
 import { BillingStats, HistoryTable, PricingTable } from './components/BillingSubComponents'
 import { VoucherForm } from './VoucherForm'
+import { DashboardHeader } from '@/features/navigation/DashboardHeader'
 
 /**
  * BillingComponent
@@ -75,23 +76,11 @@ export const BillingComponent: React.FC = () => {
 
             {/* Main Content */}
             <main className="flex-1 bg-[#020617] overflow-y-auto">
-                <header className="h-20 border-b border-white/5 px-10 flex items-center justify-between sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-xl">
-                    <h2 className="text-lg font-bold tracking-tight">{t.dashboard.billing.title}</h2>
-                    <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-2">
-                            <p className="text-xs font-bold text-white">{user?.email}</p>
-                            <div className="relative">
-                                <span className="text-sm">🔔</span>
-                                {unreadNotificationsCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-600 border border-[#020617] flex items-center justify-center text-[7px] font-bold text-white">
-                                        {unreadNotificationsCount}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-xs shadow-lg">👤</div>
-                    </div>
-                </header>
+                <DashboardHeader
+                    title={t.dashboard.billing.title}
+                    user={user}
+                    unreadNotificationsCount={unreadNotificationsCount}
+                />
 
                 <div className="p-10 max-w-[1200px] mx-auto space-y-10">
                     <div className="pb-2">

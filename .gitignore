@@ -17,6 +17,7 @@ build/
 .agent/
 .antigravity/
 .cursorrules
+.code-workspace
 
 # Logs and temp files
 # Ignore specific test result patterns but keep requirements.txt safe

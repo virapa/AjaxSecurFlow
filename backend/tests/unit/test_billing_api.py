@@ -14,7 +14,7 @@ async def client():
 @pytest.fixture
 def mock_db():
     mock_session = AsyncMock()
-    from backend.app.core.db import get_db
+    from backend.app.shared.infrastructure.database.session import get_db
     app.dependency_overrides[get_db] = lambda: mock_session
     yield mock_session
     app.dependency_overrides = {}
@@ -27,7 +27,7 @@ def mock_current_user_billed():
     mock_user.stripe_customer_id = "cus_123"
     
     # Override auth dependency
-    from backend.app.api.v1.auth import get_current_user
+    from backend.app.modules.auth.service import get_current_user
     app.dependency_overrides[get_current_user] = lambda: mock_user
     yield mock_user
     app.dependency_overrides = {}
@@ -41,7 +41,7 @@ async def test_create_checkout_session(client, mock_current_user_billed):
         
         response = await client.post(
             "/api/v1/billing/create-checkout-session",
-            json={"price_id": "price_123"}
+            json={"plan_type": "pro"}
         )
         
         assert response.status_code == 200
@@ -56,12 +56,14 @@ async def test_stripe_webhook_valid(client, mock_db):
     # Mock settings
     with patch("backend.app.core.config.settings.STRIPE_WEBHOOK_SECRET", MagicMock(get_secret_value=lambda: "whsec_123")), \
          patch("stripe.Webhook.construct_event") as mock_construct, \
-         patch("backend.app.api.v1.billing.audit_service.log_request_action", new_callable=AsyncMock), \
-         patch("backend.app.api.v1.billing.process_stripe_webhook.delay") as mock_task:
+         patch("backend.app.modules.billing.router.security_service.log_request_action", new_callable=AsyncMock), \
+         patch("backend.app.modules.billing.router.process_stripe_webhook.delay") as mock_task:
         
         mock_event = MagicMock()
         mock_event.id = "evt_123"
         mock_event.type = "customer.subscription.created"
+        # Stripe objects in some contexts behave like dicts
+        mock_event.__getitem__.side_effect = lambda key: "evt_123" if key == "id" else "customer.subscription.created" if key == "type" else None
         mock_event.to_dict.return_value = {"id": "evt_123", "type": "customer.subscription.created"}
         mock_construct.return_value = mock_event
         
@@ -79,7 +81,7 @@ async def test_stripe_webhook_valid(client, mock_db):
 async def test_stripe_webhook_invalid_signature(client, mock_db):
     with patch("backend.app.core.config.settings.STRIPE_WEBHOOK_SECRET", MagicMock(get_secret_value=lambda: "whsec_123")), \
          patch("stripe.Webhook.construct_event") as mock_construct, \
-         patch("backend.app.api.v1.billing.audit_service.log_request_action", new_callable=AsyncMock):
+         patch("backend.app.modules.billing.router.security_service.log_request_action", new_callable=AsyncMock):
         
         mock_construct.side_effect = stripe.error.SignatureVerificationError("Invalid sig", "sig_header")
         

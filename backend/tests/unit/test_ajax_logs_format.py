@@ -3,9 +3,9 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.main import app
-from backend.app.api.deps import get_ajax_client
-from backend.app.api.v1.auth import get_current_user
-from backend.app.schemas import ajax as schemas
+from backend.app.shared.infrastructure.ajax.deps import get_ajax_client
+from backend.app.modules.auth.service import get_current_user
+from backend.app.modules.ajax import schemas as schemas
 
 @pytest.fixture
 def mock_ajax_logs_overrides():
@@ -18,31 +18,34 @@ def mock_ajax_logs_overrides():
 
     mock_ajax = AsyncMock()
     # Raw mock data from Ajax API (camelCase)
-    mock_ajax.get_hub_logs.return_value = [
-        {
-            "eventId": "event_123",
-            "hubId": "hub_456",
-            "timestamp": 1700000000000,
-            "eventType": "SECURITY",
-            "eventTag": "Motion",
-            "sourceObjectType": "DEVICE",
-            "sourceObjectName": "Living Room Cam"
-        },
-        {
-            "eventId": "event_789",
-            "hubId": "hub_456",
-            "timestamp": 1700000060000,
-            "eventType": "SECURITY",
-            "eventTag": "Arm",
-            "sourceObjectType": "USER",
-            "sourceObjectName": "John Doe"
-        }
-    ]
+    mock_ajax.get_hub_logs.return_value = {
+        "logs": [
+            {
+                "eventId": "event_123",
+                "hubId": "hub_456",
+                "timestamp": 1700000000000,
+                "eventType": "SECURITY",
+                "eventTag": "Motion",
+                "sourceObjectType": "DEVICE",
+                "sourceObjectName": "Living Room Cam"
+            },
+            {
+                "eventId": "event_789",
+                "hubId": "hub_456",
+                "timestamp": 1700000060000,
+                "eventType": "SECURITY",
+                "eventTag": "Arm",
+                "sourceObjectType": "USER",
+                "sourceObjectName": "John Doe"
+            }
+        ],
+        "total_count": 2
+    }
     # Necessary for verify_hub_access
     mock_ajax.get_hubs.return_value = {"hubs": [{"id": "hub_456"}]}
 
     # Mock DB to prevent real DB access or leaky state
-    from backend.app.api.deps import get_db
+    from backend.app.shared.infrastructure.database.session import get_db
     mock_db = AsyncMock(spec=AsyncSession)
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None

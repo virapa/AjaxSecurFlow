@@ -4,11 +4,14 @@ import stripe
 import datetime
 from datetime import datetime as dt_datetime
 from backend.app.worker.celery_app import celery_app
-from backend.app.services.ajax_client import AjaxClient
-from backend.app.core.db import async_session_factory
-from backend.app.crud import user as crud_user
-from backend.app.domain.models import User, ProcessedStripeEvent
-from backend.app.services import audit_service, notification_service, email_service, billing_service
+from backend.app.modules.ajax.service import AjaxClient
+from backend.app.shared.infrastructure.database.session import async_session_factory
+from backend.app.modules.auth.models import User
+from backend.app.modules.billing.models import ProcessedStripeEvent
+from backend.app.modules.auth import service as auth_service
+from backend.app.modules.security import service as security_service
+from backend.app.modules.notifications import service as notification_service
+from backend.app.modules.billing import service as billing_service
 from sqlalchemy import select
 
 @celery_app.task(name="tasks.send_transactional_email")
@@ -25,7 +28,7 @@ def send_transactional_email(to_email: str, subject: str, html_content: str, tex
     Returns:
         bool: True if sent successfully.
     """
-    return email_service.send_email(to_email, subject, html_content, text_content)
+    return notification_service.send_email(to_email, subject, html_content, text_content)
 
 @celery_app.task(name="tasks.cleanup_expired_subscriptions")
 def cleanup_expired_subscriptions() -> int:
@@ -146,7 +149,7 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
                         price_id = data.metadata.get("price_id")
                         plan_name = billing_service.get_plan_from_price_id(price_id) if price_id else "premium"
                         
-                        await crud_user.update_user_subscription(
+                        await auth_service.update_user_subscription(
                             session, user.id, "active", plan_name, subscription_id
                         )
                         # Ensure customer ID is also saved if not present
@@ -175,7 +178,7 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
                 subscription_id = data.id
                 status = data.status
                 
-                user = await crud_user.get_user_by_stripe_customer_id(session, customer_id)
+                user = await auth_service.get_user_by_stripe_customer_id(session, customer_id)
                 if user:
                     user_id = user.id
                     
@@ -190,7 +193,7 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
                         
                     plan_name = billing_service.get_plan_from_price_id(price_id) if price_id else user.subscription_plan
                     
-                    await crud_user.update_user_subscription(
+                    await auth_service.update_user_subscription(
                         session, user.id, status, plan_name, subscription_id
                     )
                     if status == "active":
@@ -211,10 +214,10 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
             
             elif event_type == "customer.subscription.deleted":
                 customer_id = data.customer
-                user = await crud_user.get_user_by_stripe_customer_id(session, customer_id)
+                user = await auth_service.get_user_by_stripe_customer_id(session, customer_id)
                 if user:
                     user_id = user.id
-                    await crud_user.update_user_subscription(
+                    await auth_service.update_user_subscription(
                         session, user.id, "canceled", "free", ""
                     )
                     await notification_service.create_notification(
@@ -234,7 +237,7 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
 
             elif event_type == "invoice.payment_failed":
                 customer_id = data.customer
-                user = await crud_user.get_user_by_stripe_customer_id(session, customer_id)
+                user = await auth_service.get_user_by_stripe_customer_id(session, customer_id)
                 if user:
                     user_id = user.id
                     # Downgrade status
@@ -263,7 +266,7 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
             await session.commit()
 
             # 4. Final Audit
-            await audit_service.log_action(
+            await security_service.log_action(
                 db=session,
                 user_id=user_id,
                 action=f"STRIPE_EVENT_PROCESSED_{event_type.upper().replace('.', '_')}",

@@ -47,12 +47,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ hubId })
                 const hourStr = h.getHours() + ':00'
                 const count = logs.filter(l => new Date(l?.timestamp).getHours() === h.getHours()).length
 
-                // Use a stable value based on the hour if no real logs exist to avoid purity violation
-                const stableMock = ((h.getHours() % 5) + 1)
-
                 return {
                     name: hourStr,
-                    events: count || stableMock
+                    events: count
                 }
             })
             setTrendData(hours)

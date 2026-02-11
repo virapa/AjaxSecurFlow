@@ -22,6 +22,6 @@ async def test_notification_flow(async_client: AsyncClient, mock_user_subscripti
     assert len(data["notifications"]) == 0
 
     # 2. Test Mark All as Read
-    response = await async_client.post(f"{settings.API_V1_STR}/notifications/mark-all-read")
+    response = await async_client.post(f"{settings.API_V1_STR}/notifications/read-all")
     assert response.status_code == 200
-    assert response.json()["status"] == "success"
+    assert "marked as read" in response.json()["detail"]

@@ -4,6 +4,7 @@ const PLAN_TIERS = {
         price: '$0',
         period: '/ para siempre',
         description: 'Exploración básica para usuarios individuales.',
+        recommended: '',
         features: ['1 Hub Ajax', 'Visualización de Hubs', 'Soporte Comunitario']
     },
     basic: {
@@ -11,6 +12,7 @@ const PLAN_TIERS = {
         price: '$9',
         period: '/ mes',
         description: 'Monitoreo esencial con telemetría en vivo.',
+        recommended: '',
         features: ['Todo lo del plan Free', 'Dispositivos Ilimitados', 'Telemetría RT', 'Historial de Eventos', 'Estado de Batería']
     },
     pro: {
@@ -33,6 +35,7 @@ const PLAN_TIERS = {
         price: '$49',
         period: '/ mes',
         description: 'Integración industrial y proxy total.',
+        recommended: '',
         features: [
             'Todo lo del plan Pro',
             'Generic Proxy API',
@@ -325,6 +328,21 @@ export const es = {
                 other: 'Otro'
             }
         }
+    },
+    logEvents: {
+        Arm: 'Sistema Armado',
+        Disarm: 'Sistema Desarmado',
+        NightModeOn: 'Modo Noche Activado',
+        NightModeOff: 'Modo Noche Desactivado',
+        Motion: 'Movimiento Detectado',
+        Fire: 'Alarma de Incendio',
+        Leak: 'Inundación Detectada',
+        Panic: 'Botón de Pánico',
+        TamperOpen: 'Carcasa Abierta (Tamper)',
+        TamperClosed: 'Carcasa Cerrada',
+        Loss: 'Pérdida de Conexión',
+        Restored: 'Conexión Restaurada',
+        Dureza: 'Coacción Desactivada'
     }
 }
 

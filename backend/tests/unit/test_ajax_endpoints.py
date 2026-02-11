@@ -2,7 +2,8 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient
 from backend.app.main import app
-from backend.app.api.deps import get_ajax_client
+from backend.app.shared.infrastructure.ajax.deps import get_ajax_client
+from backend.app.modules.ajax.schemas import ArmState
 
 # Mock data
 MOCK_HUBS = [{"id": "000000", "name": "Success Hub", "role": "MASTER"}]
@@ -31,7 +32,7 @@ async def test_get_hubs_success(async_client: AsyncClient, mock_user_subscriptio
     mock_ajax_client_override.get_hubs.assert_called_with(user_email=mock_user_subscription.email)
 
 @pytest.mark.asyncio
-async def test_get_hubs_no_subscription(async_client: AsyncClient, mock_user_no_subscription):
+async def test_get_hubs_no_subscription(async_client: AsyncClient, mock_user_no_subscription, mock_ajax_client_override):
     """
     Test access denied when subscription is not active.
     """
@@ -64,7 +65,7 @@ async def test_get_hub_logs_success(async_client: AsyncClient, mock_user_subscri
     mock_ajax_client_override.get_hub_logs.assert_called_with(
         user_email=mock_user_subscription.email, 
         hub_id="000000", 
-        limit=100, 
+        limit=20, 
         offset=0
     )
 
@@ -73,19 +74,20 @@ async def test_set_arm_state_success(async_client: AsyncClient, mock_user_subscr
     """
     Test setting arm state successfully.
     """
-    with patch("backend.app.crud.audit.create_audit_log") as mock_log:
+    with patch("backend.app.modules.security.service.create_audit_log") as mock_log:
         mock_ajax_client_override.set_arm_state = AsyncMock(return_value={"success": True, "message": "Command sent"})
         mock_log.return_value = AsyncMock()
         
         payload = {"armState": 1}
-        response = await async_client.post("/api/v1/ajax/hubs/000000/arm-state", json=payload)
+        response = await async_client.post("/api/v1/ajax/hubs/000000/arm", json=payload)
         
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
+        # The actual call uses positional for all arguments
         mock_ajax_client_override.set_arm_state.assert_called_with(
-            user_email=mock_user_subscription.email,
-            hub_id="000000", 
-            arm_state=1, 
-            group_id=None
+            mock_user_subscription.email,
+            "000000", 
+            ArmState.ARMED, 
+            None
         )

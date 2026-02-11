@@ -1,14 +1,14 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.services.notification_service import (
+from backend.app.modules.notifications.service import (
     create_notification,
-    get_user_notifications,
+    get_latest_notifications,
     mark_as_read,
-    mark_all_as_read,
+    mark_all_read,
     get_unread_count
 )
-from backend.app.domain.models import Notification
+from backend.app.modules.notifications.models import Notification
 
 @pytest.mark.asyncio
 async def test_create_notification():
@@ -41,7 +41,7 @@ async def test_create_notification():
     mock_db.refresh.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_get_user_notifications():
+async def test_get_latest_notifications():
     mock_db = AsyncMock(spec=AsyncSession)
     mock_result = MagicMock()
     
@@ -52,7 +52,7 @@ async def test_get_user_notifications():
     mock_result.scalars.return_value.all.return_value = [notif1, notif2]
     mock_db.execute.return_value = mock_result
     
-    notifications = await get_user_notifications(mock_db, user_id=1)
+    notifications = await get_latest_notifications(mock_db, user_id=1)
     
     assert len(notifications) == 2
     assert notifications[0].title == "N1"
@@ -82,13 +82,13 @@ async def test_mark_as_read_fail():
     assert success is False
 
 @pytest.mark.asyncio
-async def test_mark_all_as_read():
+async def test_mark_all_read():
     mock_db = AsyncMock(spec=AsyncSession)
     mock_result = MagicMock()
     mock_result.rowcount = 5
     mock_db.execute.return_value = mock_result
     
-    count = await mark_all_as_read(mock_db, user_id=1)
+    count = await mark_all_read(mock_db, user_id=1)
     
     assert count == 5
     assert mock_db.commit.called

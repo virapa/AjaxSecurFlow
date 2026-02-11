@@ -1,24 +1,25 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from backend.app.services.audit_service import log_request_action, log_action
+from backend.app.modules.security.service import log_request_action, log_action
 
 @pytest.mark.asyncio
 async def test_log_action_basic():
     mock_db = AsyncMock()
-    with patch("backend.app.services.audit_service.crud_audit.create_audit_log", new_callable=AsyncMock) as mock_create:
-        await log_action(
-            db=mock_db,
-            user_id=1,
-            action="TEST_ACTION",
-            endpoint="/test",
-            status_code=200,
-            severity="DEBUG"
-        )
-        
-        mock_create.assert_called_once()
-        args, kwargs = mock_create.call_args
-        assert kwargs["action"] == "TEST_ACTION"
-        assert kwargs["severity"] == "DEBUG"
+    await log_action(
+        db=mock_db,
+        user_id=1,
+        action="TEST_ACTION",
+        endpoint="/test",
+        status_code=200,
+        severity="DEBUG"
+    )
+    
+    mock_db.add.assert_called_once()
+    mock_db.commit.assert_called_once()
+    # Check that AuditLog instance passed to add has correct data
+    audit_log = mock_db.add.call_args[0][0]
+    assert audit_log.action == "TEST_ACTION"
+    assert audit_log.severity == "DEBUG"
 
 @pytest.mark.asyncio
 async def test_log_request_action_with_x_forwarded_for():
@@ -31,7 +32,7 @@ async def test_log_request_action_with_x_forwarded_for():
     mock_request.url.path = "/api/v1/resource"
     mock_request.method = "POST"
     
-    with patch("backend.app.services.audit_service.log_action", new_callable=AsyncMock) as mock_log:
+    with patch("backend.app.modules.security.service.log_action", new_callable=AsyncMock) as mock_log:
         await log_request_action(
             db=mock_db,
             request=mock_request,
@@ -59,7 +60,7 @@ async def test_log_request_action_with_x_real_ip():
     mock_request.url.path = "/test"
     mock_request.method = "GET"
     
-    with patch("backend.app.services.audit_service.log_action", new_callable=AsyncMock) as mock_log:
+    with patch("backend.app.modules.security.service.log_action", new_callable=AsyncMock) as mock_log:
         await log_request_action(
             db=mock_db,
             request=mock_request,

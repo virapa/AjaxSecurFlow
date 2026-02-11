@@ -1,11 +1,17 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Sidebar } from '@/features/navigation/Sidebar'
 import { es as t } from '@/shared/i18n/es'
 import { apiClient } from '@/infrastructure/api-client'
+import { authService } from '@/features/auth/auth.service'
+import { notificationService } from '@/features/notifications/notification.service'
+import { DashboardHeader } from '@/features/navigation/DashboardHeader'
+import { User } from '@/shared/types'
 
 const SupportComponent: React.FC = () => {
+    const [user, setUser] = useState<User | null>(null)
+    const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number>(0)
     const [formData, setFormData] = useState({
         subject: '',
         category: 'question',
@@ -14,6 +20,22 @@ const SupportComponent: React.FC = () => {
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const [profile, notifSummary] = await Promise.all([
+                    authService.getProfile(),
+                    notificationService.getSummary()
+                ])
+                setUser(profile as User)
+                setUnreadNotificationsCount(notifSummary.unread_count)
+            } catch (err) {
+                console.error('Failed to fetch profile/notifications for support page:', err)
+            }
+        }
+        fetchProfile()
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -49,9 +71,11 @@ const SupportComponent: React.FC = () => {
             <Sidebar />
 
             <main className="flex-1 bg-[#020617] overflow-y-auto">
-                <header className="h-20 border-b border-white/5 px-10 flex items-center justify-between sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-xl">
-                    <h2 className="text-lg font-bold tracking-tight">{t.support.title}</h2>
-                </header>
+                <DashboardHeader
+                    title={t.support.title}
+                    user={user}
+                    unreadNotificationsCount={unreadNotificationsCount}
+                />
 
                 <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
                     {/* Header Section */}

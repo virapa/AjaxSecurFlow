@@ -4,9 +4,9 @@ from httpx import AsyncClient
 from unittest.mock import AsyncMock, patch, MagicMock
 from backend.app.main import app
 from backend.app.core.config import settings
-from backend.app.api.deps import get_redis
-from backend.app.api.v1.auth import get_current_user
-from backend.app.domain.models import User
+from backend.app.shared.infrastructure.redis.deps import get_redis
+from backend.app.modules.auth.service import get_current_user
+from backend.app.modules.auth.models import User
 import httpx
 
 # --- Fixtures for this test file ---
@@ -31,10 +31,11 @@ def mock_user():
 def override_deps(mock_user):
     # Mock Redis (Rate Limiter)
     # We use MagicMock for the client because redis-py pipeline() is synchronous.
-    mock_redis = MagicMock()
-    mock_redis.get = AsyncMock(return_value=None) # Start with 0 count
+    mock_redis = AsyncMock()
+    mock_redis.get = AsyncMock(return_value=None)
+    mock_redis.incr = AsyncMock(return_value=1)
     
-    mock_pipeline_obj = MagicMock()
+    mock_pipeline_obj = AsyncMock()
     mock_pipeline_obj.execute = AsyncMock()
     mock_pipeline_obj.incr = MagicMock()
     mock_pipeline_obj.expire = MagicMock()
@@ -98,7 +99,7 @@ async def test_support_html_injection(client, override_deps):
     """
     Test that HTML content in subject/message is escaped before sending email.
     """
-    with patch("backend.app.api.v1.support.email_service.send_email") as mock_send:
+    with patch("backend.app.modules.support.router.email_service.send_email") as mock_send:
         # Payload with HTML injection attempt
         danger_payload = {
             "subject": "<b>Bold</b>",

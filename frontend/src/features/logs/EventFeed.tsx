@@ -14,11 +14,17 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId, role }) => {
     const [isLoading, setIsLoading] = useState(true)
     const [mounted, setMounted] = useState(false)
 
-    const isPro = role === 'MASTER' || role === 'PRO'
+    const isPro = role === 'MASTER' || role === 'PRO' || role === 'USER'
 
     // Helper to translate/refine event descriptions
     const getEventDescription = (log: EventLog): string => {
         const desc = log.event_desc || ''
+
+        // Try direct lookup in translations
+        // @ts-ignore - Dynamic key lookup
+        const translated = t.logEvents[desc]
+        if (translated) return translated
+
         // Check for transition-based bypass events
         if (desc.includes('TamperBypassOn') || desc.includes('BypassOn')) {
             if (log.transition === 'RECOVERED') {

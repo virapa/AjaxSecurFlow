@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException
-from backend.app.services import security_service
+from backend.app.modules.security import service as security_service
 
 @pytest.mark.asyncio
 async def test_track_login_failure_increments_and_bans():

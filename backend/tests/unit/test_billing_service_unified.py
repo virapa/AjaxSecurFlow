@@ -1,9 +1,8 @@
 import pytest
 from datetime import datetime as dt_datetime, timezone, timedelta
 from unittest.mock import AsyncMock, patch, MagicMock
-from backend.app.services import billing_service
-from backend.app.schemas.voucher import VoucherDetailed
-from backend.app.schemas.billing import BillingHistoryItem
+from backend.app.modules.billing import service as billing_service
+from backend.app.modules.billing.schemas import VoucherDetailed, BillingHistoryItem
 
 @pytest.mark.asyncio
 async def test_get_unified_history_empty():
@@ -13,7 +12,7 @@ async def test_get_unified_history_empty():
     user.id = 1
     user.stripe_customer_id = None
     
-    with patch("backend.app.services.billing_service.voucher_service.get_user_voucher_history", new_callable=AsyncMock, return_value=[]):
+    with patch("backend.app.modules.billing.service.get_user_voucher_history", new_callable=AsyncMock, return_value=[]):
         history = await billing_service.get_unified_history(db, user)
         assert history == []
 
@@ -41,7 +40,7 @@ async def test_get_unified_history_merged_and_sorted():
     mock_invoice.invoice_pdf = "http://stripe.com/pdf"
     mock_invoice.lines.data = [MagicMock(description="Premium Plan")]
     
-    with patch("backend.app.services.billing_service.voucher_service.get_user_voucher_history", new_callable=AsyncMock, return_value=vouchers), \
+    with patch("backend.app.modules.billing.service.get_user_voucher_history", new_callable=AsyncMock, return_value=vouchers), \
          patch("stripe.Invoice.list") as mock_stripe:
         
         mock_stripe.return_value.data = [mock_invoice]
@@ -67,7 +66,7 @@ async def test_get_unified_history_stripe_failure_graceful():
         VoucherDetailed(id=1, code="AJAX-1", duration_days=30, is_redeemed=True, redeemed_at=dt_datetime.now(timezone.utc), created_at=dt_datetime.now(timezone.utc))
     ]
     
-    with patch("backend.app.services.billing_service.voucher_service.get_user_voucher_history", return_value=vouchers), \
+    with patch("backend.app.modules.billing.service.get_user_voucher_history", return_value=vouchers), \
          patch("stripe.Invoice.list", side_effect=Exception("Stripe Down")):
         
         history = await billing_service.get_unified_history(db, user)

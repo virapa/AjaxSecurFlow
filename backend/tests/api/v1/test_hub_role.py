@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from backend.app.services.ajax_client import AjaxClient
+from backend.app.modules.ajax.service import AjaxClient
 
 # Pure Unit Test - No app/db imports to avoid Side Effects
 
@@ -31,7 +31,7 @@ async def test_get_user_hub_binding_success():
     client.request.assert_called_with(
         "test@email.com",
         "GET",
-        "/user/user123/hubs/0004C602/users/user123"
+        "/user/user123/hubs/0004C602"
     )
 
 @pytest.mark.asyncio

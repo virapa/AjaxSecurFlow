@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from backend.app.core.config import settings
-from backend.app.services.ajax_client import AjaxAuthError
+from backend.app.modules.ajax.service import AjaxAuthError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -100,9 +101,8 @@ app.add_middleware(
 import time
 import uuid
 from fastapi import Request
-from backend.app.core.db import async_session_factory
-from backend.app.crud import audit as crud_audit
-from backend.app.services import audit_service
+from backend.app.shared.infrastructure.database.session import async_session_factory
+from backend.app.modules.security import service as security_service
 
 
 @app.middleware("http")
@@ -146,55 +146,70 @@ async def security_headers_middleware(request: Request, call_next):
 @app.middleware("http")
 async def audit_middleware(request: Request, call_next):
     """
-    Automated Corporate Audit Middleware:
-    - Generates Correlation ID
-    - Measures Latency
-    - Logs all API requests automatically
+    Middleware to automatically audit all mutations (POST, PUT, PATCH, DELETE).
     """
-    # Only audit API routes
-    if not request.scope['path'].startswith(settings.API_V1_STR):
-        return await call_next(request)
-
-    correlation_id = str(uuid.uuid4())
-    request.state.correlation_id = correlation_id
+    # Track correlation ID and start time for audit
+    import uuid
+    import time
+    from backend.app.core.config import settings
+    
+    correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
     start_time = time.perf_counter()
     
-    response = await call_next(request)
+    # Store in request state for later retrieval in routes if needed
+    request.state.correlation_id = correlation_id
     
-    latency_ms = int((time.perf_counter() - start_time) * 1000)
-    
-    # Non-blocking background log (via new session to avoid context issues)
-    # Note: For mission-critical high-load, this would go to a queue (Celery/Kafka)
+    response = None
     try:
-        async with async_session_factory() as db:
-            # We try to get user_id from state if auth middleware/dependency already set it
-            # (Though in FastAPI, middleware runs BEFORE dependencies, so user_id might be None here)
-            user_id = getattr(request.state, "user_id", None)
-            
-            await crud_audit.create_audit_log(
-                db=db,
-                user_id=user_id,
-                action=f"AUTO_AUDIT_{request.method}",
-                endpoint=request.url.path,
-                method=request.method,
-                status_code=response.status_code,
-                ip_address=request.client.host if request.client else None,
-                user_agent=request.headers.get("user-agent"),
-                latency_ms=latency_ms,
-                correlation_id=correlation_id
-            )
-    except Exception as e:  # nosec B110
-        # Failsafe: Audit failure shouldn't crash the main request
-        logger.error(f"Audit middleware failure: {str(e)}")
-        pass
+        response = await call_next(request)
         
-    response.headers["X-Correlation-ID"] = correlation_id
-    return response
-from fastapi.openapi.utils import get_openapi
-from backend.app.api.v1.api import api_router
+        # Only audit mutations for API routes
+        if request.scope['path'].startswith(settings.API_V1_STR) and request.method in ["POST", "PUT", "PATCH", "DELETE"]:
+            # Only audit successful or client-error attempts that reach routes
+            if response.status_code < 500:
+                from backend.app.modules.security.service import log_request_action
+                from backend.app.shared.infrastructure.database.session import async_session_factory
+                
+                # Check for user_id in request state (if set by auth)
+                user_id = getattr(request.state, "user_id", None)
+                
+                # We use a background task or a separate session to avoid blocking the main request
+                # For this implementation, we use a separate session
+                try:
+                    # Defensive check for status_code to prevent RecursionError with mocks in tests
+                    raw_status = getattr(response, "status_code", 500)
+                    if hasattr(raw_status, "__call__") or not isinstance(raw_status, (int, float)):
+                        status_code = 500
+                    else:
+                        status_code = int(raw_status)
 
-# Include router normally for full test compatibility
-app.include_router(api_router, prefix=settings.API_V1_STR)
+                    async with async_session_factory() as db:
+                        await log_request_action(
+                            db=db,
+                            request=request, 
+                            user_id=user_id,
+                            action=f"Mutation: {request.url.path}",
+                            status_code=status_code
+                        )
+                except Exception as audit_err:
+                    logger.error(f"Audit log failure: {str(audit_err)}")
+        
+        # Calculate latency and add correlation ID header
+        latency_ms = int((time.perf_counter() - start_time) * 1000)
+        response.headers["X-Correlation-ID"] = correlation_id
+        response.headers["X-Request-Latency-ms"] = str(latency_ms)
+        
+        return response
+    except Exception as e:
+        logger.error(f"Audit middleware crash: {str(e)}")
+        if response:
+            return response
+        raise e
+        
+from backend.app.modules.router import api_router as modular_router
+
+# Include modular router
+app.include_router(modular_router, prefix=settings.API_V1_STR)
 
 def custom_openapi():
     if app.openapi_schema:

@@ -6,7 +6,8 @@ from httpx import AsyncClient
 from backend.app.main import app
 from unittest.mock import AsyncMock, patch
 from datetime import datetime as dt_datetime, timezone, timedelta
-from backend.app.api.deps import get_db, get_redis
+from backend.app.shared.infrastructure.database.session import get_db
+from backend.app.shared.infrastructure.redis.deps import get_redis
 
 @pytest_asyncio.fixture
 async def client():
@@ -33,13 +34,12 @@ async def test_refresh_token_rotation_success(client, mock_db):
     refresh_token = create_refresh_token(subject=user_email, jti=old_jti)
     
     # Mock Redis for blacklist check and setting
-    from backend.app.crud import user as crud_user
     
     mock_redis = AsyncMock()
     mock_redis.exists.return_value = False # Not revoked yet
     app.dependency_overrides[get_redis] = lambda: mock_redis
     
-    with patch("backend.app.crud.user.get_user_by_email") as mock_get_user:
+    with patch("backend.app.modules.auth.service.get_user_by_email") as mock_get_user:
         
         mock_user = AsyncMock()
         mock_user.email = user_email
