@@ -245,38 +245,149 @@ def custom_openapi():
         return app.openapi_schema
     
     try:
-        # Generate the base schema
+        # Enhanced API description with documentation links
+        enhanced_description = """
+## AjaxSecurFlow Proxy API
+
+An advanced, secure proxy for Ajax Systems API with tiered subscription plans.
+
+### Features
+- **Unified Authentication**: Integrated with Ajax cloud identities
+- **Session Persistence**: Automated token refresh (Dual Token)
+- **SaaS Billing**: Integrated Stripe lifecycle management
+- **Plan-Based Access**: Granular permissions by subscription tier
+
+### Subscription Plans
+
+| Plan | Price | Access Level |
+|------|-------|--------------|
+| **Free** | €0/mo | Hub listing only |
+| **Basic** | €9.99/mo | Free + Devices, Rooms, Groups, Logs |
+| **Pro** | €19.99/mo | Basic + Commands (arm/disarm) |
+| **Premium** | €49.99/mo | Pro + Full API proxy |
+
+### Authentication
+
+All endpoints require authentication via Bearer token:
+
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+Get your token from `POST /auth/token`
+
+### Rate Limiting
+
+- **Free**: 100 requests/hour
+- **Basic**: 500 requests/hour
+- **Pro**: 1000 requests/hour
+- **Premium**: 5000 requests/hour
+
+### Documentation
+
+- [API Permissions](https://github.com/virapa/AjaxSecurFlow/blob/main/backend/docs/API_PERMISSIONS.md) - Detailed permission matrix
+- [Plan Migration Guide](https://github.com/virapa/AjaxSecurFlow/blob/main/backend/docs/PLAN_MIGRATION_GUIDE.md) - Upgrading/downgrading plans
+- [Integration Examples](https://github.com/virapa/AjaxSecurFlow/blob/main/backend/docs/INTEGRATION_EXAMPLES.md) - Code samples
+- [Frontend Integration](https://github.com/virapa/AjaxSecurFlow/blob/main/frontend/docs/FRONTEND_INTEGRATION.md) - React integration guide
+        """
+        
+        # Generate the base schema with enhanced description
         openapi_schema = get_openapi(
-            title="Ajax Client API",
-            version="1.135.0", # Usando versión de tu imagen
-            description="General API description",
+            title="AjaxSecurFlow Proxy API",
+            version="1.0.0",
+            description=enhanced_description,
             routes=app.routes,
         )
+        
+        # Add security schemes
+        if "components" not in openapi_schema:
+            openapi_schema["components"] = {}
+        
+        openapi_schema["components"]["securitySchemes"] = {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "JWT token obtained from /auth/token endpoint. Example: `Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`"
+            }
+        }
+        
+        # Add global security requirement
+        openapi_schema["security"] = [{"BearerAuth": []}]
+        
+        # Enhanced server definitions
+        openapi_schema["servers"] = [
+            {
+                "url": settings.API_V1_STR,
+                "description": "Local development server"
+            },
+            {
+                "url": "https://staging.ajaxsecurflow.com/api/v1",
+                "description": "Staging environment"
+            },
+            {
+                "url": "https://api.ajaxsecurflow.com/api/v1",
+                "description": "Production environment"
+            }
+        ]
+        
+        # Add contact and license information
+        openapi_schema["info"]["contact"] = {
+            "name": "AjaxSecurFlow Support",
+            "email": "support@ajaxsecurflow.com",
+            "url": "https://ajaxsecurflow.com/support"
+        }
+        
+        openapi_schema["info"]["license"] = {
+            "name": "Proprietary",
+            "url": "https://ajaxsecurflow.com/terms"
+        }
         
         # VISUAL CLEANUP: Strip /api/v1 from the paths displayed in Swagger
         new_paths = {}
         for path, methods in openapi_schema["paths"].items():
             if path.startswith(settings.API_V1_STR):
-                clean_path = path.replace(settings.API_V1_STR, "", 1) # Only replace first occurrence
+                clean_path = path.replace(settings.API_V1_STR, "", 1)
                 if not clean_path.startswith("/"):
                     clean_path = "/" + clean_path
                 new_paths[clean_path] = methods
             else:
                 new_paths[path] = methods
-                
+        
         openapi_schema["paths"] = new_paths
         
-        # Display the Base URL exactly as in your image
-        openapi_schema["servers"] = [{"url": settings.API_V1_STR, "description": "Local server"}]
+        # Add custom extensions to endpoints (plan requirements and rate limits)
+        # This is a foundation - specific endpoint annotations should be added in routers
+        for path, path_item in openapi_schema["paths"].items():
+            for method in ["get", "post", "put", "delete", "patch"]:
+                if method in path_item:
+                    operation = path_item[method]
+                    
+                    # Add plan requirement based on path patterns
+                    if "/ajax/" in path:
+                        if "/devices" in path or "/rooms" in path or "/groups" in path or "/logs" in path:
+                            operation["x-required-plan"] = "basic"
+                        elif "/arm-state" in path:
+                            operation["x-required-plan"] = "pro"
+                        elif path == "/ajax" or "hubs" in path:
+                            operation["x-required-plan"] = "free"
+                    
+                    # Add rate limit information
+                    operation["x-rate-limit"] = {
+                        "free": "100/hour",
+                        "basic": "500/hour",
+                        "pro": "1000/hour",
+                        "premium": "5000/hour"
+                    }
         
         app.openapi_schema = openapi_schema
-        logger.info("OpenAPI schema generated successfully with path cleanup.")
+        logger.info("OpenAPI schema generated successfully with enhanced documentation.")
         return app.openapi_schema
     except Exception as e:
         logger.error(f"Error generating OpenAPI schema: {e}")
         # Return fallback default schema if custom logic fails
         return get_openapi(
-            title="Ajax Client API (Fallback)",
+            title="AjaxSecurFlow Proxy API (Fallback)",
             version="1.0.0",
             routes=app.routes
         )
