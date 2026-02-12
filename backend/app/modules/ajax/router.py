@@ -19,7 +19,7 @@ from backend.app.modules.ajax.schemas import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    tags=["Ajax API"],
+    tags=["AjaxSecurFlow API"],
     responses={
         401: {"description": "Not authenticated"},
         403: {"description": "Insufficient plan permissions"},
@@ -44,7 +44,6 @@ router = APIRouter(
     
     **Returns**: List of hub objects with details including name, status, role, and configuration.
     """,
-    tags=["Hubs", "Free Tier"],
     responses={
         200: {"description": "List of hubs retrieved successfully"},
         403: {"description": "Hub access not included in your plan"}
@@ -76,7 +75,6 @@ async def list_hubs(
     
     **Returns**: Hub object with complete details including devices, rooms, and current status.
     """,
-    tags=["Hubs", "Free Tier"],
     responses={
         200: {"description": "Hub details retrieved successfully"},
         403: {"description": "Hub access not included in your plan"},
@@ -110,7 +108,6 @@ async def get_hub(
     
     **Returns**: List of devices with name, type, online status, room, and group information.
     """,
-    tags=["Devices", "Basic Tier"],
     responses={
         200: {"description": "Device list retrieved successfully"},
         403: {"description": "Device access not included in your plan"},
@@ -144,7 +141,6 @@ async def list_devices(
     
     **Returns**: Device object with complete details including configuration and current state.
     """,
-    tags=["Devices", "Basic Tier"],
     responses={
         200: {"description": "Device details retrieved successfully"},
         403: {"description": "Device access not included in your plan"},
@@ -179,7 +175,6 @@ async def get_device(
     
     **Returns**: List of groups with IDs and names.
     """,
-    tags=["Groups", "Basic Tier"],
     responses={
         200: {"description": "Group list retrieved successfully"},
         403: {"description": "Group access not included in your plan"},
@@ -213,7 +208,6 @@ async def list_groups(
     
     **Returns**: List of rooms with IDs and names.
     """,
-    tags=["Rooms", "Basic Tier"],
     responses={
         200: {"description": "Room list retrieved successfully"},
         403: {"description": "Room access not included in your plan"},
@@ -247,7 +241,6 @@ async def list_rooms(
     
     **Returns**: Room object with complete details.
     """,
-    tags=["Rooms", "Basic Tier"],
     responses={
         200: {"description": "Room details retrieved successfully"},
         403: {"description": "Room access not included in your plan"},
@@ -282,7 +275,6 @@ async def get_room(
     
     **Returns**: Paginated list of events with timestamps, types, and details.
     """,
-    tags=["Logs", "Basic Tier"],
     responses={
         200: {"description": "Event logs retrieved successfully"},
         403: {"description": "Logs access not included in your plan"},
@@ -323,7 +315,6 @@ async def get_logs(
     
     **Returns**: Command execution result with status.
     """,
-    tags=["Commands", "Pro Tier"],
     responses={
         200: {"description": "Command sent successfully"},
         403: {"description": "Command execution not included in your plan"},

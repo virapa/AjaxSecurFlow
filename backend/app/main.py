@@ -35,12 +35,12 @@ An advanced, secure proxy for Ajax Systems API with tiered subscription plans.
 
 ### Subscription Plans
 
-| Plan | Price | Access Level |
-|------|-------|--------------|
-| **Free** | €0/mo | Read-only (hubs, devices, rooms, groups) |
-| **Basic** | €9.99/mo | Free + Logs & telemetry |
-| **Pro** | €19.99/mo | Basic + Commands (arm/disarm) |
-| **Premium** | €29.99/mo | Pro + Full API proxy |
+| Plan | Access Level |
+|------|---------------|
+| **Free** | Read-only (hubs, devices, rooms, groups) |
+| **Basic** | Free + Logs & telemetry |
+| **Pro** | Basic + Commands (arm/disarm) |
+| **Premium** | Pro + Full API proxy |
 
 ### Authentication
 
@@ -51,13 +51,6 @@ Authorization: Bearer YOUR_ACCESS_TOKEN
 ```
 
 Get your token from `POST /api/v1/auth/token`
-
-### Rate Limiting
-
-- **Free**: 100 requests/hour
-- **Basic**: 500 requests/hour
-- **Pro**: 1000 requests/hour
-- **Premium**: 5000 requests/hour
 
 For detailed endpoint permissions, see [API Permissions Documentation](/docs/API_PERMISSIONS.md)
     """,
@@ -259,12 +252,12 @@ An advanced, secure proxy for Ajax Systems API with tiered subscription plans.
 
 ### Subscription Plans
 
-| Plan | Price | Access Level |
-|------|-------|--------------|
-| **Free** | €0/mo | Hub listing only |
-| **Basic** | €9.99/mo | Free + Devices, Rooms, Groups, Logs |
-| **Pro** | €19.99/mo | Basic + Commands (arm/disarm) |
-| **Premium** | €49.99/mo | Pro + Full API proxy |
+| Plan | Access Level |
+|------|---------------|
+| **Free** | Hub listing only |
+| **Basic** | Free + Devices, Rooms, Groups, Logs |
+| **Pro** | Basic + Commands (arm/disarm) |
+| **Premium** | Pro + Full API proxy |
 
 ### Authentication
 
@@ -275,13 +268,6 @@ Authorization: Bearer YOUR_ACCESS_TOKEN
 ```
 
 Get your token from `POST /auth/token`
-
-### Rate Limiting
-
-- **Free**: 100 requests/hour
-- **Basic**: 500 requests/hour
-- **Pro**: 1000 requests/hour
-- **Premium**: 5000 requests/hour
 
 ### Documentation
 
@@ -319,14 +305,6 @@ Get your token from `POST /auth/token`
         openapi_schema["servers"] = [
             {
                 "url": settings.API_V1_STR,
-                "description": "Local development server"
-            },
-            {
-                "url": "https://staging.ajaxsecurflow.com/api/v1",
-                "description": "Staging environment"
-            },
-            {
-                "url": "https://api.ajaxsecurflow.com/api/v1",
                 "description": "Production environment"
             }
         ]
@@ -371,14 +349,55 @@ Get your token from `POST /auth/token`
                             operation["x-required-plan"] = "pro"
                         elif path == "/ajax" or "hubs" in path:
                             operation["x-required-plan"] = "free"
-                    
-                    # Add rate limit information
-                    operation["x-rate-limit"] = {
-                        "free": "100/hour",
-                        "basic": "500/hour",
-                        "pro": "1000/hour",
-                        "premium": "5000/hour"
-                    }
+        
+        # Add tags metadata to differentiate Ajax API from Ajax Systems Proxy
+        openapi_schema["tags"] = [
+            {
+                "name": "AjaxSecurFlow API",
+                "description": """
+**Structured Ajax Systems endpoints** with plan-based access control.
+
+These endpoints provide access to specific Ajax resources (hubs, devices, rooms, groups, logs, commands) with granular permissions based on your subscription plan.
+
+**Access Levels:**
+- **Free**: Hubs only
+- **Basic**: Free + Devices, Rooms, Groups, Logs
+- **Pro**: Basic + Commands (arm/disarm)
+- **Premium**: Pro + Full API Proxy
+
+All endpoints in this section are explicitly defined and documented.
+                """
+            },
+            {
+                "name": "Ajax Systems Proxy",
+                "description": """
+**🔒 PREMIUM ONLY** - Full Ajax API proxy with unrestricted access.
+
+This is a **catch-all proxy** that forwards ALL HTTP methods (GET, POST, PUT, DELETE, PATCH) directly to the Ajax Systems API. It allows you to access **any Ajax endpoint** not explicitly defined in the "AjaxSecurFlow API" section above.
+
+**Required Plan**: Premium
+
+**How it works:**
+- Any request to `/ajax/{path}` that doesn't match an explicit endpoint is proxied
+- Supports all HTTP methods
+- Forwards request body and headers
+- Returns raw Ajax API responses
+
+**Example:**
+```bash
+# Access any custom Ajax endpoint
+GET /ajax/custom/endpoint/path
+POST /ajax/user/12345/custom-action
+```
+
+**Note**: The proxy endpoints are not shown in this Swagger UI because they are dynamic catch-all routes. Refer to the [Ajax Systems API documentation](https://ajax.systems/api) for available endpoints.
+                """
+            },
+            {
+                "name": "Authentication",
+                "description": "User authentication and token management endpoints."
+            }
+        ]
         
         app.openapi_schema = openapi_schema
         logger.info("OpenAPI schema generated successfully with enhanced documentation.")

@@ -29,7 +29,8 @@ router = APIRouter()
         401: {"model": ErrorMessage, "description": "Invalid Ajax credentials"},
         403: {"model": ErrorMessage, "description": "IP Locked due to brute-force protection"},
     },
-    summary="Login with Ajax Credentials"
+    summary="Login with Ajax Credentials",
+    include_in_schema=False
 )
 async def login_for_access_token(
     request: Request,
