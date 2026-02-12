@@ -23,8 +23,15 @@ RUN pip install --no-cache-dir --upgrade pip wheel && \
 # Copy the backend code into /app/backend
 COPY . /app/backend
 
+# Copy entrypoint script and make it executable
+COPY entrypoint.sh /app/backend/entrypoint.sh
+RUN chmod +x /app/backend/entrypoint.sh
+
 # Expose port 8000
 EXPOSE 8000
 
-# Command to run the application
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Set the entrypoint to automate migrations
+ENTRYPOINT ["/app/backend/entrypoint.sh"]
+
+# Command to run the application (passed to entrypoint as $@)
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

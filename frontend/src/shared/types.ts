@@ -10,7 +10,7 @@ export interface User {
     role: string;
     subscription_active: boolean;
     subscription_expires_at?: string;
-    subscription_plan?: string;
+    subscription_plan?: 'free' | 'basic' | 'pro' | 'premium';
     subscription_id?: string;
     ajax_info?: {
         id: number;

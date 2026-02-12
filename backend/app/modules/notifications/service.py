@@ -21,7 +21,7 @@ async def create_notification(
         Notification.is_read == False
     )
     existing = await db.execute(stmt)
-    existing_notification = existing.scalar_one_or_none()
+    existing_notification = existing.scalars().first()
     
     if existing_notification:
         return existing_notification

@@ -14,7 +14,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId, role }) => {
     const [isLoading, setIsLoading] = useState(true)
     const [mounted, setMounted] = useState(false)
 
-    const isPro = role === 'MASTER' || role === 'PRO' || role === 'USER'
+    const isPro = role === 'MASTER'
 
     // Helper to translate/refine event descriptions
     const getEventDescription = (log: EventLog): string => {

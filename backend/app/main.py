@@ -22,12 +22,44 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     description="""
-    ## AjaxSecurFlow Proxy API
-    An advanced, secure proxy for Ajax Systems API with:
-    - **Unified Authentication**: Integrated with Ajax cloud identities.
-    - **Session Persistence**: Automated token refresh (Dual Token).
-    - **SaaS Billing**: Integrated Stripe lifecycle management.
-    - **Corporate Auditing**: Comprehensive logging and tracking.
+## AjaxSecurFlow Proxy API
+
+An advanced, secure proxy for Ajax Systems API with tiered subscription plans.
+
+### Features
+- **Unified Authentication**: Integrated with Ajax cloud identities
+- **Session Persistence**: Automated token refresh (Dual Token)
+- **SaaS Billing**: Integrated Stripe lifecycle management
+- **Corporate Auditing**: Comprehensive logging and tracking
+- **Plan-Based Access**: Granular permissions by subscription tier
+
+### Subscription Plans
+
+| Plan | Price | Access Level |
+|------|-------|--------------|
+| **Free** | €0/mo | Read-only (hubs, devices, rooms, groups) |
+| **Basic** | €9.99/mo | Free + Logs & telemetry |
+| **Pro** | €19.99/mo | Basic + Commands (arm/disarm) |
+| **Premium** | €29.99/mo | Pro + Full API proxy |
+
+### Authentication
+
+All endpoints require authentication via Bearer token:
+
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+Get your token from `POST /api/v1/auth/token`
+
+### Rate Limiting
+
+- **Free**: 100 requests/hour
+- **Basic**: 500 requests/hour
+- **Pro**: 1000 requests/hour
+- **Premium**: 5000 requests/hour
+
+For detailed endpoint permissions, see [API Permissions Documentation](/docs/API_PERMISSIONS.md)
     """,
     contact={
         "name": "Development",
@@ -92,7 +124,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # CORS Configuration (Must be LAST to be the outermost middleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

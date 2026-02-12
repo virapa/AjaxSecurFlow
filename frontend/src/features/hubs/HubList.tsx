@@ -3,7 +3,9 @@
 import React, { useEffect, useState } from 'react'
 import { Card } from '@/shared/components/Card'
 import { Button } from '@/shared/components/Button'
+import { PlanBadge } from '@/shared/components/PlanBadge'
 import { hubService, Hub } from './hub.service'
+import { canAccessFeature, SubscriptionPlan } from '@/shared/utils/permissions'
 import { es as t } from '@/shared/i18n/es'
 
 interface HubListProps {
@@ -14,6 +16,7 @@ interface HubListProps {
     refreshHubs: () => void
     selectedHubId?: string
     searchQuery?: string
+    userPlan?: SubscriptionPlan
 }
 
 export const HubList: React.FC<HubListProps> = ({
@@ -23,7 +26,8 @@ export const HubList: React.FC<HubListProps> = ({
     onSelectHub,
     refreshHubs,
     selectedHubId,
-    searchQuery = ''
+    searchQuery = '',
+    userPlan = 'free'
 }) => {
     const [isActionLoading, setIsActionLoading] = useState<string | null>(null)
     const [mounted, setMounted] = useState(false)
@@ -34,6 +38,13 @@ export const HubList: React.FC<HubListProps> = ({
 
     const handleArmAction = async (e: React.MouseEvent, hubId: string, newState: 0 | 1 | 2) => {
         e.stopPropagation()
+
+        // Check permission before executing command
+        if (!canAccessFeature(userPlan, 'send_commands')) {
+            console.warn('Command execution requires Pro plan or higher')
+            return
+        }
+
         console.log(`Action: Security command started for ${hubId} -> target state: ${newState}`)
         try {
             setIsActionLoading(hubId)
@@ -159,17 +170,17 @@ export const HubList: React.FC<HubListProps> = ({
                                     <>
                                         <Button
                                             size="sm"
-                                            disabled={isActionLoading === hub.id}
+                                            disabled={isActionLoading === hub.id || !canAccessFeature(userPlan, 'send_commands')}
                                             onClick={(e) => handleArmAction(e, hub.id, 2)}
-                                            className="rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20"
+                                            className={`rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 ${!canAccessFeature(userPlan, 'send_commands') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {t.dashboard.hubs.telemetry.nightMode}
                                         </Button>
                                         <Button
                                             size="sm"
-                                            disabled={isActionLoading === hub.id}
+                                            disabled={isActionLoading === hub.id || !canAccessFeature(userPlan, 'send_commands')}
                                             onClick={(e) => handleArmAction(e, hub.id, 0)}
-                                            className="rounded-xl font-bold text-[10px] uppercase tracking-tighter bg-white/5 hover:bg-white/10 text-white border-white/10"
+                                            className={`rounded-xl font-bold text-[10px] uppercase tracking-tighter bg-white/5 hover:bg-white/10 text-white border-white/10 ${!canAccessFeature(userPlan, 'send_commands') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {t.dashboard.hubs.telemetry.disarm}
                                         </Button>
@@ -178,17 +189,17 @@ export const HubList: React.FC<HubListProps> = ({
                                     <>
                                         <Button
                                             size="sm"
-                                            disabled={isActionLoading === hub.id}
+                                            disabled={isActionLoading === hub.id || !canAccessFeature(userPlan, 'send_commands')}
                                             onClick={(e) => handleArmAction(e, hub.id, 1)}
-                                            className="rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20"
+                                            className={`rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20 ${!canAccessFeature(userPlan, 'send_commands') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {t.dashboard.hubs.telemetry.armTotal}
                                         </Button>
                                         <Button
                                             size="sm"
-                                            disabled={isActionLoading === hub.id}
+                                            disabled={isActionLoading === hub.id || !canAccessFeature(userPlan, 'send_commands')}
                                             onClick={(e) => handleArmAction(e, hub.id, 0)}
-                                            className="rounded-xl font-bold text-[10px] uppercase tracking-tighter bg-white/5 hover:bg-white/10 text-white border-white/10"
+                                            className={`rounded-xl font-bold text-[10px] uppercase tracking-tighter bg-white/5 hover:bg-white/10 text-white border-white/10 ${!canAccessFeature(userPlan, 'send_commands') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {t.dashboard.hubs.telemetry.disarm}
                                         </Button>
@@ -197,17 +208,17 @@ export const HubList: React.FC<HubListProps> = ({
                                     <>
                                         <Button
                                             size="sm"
-                                            disabled={isActionLoading === hub.id}
+                                            disabled={isActionLoading === hub.id || !canAccessFeature(userPlan, 'send_commands')}
                                             onClick={(e) => handleArmAction(e, hub.id, 1)}
-                                            className="rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20"
+                                            className={`rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20 ${!canAccessFeature(userPlan, 'send_commands') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {t.dashboard.hubs.telemetry.armTotal}
                                         </Button>
                                         <Button
                                             size="sm"
-                                            disabled={isActionLoading === hub.id}
+                                            disabled={isActionLoading === hub.id || !canAccessFeature(userPlan, 'send_commands')}
                                             onClick={(e) => handleArmAction(e, hub.id, 2)}
-                                            className="rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20"
+                                            className={`rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 ${!canAccessFeature(userPlan, 'send_commands') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {t.dashboard.hubs.telemetry.nightMode}
                                         </Button>

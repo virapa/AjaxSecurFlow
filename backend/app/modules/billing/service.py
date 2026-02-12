@@ -39,14 +39,41 @@ def get_plan_from_price_id(price_id: str) -> str:
     return "free"
 
 def can_access_feature(user: User, feature: str) -> bool:
+    """
+    Check if user's plan allows access to a specific feature.
+    
+    Feature categories:
+    - Read-only (Hubs): list_hubs (Free+)
+    - Read-only (Details): read_devices, read_rooms, read_groups (Basic+)
+    - Monitoring: read_telemetry, read_logs (Basic+)
+    - Control: send_commands (Pro+)
+    - Advanced: access_proxy (Premium only)
+    """
     if settings.ENABLE_DEVELOPER_MODE:
         return True
     plan = get_effective_plan(user)
     permissions = {
-        "free": [],
-        "basic": ["list_hubs", "read_telemetry", "read_logs"],
-        "pro": ["list_hubs", "read_telemetry", "read_logs", "send_commands"],
-        "premium": ["list_hubs", "read_telemetry", "read_logs", "send_commands", "access_proxy"]
+        "free": [
+            "list_hubs"       # View hub list and details only
+        ],
+        "basic": [
+            "list_hubs",
+            "read_devices",   # View device list and details
+            "read_rooms",     # View room list and details
+            "read_groups",    # View group list
+            "read_telemetry", # Access telemetry data
+            "read_logs"       # View event logs
+        ],
+        "pro": [
+            "list_hubs", "read_devices", "read_rooms", "read_groups",
+            "read_telemetry", "read_logs",
+            "send_commands"   # Send arm/disarm commands
+        ],
+        "premium": [
+            "list_hubs", "read_devices", "read_rooms", "read_groups",
+            "read_telemetry", "read_logs", "send_commands",
+            "access_proxy"    # Full API proxy access
+        ]
     }
     allowed = permissions.get(plan, [])
     return feature in allowed

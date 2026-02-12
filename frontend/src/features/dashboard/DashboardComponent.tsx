@@ -15,6 +15,8 @@ import { notificationService } from '@/features/notifications/notification.servi
 
 import { es as t } from '@/shared/i18n/es'
 import { DashboardHeader } from '@/features/navigation/DashboardHeader'
+import { UpgradePrompt } from '@/shared/components/UpgradePrompt'
+import { canAccessFeature, SubscriptionPlan } from '@/shared/utils/permissions'
 
 /**
  * DashboardComponent (Local Scope: Dashboard)
@@ -30,6 +32,9 @@ export const DashboardComponent: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const telemetryRef = useRef<DeviceTelemetryRef>(null)
+
+    // Calculate user plan once for consistency
+    const userPlan = (user?.subscription_active ? user?.subscription_plan : 'free') as SubscriptionPlan || 'free'
 
     const fetchProfile = useCallback(async () => {
         try {
@@ -162,6 +167,7 @@ export const DashboardComponent: React.FC = () => {
                                     refreshHubs={fetchHubs}
                                     selectedHubId={selectedHub?.id}
                                     searchQuery={searchQuery}
+                                    userPlan={userPlan}
                                 />
                             </div>
 
@@ -181,11 +187,26 @@ export const DashboardComponent: React.FC = () => {
                                     </div>
                                 </div>
                                 {selectedHub ? (
-                                    <DeviceTelemetry
-                                        ref={telemetryRef}
-                                        hubId={selectedHub.id}
-                                        searchQuery={searchQuery}
-                                    />
+                                    canAccessFeature(userPlan, 'read_devices') ? (
+                                        <DeviceTelemetry
+                                            ref={telemetryRef}
+                                            hubId={selectedHub.id}
+                                            searchQuery={searchQuery}
+                                        />
+                                    ) : (
+                                        <div
+                                            data-testid="restricted-telemetry"
+                                            className="relative min-h-[500px] w-full block bg-[#0f172a]/40 border border-white/5 rounded-3xl overflow-hidden"
+                                            style={{ width: '100%', minHeight: '500px' }}
+                                        >
+                                            <UpgradePrompt
+                                                feature="Telemetría de Dispositivos"
+                                                requiredPlan="basic"
+                                                currentPlan={userPlan}
+                                                className="w-full h-full"
+                                            />
+                                        </div>
+                                    )
                                 ) : (
                                     <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl p-12 text-center text-gray-500 italic text-xs">
                                         Seleccione hub para mas detalles
@@ -197,7 +218,22 @@ export const DashboardComponent: React.FC = () => {
                         {/* Right Section: Event Feed */}
                         <div className="col-span-12 lg:col-span-4 h-full">
                             {selectedHub ? (
-                                <EventFeed hubId={selectedHub.id} role={selectedHub.role} />
+                                canAccessFeature(userPlan, 'read_logs') ? (
+                                    <EventFeed hubId={selectedHub.id} role={selectedHub.role} />
+                                ) : (
+                                    <div
+                                        data-testid="restricted-events"
+                                        className="relative min-h-[600px] h-full w-full block bg-[#0f172a]/40 border border-white/5 rounded-3xl overflow-hidden"
+                                        style={{ width: '100%', minHeight: '600px' }}
+                                    >
+                                        <UpgradePrompt
+                                            feature="Historial de Eventos"
+                                            requiredPlan="basic"
+                                            currentPlan={userPlan}
+                                            className="w-full h-full"
+                                        />
+                                    </div>
+                                )
                             ) : (
                                 <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl p-8 text-center text-gray-500 italic text-xs h-full flex items-center justify-center min-h-[400px]">
                                     Seleccione hub para mas detalles

@@ -1,0 +1,28 @@
+from datetime import datetime as dt_datetime
+from typing import Optional
+from sqlalchemy import String, Boolean, DateTime
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
+from backend.app.shared.infrastructure.database.models import Base
+
+class User(Base):
+    """
+    Represents a registered user in the SaaS platform.
+    """
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    
+    # Stripe integration for SaaS monetization
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True, index=True)
+    subscription_id: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
+    subscription_status: Mapped[Optional[str]] = mapped_column(String, nullable=True) # active, past_due, etc.
+    subscription_plan: Mapped[str] = mapped_column(String, default="free")
+    subscription_expires_at: Mapped[Optional[dt_datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[dt_datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[dt_datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+

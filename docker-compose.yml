@@ -14,6 +14,8 @@ services:
     depends_on:
       - db
       - redis
+    volumes:
+      - ./backend:/app/backend
     networks:
       - external_net
       - internal_net
