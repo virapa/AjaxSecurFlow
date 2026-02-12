@@ -16,6 +16,7 @@ async def lifespan(app: FastAPI):
 
 
 from fastapi.middleware.cors import CORSMiddleware
+from backend.app.modules.router import api_router as modular_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -88,16 +89,14 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "An internal server error occurred."}
     )
 
-# CORS Configuration
+# CORS Configuration (Must be LAST to be the outermost middleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Standardize auditing with automated middleware
 import time
 import uuid
 from fastapi import Request
@@ -206,8 +205,6 @@ async def audit_middleware(request: Request, call_next):
             return response
         raise e
         
-from backend.app.modules.router import api_router as modular_router
-
 # Include modular router
 app.include_router(modular_router, prefix=settings.API_V1_STR)
 

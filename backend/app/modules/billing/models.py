@@ -24,6 +24,7 @@ class Voucher(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     code: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     duration_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    plan: Mapped[str] = mapped_column(String, nullable=False, default="premium")
     
     is_redeemed: Mapped[bool] = mapped_column(Boolean, default=False)
     redeemed_by_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

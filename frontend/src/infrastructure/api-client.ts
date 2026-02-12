@@ -1,13 +1,14 @@
 import { User, Hub, Device, LogEntry } from '@/shared/types'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
+const API_VERSION = '/api/v1'
 
 if (!BASE_URL) {
     console.warn('⚠️ NEXT_PUBLIC_API_URL is not defined in environment variables. API requests may fail.')
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${BASE_URL}${endpoint}`
+    const url = `${BASE_URL}${API_VERSION}${endpoint}`
 
     console.log(`[API] Requesting: ${endpoint} (${options.method})`)
 
@@ -45,19 +46,27 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
         }
 
         if (!response.ok) {
-            if (response.status === 404) {
-                // Silently handle 404s for optional features (like hub logs)
-                console.log(`[API] Resource not found (404) at ${endpoint}. Returning null.`)
-                return null as unknown as T
-            }
-
             console.error(`[API] Request failed with status ${response.status} at ${endpoint}`)
             // If 401, clear token and redirect (standard security)
             if (response.status === 401 && typeof window !== 'undefined') {
                 localStorage.removeItem('ajax_access_token')
                 document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
             }
-            throw new Error(`API Error: ${response.status} ${response.statusText}`)
+
+            // Try to extract error detail from response body
+            let errorMessage = `API Error: ${response.status} ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                if (errorData.detail) {
+                    errorMessage = errorData.detail;
+                }
+            } catch {
+                // If JSON parsing fails, use the default message
+            }
+
+            const error = new Error(errorMessage);
+            (error as any).status = response.status;
+            throw error;
         }
 
         const data = await response.json()

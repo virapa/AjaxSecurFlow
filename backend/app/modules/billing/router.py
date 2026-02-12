@@ -97,11 +97,11 @@ async def redeem_voucher(
     current_user: auth_service.User = Depends(auth_service.get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    success = await billing_service.redeem_voucher(db, current_user, body.code)
-    if not success:
+    voucher = await billing_service.redeem_voucher(db, current_user, body.code)
+    if not voucher:
         raise HTTPException(status_code=400, detail="Voucher inválido, ya usado o límite alcanzado.")
     
-    return VoucherDetailed(detail="Voucher canjeado con éxito")
+    return voucher
 
 @router.post("/generate", response_model=List[VoucherDetailed], status_code=status.HTTP_201_CREATED)
 async def generate_vouchers(

@@ -125,7 +125,8 @@ export const es = {
         noAccount: '¿No tienes cuenta?',
         requestAccess: 'Solicita acceso',
         errorTitle: 'Error al iniciar sesión',
-        errorDetail: 'Verifica tus credenciales de Ajax.'
+        errorDetail: 'Verifica tus credenciales de Ajax.',
+        invalidCredentials: 'usuario o contraseña incorrectos'
     },
     dashboard: {
         title: 'Panel Principal',
@@ -255,10 +256,10 @@ export const es = {
             },
             voucher: {
                 title: 'Canjear código',
-                placeholder: 'CÓDIGO - XXXX - XXXX',
+                placeholder: 'Introduce tu código de activación',
                 button: 'Canjear y Aplicar',
                 processing: 'Procesando...',
-                hint: 'Introduce tu código de activación industrial de 12 caracteres.',
+                hint: 'Introduce el código proporcionado.',
                 success: 'Código validado y aplicado con éxito.',
                 error: 'Error al validar el código.'
             },
@@ -305,7 +306,7 @@ export const es = {
             },
             footer: {
                 encrypted: 'Encriptado SSL',
-                rights: '© 2024 AjaxSecurFlow Industrial Security Management. Todos los derechos reservados.'
+                rights: '© 2026 AjaxSecurFlow. Todos los derechos reservados.'
             }
         }
     },

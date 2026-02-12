@@ -27,7 +27,7 @@ El proyecto sigue una arquitectura de **Monolito Modular** estricta, separando l
 ├── backend/
 │   ├── app/
 │   │   ├── core/           # Configuración global y Settings
-│   │   ├── modules/        # Slices Verticales (Auth, Ajax, Billing, Security, etc.)
+│   │   ├── modules/        # Slices Verticales (Auth, Ajax, Billing, Security, Support, Notifications)
 │   │   ├── shared/         # Infraestructura compartida (DB, Redis, Utils)
 │   │   └── worker/         # Tareas Background (Celery)
 │   ├── tests/              # Pruebas Unitarias e Integración (Pytest)
@@ -35,7 +35,13 @@ El proyecto sigue una arquitectura de **Monolito Modular** estricta, separando l
 │   ├── docker-compose.yml
 │   ├── backend/            # Dockerfile y configuración Backend
 │   └── frontend/           # Dockerfile y configuración Frontend
-├── frontend/               # Aplicación Next.js 16
+├── frontend/             
+│   ├── src/
+│   │   ├── app/            # Rutas y Pages (Next.js App Router)
+│   │   ├── features/       # Componentes por dominio (Auth, Dashboard, Logs, Navigation, etc.)
+│   │   ├── infrastructure/ # Clientes API y Servicios Externos
+│   │   ├── shared/         # Componentes UI reutilizables (hooks, types, i18n)
+│   │   └── tests/          # Configuración de Tests
 ├── scripts/                # Utilidades de mantenimiento
 └── README.md
 ```
@@ -186,7 +192,7 @@ El sistema implementa capas de defensa activa para proteger las sesiones de usua
 Para iniciar todos los servicios (API, Base de Datos, Redis) desde la raíz del proyecto:
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build
+docker-compose --env-file .env -f docker/docker-compose.yml up -d --build
 ```
 
 ### Inicialización de Base de Datos

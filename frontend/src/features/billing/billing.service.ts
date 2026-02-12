@@ -11,7 +11,7 @@ export const billingService = {
      * @param code The voucher code (e.g., AJAX-XXXX-XXXX)
      */
     redeemVoucher: async (code: string): Promise<VoucherRedeemResponse> => {
-        return apiClient.post<VoucherRedeemResponse>('/billing/vouchers/redeem', {
+        return apiClient.post<VoucherRedeemResponse>('/billing/redeem', {
             code: code
         })
     },

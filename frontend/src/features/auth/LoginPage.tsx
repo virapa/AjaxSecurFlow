@@ -29,9 +29,12 @@ const LoginPage: React.FC = () => {
         try {
             await authService.login(email, password)
             router.push('/dashboard')
-        } catch (err: unknown) {
-            const error = err as Error
-            setError(error.message || `${t.auth.errorTitle}. ${t.auth.errorDetail}`)
+        } catch (err: any) {
+            if (err.status === 401) {
+                setError(t.auth.invalidCredentials)
+            } else {
+                setError(err.message || `${t.auth.errorTitle}. ${t.auth.errorDetail}`)
+            }
         } finally {
             setIsLoading(false)
         }

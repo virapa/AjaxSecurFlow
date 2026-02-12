@@ -54,16 +54,22 @@ def can_access_feature(user: User, feature: str) -> bool:
 # --- Voucher Logic ---
 
 def generate_random_code() -> str:
+    """
+    Generates a secure voucher code with high entropy.
+    Format: AJAX-XXXX-XXXX-XXXX (12 random characters)
+    Entropy: 36^12 ≈ 4.7 × 10^18 combinations
+    """
     chars = string.ascii_uppercase + string.digits
     part1 = ''.join(secrets.choice(chars) for _ in range(4))
     part2 = ''.join(secrets.choice(chars) for _ in range(4))
-    return f"AJAX-{part1}-{part2}"
+    part3 = ''.join(secrets.choice(chars) for _ in range(4))
+    return f"AJAX-{part1}-{part2}-{part3}"
 
-async def create_vouchers(db: AsyncSession, count: int, duration_days: int) -> List[Voucher]:
+async def create_vouchers(db: AsyncSession, count: int, duration_days: int, plan: str = "premium") -> List[Voucher]:
     vouchers = []
     for _ in range(count):
         code = generate_random_code()
-        voucher = Voucher(code=code, duration_days=duration_days, is_redeemed=False)
+        voucher = Voucher(code=code, duration_days=duration_days, plan=plan, is_redeemed=False)
         db.add(voucher)
         vouchers.append(voucher)
     await db.commit()
@@ -71,20 +77,20 @@ async def create_vouchers(db: AsyncSession, count: int, duration_days: int) -> L
         await db.refresh(v)
     return vouchers
 
-async def redeem_voucher(db: AsyncSession, user: User, code: str) -> bool:
+async def redeem_voucher(db: AsyncSession, user: User, code: str) -> Optional[Voucher]:
     redeemed_stmt = select(func.count(Voucher.id)).where(Voucher.redeemed_by_id == user.id)
     redeemed_count_res = await db.execute(redeemed_stmt)
     redeemed_count = redeemed_count_res.scalar() or 0
     
     if redeemed_count >= 5:
-        return False
+        return None
 
     stmt = select(Voucher).where(Voucher.code == code).with_for_update()
     result = await db.execute(stmt)
     voucher = result.scalar_one_or_none()
     
     if not voucher or voucher.is_redeemed:
-        return False
+        return None
         
     voucher.is_redeemed = True
     voucher.redeemed_by_id = user.id
@@ -97,11 +103,12 @@ async def redeem_voucher(db: AsyncSession, user: User, code: str) -> bool:
         
     user.subscription_expires_at = base_date + timedelta(days=voucher.duration_days)
     user.subscription_status = "active"
-    user.subscription_plan = "premium"
+    user.subscription_plan = voucher.plan
     
     await db.commit()
     await db.refresh(user)
-    return True
+    await db.refresh(voucher)
+    return voucher
 
 async def get_user_voucher_history(db: AsyncSession, user_id: int) -> List[Voucher]:
     stmt = select(Voucher).where(Voucher.redeemed_by_id == user_id).order_by(Voucher.redeemed_at.desc())

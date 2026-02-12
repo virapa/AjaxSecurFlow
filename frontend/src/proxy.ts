@@ -38,11 +38,16 @@ export default function middleware(request: NextRequest) {
 
     // 2. Authentication Flow
     const accessToken = request.cookies.get('access_token')
-    const isDashboardRoute = pathname.startsWith('/dashboard')
 
-    // Case 1: Unauthenticated user trying to access the dashboard
-    if (!accessToken && isDashboardRoute) {
+    // Define protected routes that require authentication
+    const protectedRoutes = ['/dashboard', '/billing', '/profile', '/support']
+    const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+
+    // Case 1: Unauthenticated user trying to access protected routes
+    if (!accessToken && isProtectedRoute) {
         const loginUrl = new URL('/login', request.url)
+        // Add redirect parameter to return user after login
+        loginUrl.searchParams.set('redirect', pathname)
         return NextResponse.redirect(loginUrl)
     }
 
