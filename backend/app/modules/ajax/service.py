@@ -244,12 +244,52 @@ class AjaxClient:
         return await self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}")
 
     async def get_hub_details(self, user_email: str, hub_id: str) -> Dict[str, Any]:
+        """
+        Get detailed information for a specific hub.
+        
+        Note: The Ajax API's /user/{user_id}/hubs/{hub_id} endpoint does NOT include
+        the hubBindingRole field. We need to fetch it from the hubs list endpoint
+        and merge it with the hub details.
+        """
         user_id = await self._get_ajax_user_id(user_email)
-        return await self.cache.get_or_fetch(
+        
+        # Fetch hub details (contains most fields but NOT hubBindingRole)
+        details = await self.cache.get_or_fetch(
             self.cache.key_hub(user_email, hub_id),
             settings.CACHE_TTL_HUB_DETAIL,
             lambda: self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}")
         )
+        
+        # Fetch hubs list to get hubBindingRole
+        hubs_response = await self.request(user_email, "GET", f"/user/{user_id}/hubs")
+        hubs_list = hubs_response.get("hubs", hubs_response) if isinstance(hubs_response, dict) else hubs_response
+        
+        # Find the matching hub in the list to extract role
+        hub_from_list = next((h for h in hubs_list if h.get("hubId") == hub_id), None)
+        
+        # DEBUG: Log what we found
+        logger.info(f"[get_hub_details] hub_id={hub_id}")
+        logger.info(f"[get_hub_details] hub_from_list keys: {hub_from_list.keys() if hub_from_list else 'None'}")
+        if hub_from_list:
+            logger.info(f"[get_hub_details] hubBindingRole from list: {hub_from_list.get('hubBindingRole')}")
+        logger.info(f"[get_hub_details] details keys: {details.keys()}")
+        
+        # Merge: hub_from_list has hubBindingRole, details has everything else
+        if hub_from_list:
+            # Merge with hub_from_list first so details override most fields
+            merged = {**hub_from_list, **details}
+        else:
+            # Fallback if hub not found in list (shouldn't happen)
+            logger.warning(f"[get_hub_details] Hub {hub_id} not found in hubs list!")
+            merged = details
+        
+        logger.info(f"[get_hub_details] merged hubBindingRole: {merged.get('hubBindingRole')}")
+        
+        # Derive 'online' status from activeChannels if present
+        if "activeChannels" in merged:
+            merged["online"] = bool(merged["activeChannels"])
+            
+        return merged
     
     async def get_hub_devices(self, user_email: str, hub_id: str) -> List[Dict[str, Any]]:
         cache_key = self.cache.key_devices(user_email, hub_id)
@@ -263,22 +303,44 @@ class AjaxClient:
         for item in raw:
             device_id = item.get("deviceId") or item.get("id")
             props = item.get("properties", {})
-            # Merge properties but allow root fields to take precedence ONLY if they are not None
+            
+            # Start with properties as base, then merge root fields
             flattened_item = {"deviceId": device_id, **props}
-            for field in ["deviceName", "online", "deviceType"]:
+            
+            # Copy important fields from root object if they exist and are not None
+            # This includes hubId, roomId, groupId, deviceName, online, deviceType
+            for field in ["hubId", "roomId", "groupId", "deviceName", "online", "deviceType"]:
                 val = item.get(field)
                 if val is not None:
                     flattened_item[field] = val
+            
+            # If hubId is still missing, use the hub_id from the URL parameter
+            if not flattened_item.get("hubId"):
+                flattened_item["hubId"] = hub_id
+                
             flattened.append(flattened_item)
             
         await self.cache.set(cache_key, flattened, settings.CACHE_TTL_DEVICES)
+        return flattened
     async def get_device_details(self, user_email: str, hub_id: str, device_id: str) -> Dict[str, Any]:
+        """
+        Get detailed information for a specific device.
+        
+        Note: The Ajax API may not include hubId in the device details response.
+        We ensure it's always present by using the hub_id from the URL parameter.
+        """
         user_id = await self._get_ajax_user_id(user_email)
-        return await self.cache.get_or_fetch(
+        details = await self.cache.get_or_fetch(
             self.cache.key_device(user_email, hub_id, device_id),
             settings.CACHE_TTL_DEVICE_DETAIL,
             lambda: self.request(user_email, "GET", f"/user/{user_id}/hubs/{hub_id}/devices/{device_id}")
         )
+        
+        # Ensure hubId is always present
+        if not details.get("hubId"):
+            details["hubId"] = hub_id
+            
+        return details
 
     async def get_hub_rooms(self, user_email: str, hub_id: str) -> List[Dict[str, Any]]:
         user_id = await self._get_ajax_user_id(user_email)
