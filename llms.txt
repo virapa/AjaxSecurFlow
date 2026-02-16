@@ -1,0 +1,23 @@
+# AjaxSecurFlow
+> Industrial-grade Proxy for Ajax Systems API with multi-tier subscription management.
+
+## Core Files
+- [backend/app/main.py]: API Entry point and Security Shield
+- [backend/app/modules/ajax/]: Ajax Systems core integration
+- [backend/app/modules/billing/]: Stripe and Voucher management
+- [frontend/src/app/layout.tsx]: Root layout and UI configuration
+- [docs/CONFIGURATION.md]: Full .env variable reference
+- [docker/docker-compose.yml]: Infrastructure orchestration
+
+## Key Concepts
+- **Unified Identity**: Uses Ajax Systems as the primary Identity Provider (IdP).
+- **Dual-Token Strategy**: Rotates Access (JWT) and Refresh tokens for local and upstream sessions.
+- **Global Rate Limiting**: Centralized Redis-based counter to protect Ajax API limits (100 req/min).
+- **Request Shield**: Proactive protection against vulnerability scanners and automated probes.
+- **Hybrid SaaS**: Supports both automated Stripe payments and manual B2B Vouchers.
+- **Modular Monolith**: Separates domain logic into vertical slices (Auth, Ajax, Billing, Security).
+
+## Tech Stack
+- **Backend**: Python 3.11+, FastAPI, SQLAlchemy 2.0 (Async), Celery, Redis.
+- **Frontend**: Next.js 15+, React 19, TailwindCSS 4, Recharts.
+- **Infra**: Docker, PostgreSQL 15, Redis.
