@@ -27,11 +27,7 @@ app = FastAPI(
 An advanced, secure proxy for Ajax Systems API with tiered subscription plans.
 
 ### Features
-- **Unified Authentication**: Integrated with Ajax cloud identities
-- **Session Persistence**: Automated token refresh (Dual Token)
-- **SaaS Billing**: Integrated Stripe lifecycle management
 - **Corporate Auditing**: Comprehensive logging and tracking
-- **Plan-Based Access**: Granular permissions by subscription tier
 
 ### Subscription Plans
 
@@ -244,12 +240,7 @@ def custom_openapi():
 
 An advanced, secure proxy for Ajax Systems API with tiered subscription plans.
 
-### Features
-- **Unified Authentication**: Integrated with Ajax cloud identities
-- **Session Persistence**: Automated token refresh (Dual Token)
-- **SaaS Billing**: Integrated Stripe lifecycle management
-- **Plan-Based Access**: Granular permissions by subscription tier
-
+    
 ### Subscription Plans
 
 | Plan | Access Level |
@@ -313,7 +304,7 @@ Get your token from `POST /auth/token`
         openapi_schema["info"]["contact"] = {
             "name": "AjaxSecurFlow Support",
             "email": "support@ajaxsecurflow.com",
-            "url": "https://ajaxsecurflow.com/support"
+            "url": "https://www.ajaxsecurflow.com"
         }
         
         openapi_schema["info"]["license"] = {

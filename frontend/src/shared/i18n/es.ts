@@ -5,15 +5,15 @@ const PLAN_TIERS = {
         period: '/ para siempre',
         description: 'Exploración básica para usuarios individuales.',
         recommended: '',
-        features: ['1 Hub Ajax', 'Visualización de Hubs', 'Soporte Comunitario']
+        features: ['Visualización de Hubs', 'Visualización de Estado de Hubs', 'Estado de Batería de Hubs']
     },
     basic: {
         name: 'Basic',
         price: '1€',
         period: '/ mes',
-        description: 'Monitoreo esencial con telemetría en vivo.',
+        description: 'Monitoreo esencial con dispositivos ilimitados.',
         recommended: '',
-        features: ['Todo lo del plan Free', 'Dispositivos Ilimitados', 'Telemetría RT', 'Historial de Eventos', 'Estado de Batería']
+        features: ['Todo lo del plan Free', 'Dispositivos Ilimitados', 'Estados de dispositivos', 'Historial de Eventos', 'Estado de Batería Dispositivos']
     },
     pro: {
         name: 'Pro',
@@ -25,9 +25,8 @@ const PLAN_TIERS = {
             'Todo lo del plan Basic',
             'Control de Armado',
             'Modo Noche',
-            'Notificaciones Críticas',
-            'Soporte Prioritario',
-            'Gestión de Usuarios'
+            'Control de Desarmado',
+            'Soporte Prioritario'
         ]
     },
     premium: {
@@ -40,9 +39,7 @@ const PLAN_TIERS = {
             'Todo lo del plan Pro',
             'Generic Proxy API',
             'Webhooks Avanzados',
-            'Exportación de Datos',
-            'Acceso Pro Max',
-            'SLA Garantizado'
+            'Exportación de Datos'
         ]
     }
 };
@@ -112,7 +109,7 @@ export const es = {
             tagline: 'Conectando el hardware de seguridad más fiable del mundo con la infraestructura de software moderna. Proxy de grado industrial para sistemas Ajax.',
             resources: ['Documentación API', 'Estado del Sistema', 'Centro de Soporte'],
             legal: ['Política de Privacidad', 'Términos de Servicio', 'Divulgación de Seguridad'],
-            copyright: '© 2024 AjaxSecurFlow Inc. No afiliado con Ajax Systems Ltd. Todos los derechos reservados.'
+            copyright: '© 2026 AjaxSecurFlow. No afiliado con Ajax Systems Ltd. Todos los derechos reservados.'
         }
     },
     auth: {

@@ -109,6 +109,7 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
     """
     Handle Stripe events with Idempotency and Corporate Auditing.
     """
+    stripe.api_key = settings.STRIPE_SECRET_KEY.get_secret_value()
     event = stripe.Event.construct_from(event_dict, stripe.api_key)
     event_id = event.id
     event_type = event.type

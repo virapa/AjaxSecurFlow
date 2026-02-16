@@ -61,9 +61,6 @@ export const LandingPage: React.FC = () => {
                             <span className="ml-2 transition-transform group-hover:translate-x-1">→</span>
                         </Button>
                     </Link>
-                    <Button variant="ghost" className="h-12 px-8 text-sm font-bold border border-white/10 hover:bg-white/5 transition-all">
-                        {t.landing.hero.ctaDemo}
-                    </Button>
                 </div>
 
                 {/* Micro Stats */}
@@ -172,12 +169,14 @@ export const LandingPage: React.FC = () => {
                                 ))}
                             </ul>
 
-                            <Button
-                                variant={plan.recommended ? 'primary' : 'ghost'}
-                                className={`w-full ${!plan.recommended ? 'border border-white/10 hover:bg-white/5' : ''}`}
-                            >
-                                {t.common.getStarted}
-                            </Button>
+                            <Link href="/login" className="w-full">
+                                <Button
+                                    variant={plan.recommended ? 'primary' : 'ghost'}
+                                    className={`w-full ${!plan.recommended ? 'border border-white/10 hover:bg-white/5' : ''}`}
+                                >
+                                    {t.common.getStarted}
+                                </Button>
+                            </Link>
                         </div>
                     ))}
                 </div>
@@ -201,7 +200,15 @@ export const LandingPage: React.FC = () => {
                             <h6 className="text-xs font-bold uppercase tracking-widest text-white mb-4">{t.common.resources}</h6>
                             <ul className="text-xs text-gray-500 space-y-2">
                                 {t.landing.footer.resources.map((item, idx) => (
-                                    <li key={idx}><Link href="#">{item}</Link></li>
+                                    <li key={idx}>
+                                        <Link
+                                            href={item === 'Documentación API' ? 'https://api.ajaxsecurflow.com/docs' : '#'}
+                                            target={item === 'Documentación API' ? '_blank' : undefined}
+                                            rel={item === 'Documentación API' ? 'noopener noreferrer' : undefined}
+                                        >
+                                            {item}
+                                        </Link>
+                                    </li>
                                 ))}
                             </ul>
                         </div>
@@ -218,8 +225,7 @@ export const LandingPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-white/5 flex justify-between items-center text-[10px] text-gray-600">
                     <p>{t.landing.footer.copyright}</p>
                     <div className="flex gap-4">
-                        <Link href="#">𝕏</Link>
-                        <Link href="#">GitHub</Link>
+                        <Link href="https://github.com/virapa/AjaxSecurFlow" target="_blank" rel="noopener noreferrer">GitHub</Link>
                     </div>
                 </div>
             </footer>

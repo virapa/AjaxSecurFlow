@@ -14,10 +14,10 @@ interface UpgradePromptProps {
 }
 
 const PLAN_PRICING: Record<SubscriptionPlan, string> = {
-    free: '€0',
-    basic: '€9.99/mes',
-    pro: '€19.99/mes',
-    premium: '€29.99/mes'
+    free: '0€/mes',
+    basic: '1€/mes',
+    pro: '2€/mes',
+    premium: '8€/mes'
 }
 
 export const UpgradePrompt: React.FC<UpgradePromptProps> = ({

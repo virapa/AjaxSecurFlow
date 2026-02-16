@@ -94,22 +94,6 @@ export const BillingComponent: React.FC = () => {
                         onSubscribe={handleSubscribe}
                     />
 
-                    <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl overflow-hidden flex flex-col md:flex-row items-stretch">
-                        <div className="w-full md:w-1/3 bg-blue-600 flex items-center justify-center p-12 min-h-[160px]">
-                            <span className="text-6xl drop-shadow-2xl">💵</span>
-                        </div>
-                        <div className="flex-1 p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div className="space-y-2">
-                                <h3 className="text-xl font-bold flex items-center gap-2">
-                                    <span className="text-blue-400">🛡️</span> {t.dashboard.billing.portal.title}
-                                </h3>
-                                <p className="text-gray-500 text-sm max-w-md">{t.dashboard.billing.portal.description}</p>
-                            </div>
-                            <button className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2 whitespace-nowrap">
-                                <span>📤</span> {t.dashboard.billing.portal.button}
-                            </button>
-                        </div>
-                    </div>
 
                     <VoucherForm onSuccess={fetchData} />
 
