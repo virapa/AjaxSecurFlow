@@ -12,6 +12,7 @@ from backend.app.modules.auth import service as auth_service
 from backend.app.modules.security import service as security_service
 from backend.app.modules.notifications import service as notification_service
 from backend.app.modules.billing import service as billing_service
+from backend.app.core.config import settings
 from sqlalchemy import select
 
 @celery_app.task(name="tasks.send_transactional_email")
@@ -107,15 +108,6 @@ def sync_ajax_data(user_id: int) -> dict:
 def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -> dict:
     """
     Handle Stripe events with Idempotency and Corporate Auditing.
-    
-    This task processes subscription updates, payment failures, and initial activations.
-
-    Args:
-        event_dict: The raw Stripe event dictionary.
-        correlation_id: ID for cross-module tracking.
-
-    Returns:
-        dict: Processing status.
     """
     event = stripe.Event.construct_from(event_dict, stripe.api_key)
     event_id = event.id
@@ -124,164 +116,187 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
     logger.info(f"Worker processing Stripe event: {event_type} ({event_id})")
 
     async def _handle():
-        async with async_session_factory() as session:
-            # 1. Idempotency Check
-            stmt = select(ProcessedStripeEvent).where(ProcessedStripeEvent.id == event_id)
-            res = await session.execute(stmt)
-            if res.scalar_one_or_none():
-                logger.warning(f"Event {event_id} already processed. Skipping.")
-                return {"status": "skipped", "reason": "idempotent"}
+        # Create isolated resources for the task
+        from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+        from redis.asyncio import Redis
+        
+        local_engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True)
+        local_session_factory = async_sessionmaker(local_engine, class_=AsyncSession, expire_on_commit=False)
+        redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        ajax_client = AjaxClient(redis_client=redis_client)
+        
+        try:
+            async with local_session_factory() as session:
+                # 1. Idempotency Check
+                stmt = select(ProcessedStripeEvent).where(ProcessedStripeEvent.id == event_id)
+                res = await session.execute(stmt)
+                if res.scalar_one_or_none():
+                    logger.warning(f"Event {event_id} already processed. Skipping.")
+                    return {"status": "skipped", "reason": "idempotent"}
 
-            data = event.data.object
-            user_id = None
-            
-            # 2. Logic based on event type
-            if event_type == "checkout.session.completed":
-                # Entry point for new customers
-                stripe_customer_id = data.customer
-                subscription_id = data.subscription
-                internal_user_id = data.metadata.get("user_id")
+                data = event.data.object
+                user_id = None
                 
-                if internal_user_id:
-                    user = await session.get(User, int(internal_user_id))
+                # 2. Logic based on event type
+                if event_type == "checkout.session.completed":
+                    stripe_customer_id = data.customer
+                    subscription_id = data.subscription
+                    internal_user_id = data.metadata.get("user_id")
+                    
+                    if internal_user_id:
+                        user = await session.get(User, int(internal_user_id))
+                        if user:
+                            user_id = user.id
+                            price_id = data.metadata.get("price_id")
+                            plan_name = billing_service.get_plan_from_price_id(price_id) if price_id else data.metadata.get("plan_type", "basic")
+                            
+                            await auth_service.update_user_subscription(
+                                session, user.id, "active", plan_name, subscription_id
+                            )
+                            if not user.stripe_customer_id:
+                                user.stripe_customer_id = stripe_customer_id
+                                await session.commit()
+                            
+                            logger.info(f"User {user.email} (ID:{user.id}) checkout completed. Plan: {plan_name}")
+                            
+                            # Fetch Profile for Personalization
+                            display_name = user.email
+                            try:
+                                profile = await ajax_client.get_user_info(user.email)
+                                if profile and (profile.firstName or profile.lastName):
+                                    display_name = f"{profile.firstName or ''} {profile.lastName or ''}".strip()
+                            except: pass
+
+                            send_transactional_email.delay(
+                                user.email,
+                                "¡Bienvenido a AjaxSecurFlow!",
+                                f"<h1>Hola {display_name}</h1><p>Tu suscripción {plan_name.upper()} ha sido activada correctamente. Ya puedes acceder a las funciones correspondientes.</p>",
+                                f"Hola {display_name}, tu suscripción {plan_name.upper()} ha sido activada correctamente."
+                            )
+
+                elif event_type in ["customer.subscription.created", "customer.subscription.updated", "invoice.payment_succeeded"]:
+                    customer_id = data.get("customer")
+                    subscription_id = data.get("subscription") or data.get("id")
+                    stripe_status = data.get("status")
+                    
+                    # Robust extraction of expiration date
+                    expires_at = None
+                    try:
+                        # Try current_period_end (Subscription objects)
+                        cpe = getattr(data, "current_period_end", None)
+                        if cpe is None and hasattr(data, "get"):
+                            cpe = data.get("current_period_end")
+                            
+                        # Try invoice lines period end (Invoice objects)
+                        if cpe is None and "lines" in data:
+                            lines = data.get("lines", {}).get("data", [])
+                            if lines:
+                                cpe = lines[0].get("period", {}).get("end")
+                        
+                        if cpe:
+                            expires_at = dt_datetime.fromtimestamp(cpe, tz=datetime.timezone.utc)
+                    except Exception as e:
+                        logger.warning(f"Could not parse expiration date from {event_type}: {e}")
+
+                    if event_type == "invoice.payment_succeeded":
+                        if data.get("billing_reason") in ["subscription_create", "subscription_cycle", "subscription_update"]:
+                            stripe_status = "active"
+                    
+                    user = await auth_service.get_user_by_stripe_customer_id(session, customer_id)
                     if user:
                         user_id = user.id
-                        price_id = data.metadata.get("price_id")
-                        plan_name = billing_service.get_plan_from_price_id(price_id) if price_id else "premium"
+                        price_id = None
+                        try:
+                            items = data.get("items", {}).get("data", []) if "items" in data else []
+                            if not items and "lines" in data:
+                                items = data.get("lines", {}).get("data", [])
+                            if items:
+                                price_id = items[0].get("price", {}).get("id")
+                        except:
+                            pass
+                            
+                        plan_name = billing_service.get_plan_from_price_id(price_id) if price_id else user.subscription_plan
                         
                         await auth_service.update_user_subscription(
-                            session, user.id, "active", plan_name, subscription_id
+                            session, user.id, stripe_status, plan_name, subscription_id, expires_at=expires_at
                         )
-                        # Ensure customer ID is also saved if not present
-                        if not user.stripe_customer_id:
-                            user.stripe_customer_id = stripe_customer_id
-                            await session.commit()
-                            
-                        logger.info(f"Linked User {user.email} to Stripe Customer {stripe_customer_id} (Plan: {plan_name})")
-                        await notification_service.create_notification(
-                            db=session,
-                            user_id=user.id,
-                            title="Suscripción Activada",
-                            message=f"¡Bienvenido! Tu suscripción {plan_name.upper()} ha sido activada correctamente.",
-                            notification_type="success"
-                        )
-                        # Point 2: Send Warm Welcome Email
-                        send_transactional_email.delay(
-                            user.email,
-                            "¡Bienvenido a AjaxSecurFlow!",
-                            f"<h1>Hola {user.email}</h1><p>Tu suscripción {plan_name.upper()} ha sido activada correctamente. Ya puedes acceder a las funciones correspondientes.</p>",
-                            f"Hola {user.email}, tu suscripción {plan_name.upper()} ha sido activada correctamente."
-                        )
-
-            elif event_type in ["customer.subscription.created", "customer.subscription.updated"]:
-                customer_id = data.customer
-                subscription_id = data.id
-                status = data.status
-                
-                user = await auth_service.get_user_by_stripe_customer_id(session, customer_id)
-                if user:
-                    user_id = user.id
-                    
-                    # Extract plan from subscription items
-                    price_id = None
-                    try:
-                        items = data.get("items", {}).get("data", [])
-                        if items:
-                            price_id = items[0].get("price", {}).get("id")
-                    except:
-                        pass
                         
-                    plan_name = billing_service.get_plan_from_price_id(price_id) if price_id else user.subscription_plan
-                    
-                    await auth_service.update_user_subscription(
-                        session, user.id, status, plan_name, subscription_id
-                    )
-                    if status == "active":
+                        if event_type == "invoice.payment_succeeded":
+                             # Fetch Profile for Personalization
+                             display_name = user.email
+                             try:
+                                 profile = await ajax_client.get_user_info(user.email)
+                                 if profile and (profile.firstName or profile.lastName):
+                                     display_name = f"{profile.firstName or ''} {profile.lastName or ''}".strip()
+                             except: pass
+
+                             await notification_service.create_notification(
+                                 db=session,
+                                 user_id=user.id,
+                                 title="Pago Confirmado",
+                                 message=f"Gracias por elegir AjaxSecurFlow. Tu pago para el plan {plan_name.upper()} ha sido procesado con éxito.",
+                                 notification_type="success"
+                             )
+                             send_transactional_email.delay(
+                                 user.email,
+                                 "Confirmación de Pago - AjaxSecurFlow",
+                                 f"<h1>Pago Recibido</h1><p>Hola {display_name}, tu suscripción {plan_name.upper()} está lista. Gracias por tu confianza.</p>",
+                                 f"Hola {display_name}, tu pago para el plan {plan_name.upper()} ha sido procesado con éxito."
+                             )
+
+                elif event_type == "customer.subscription.deleted":
+                    customer_id = data.customer
+                    user = await auth_service.get_user_by_stripe_customer_id(session, customer_id)
+                    if user:
+                        user_id = user.id
+                        await auth_service.update_user_subscription(
+                            session, user.id, "canceled", "free", ""
+                        )
+                
+                elif event_type == "invoice.payment_failed":
+                    customer_id = data.customer
+                    user = await auth_service.get_user_by_stripe_customer_id(session, customer_id)
+                    if user:
+                        user_id = user.id
+                        user.subscription_status = "past_due"
+                        await session.commit()
                         await notification_service.create_notification(
-                            db=session,
-                            user_id=user.id,
-                            title="Suscripción Actualizada",
-                            message="Tu suscripción ha sido renovada o actualizada con éxito.",
-                            notification_type="success"
+                            db=session, user_id=user.id,
+                            title="Fallo en el Pago",
+                            message="No pudimos procesar tu cobro. Revisa tu tarjeta para no perder acceso.",
+                            notification_type="error", link="/billing"
                         )
-                        # Point 2: Subscription Update Email
-                        send_transactional_email.delay(
-                            user.email,
-                            "Suscripción Actualizada correctamente",
-                            f"<h1>Suscripción Renovada</h1><p>Hemos procesado la renovación de tu suscripción con éxito.</p>",
-                            f"Tu suscripción en AjaxSecurFlow ha sido renovada o actualizada."
-                        )
-            
-            elif event_type == "customer.subscription.deleted":
-                customer_id = data.customer
-                user = await auth_service.get_user_by_stripe_customer_id(session, customer_id)
-                if user:
-                    user_id = user.id
-                    await auth_service.update_user_subscription(
-                        session, user.id, "canceled", "free", ""
-                    )
-                    await notification_service.create_notification(
-                        db=session,
-                        user_id=user.id,
-                        title="Suscripción Cancelada",
-                        message="Tu suscripción ha sido cancelada. Esperamos volver a verte pronto.",
-                        notification_type="warning"
-                    )
-                    # Point 2: Churn Prevention / Goodbye Email
-                    send_transactional_email.delay(
-                        user.email,
-                        "Tu suscripción ha finalizado",
-                        f"<h1>Sentimos verte partir</h1><p>Tu suscripción ha sido cancelada. Tus datos se mantendrán por 30 días si decides volver.</p>",
-                        f"Tu suscripción en AjaxSecurFlow ha sido cancelada."
-                    )
 
-            elif event_type == "invoice.payment_failed":
-                customer_id = data.customer
-                user = await auth_service.get_user_by_stripe_customer_id(session, customer_id)
-                if user:
-                    user_id = user.id
-                    # Downgrade status
-                    user.subscription_status = "past_due"
-                    await session.commit()
-                    logger.warning(f"Payment failed for user {user.email}")
-                    await notification_service.create_notification(
-                        db=session,
-                        user_id=user.id,
-                        title="Fallo en el Pago",
-                        message="No hemos podido procesar tu último pago. Por favor, revisa tu método de pago para evitar la interrupción del servicio.",
-                        notification_type="error",
-                        link="/billing"
-                    )
-                    # Point 2: Critical Payment Error Email
-                    send_transactional_email.delay(
-                        user.email,
-                        "Acción Requerida: Fallo en el pago",
-                        f"<h1>Error en el pago</h1><p>No hemos podido procesar tu suscripción. Por favor actualiza tu tarjeta para evitar cortes.</p>",
-                        f"URGENTE: Fallo en el pago de tu suscripción AjaxSecurFlow."
-                    )
+                # 3. Mark event as processed
+                processed_event = ProcessedStripeEvent(id=event_id, event_type=event_type)
+                session.add(processed_event)
+                await session.commit()
 
-            # 3. Mark event as processed
-            processed_event = ProcessedStripeEvent(id=event_id, event_type=event_type)
-            session.add(processed_event)
-            await session.commit()
-
-            # 4. Final Audit
-            await security_service.log_action(
-                db=session,
-                user_id=user_id,
-                action=f"STRIPE_EVENT_PROCESSED_{event_type.upper().replace('.', '_')}",
-                endpoint="celery_task",
-                status_code=200,
-                severity="INFO",
-                resource_id=event_id,
-                correlation_id=correlation_id
-            )
-            
-            return {"status": "processed", "id": event_id}
+                # 4. Final Audit
+                await security_service.log_action(
+                    db=session, user_id=user_id,
+                    action=f"STRIPE_EVENT_PROCESSED_{event_type.upper().replace('.', '_')}",
+                    endpoint="celery_task", status_code=200, severity="INFO",
+                    resource_id=event_id, correlation_id=correlation_id
+                )
+                
+                return {"status": "processed", "id": event_id}
+                
+        finally:
+            await local_engine.dispose()
+            await redis_client.close()
 
     try:
-        # Standard synchronous entry point for Celeste/Celery worker
-        return asyncio.run(_handle())
+        # Use a new loop or the existing one correctly
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                raise RuntimeError("Closed")
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        return loop.run_until_complete(_handle())
     except Exception as e:
         logger.error(f"Error processing webhook {event_id}: {str(e)}")
         raise e

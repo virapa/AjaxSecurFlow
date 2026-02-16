@@ -52,7 +52,8 @@ async def update_user_subscription(
     user_id: int, 
     status: str, 
     plan: str, 
-    subscription_id: str = ""
+    subscription_id: str = "",
+    expires_at: Optional[dt_datetime] = None
 ) -> bool:
     user = await db.get(User, user_id)
     if not user:
@@ -60,6 +61,8 @@ async def update_user_subscription(
     user.subscription_status = status
     user.subscription_plan = plan
     user.subscription_id = subscription_id
+    if expires_at:
+        user.subscription_expires_at = expires_at
     await db.commit()
     return True
 

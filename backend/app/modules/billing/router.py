@@ -49,7 +49,11 @@ async def create_checkout_session(
             mode="subscription",
             success_url=f"{settings.FRONTEND_URL}/billing?success=true&session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{settings.FRONTEND_URL}/billing?canceled=true",
-            metadata={"user_id": str(current_user.id), "plan_type": body.plan_type}
+            metadata={
+                "user_id": str(current_user.id), 
+                "plan_type": body.plan_type,
+                "price_id": price_id
+            }
         )
         return {"url": checkout_session.url}
     except Exception as e:

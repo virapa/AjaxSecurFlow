@@ -35,6 +35,8 @@ services:
       - db
       - redis
     command: celery -A backend.app.worker.celery_app worker --loglevel=info -B
+    volumes:
+      - ./backend:/app/backend
     networks:
       - internal_net
     restart: always
