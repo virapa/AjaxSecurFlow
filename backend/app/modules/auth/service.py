@@ -24,7 +24,7 @@ from backend.app.shared.infrastructure.redis.deps import get_redis
 logger = logging.getLogger(__name__)
 
 # Security Schemes
-oauth2_scheme = APIKeyHeader(name="Authorization", scheme_name="JWT Token", description="Enter: Bearer <your_token>")
+oauth2_scheme = APIKeyHeader(name="Authorization", scheme_name="JWT Token", description="Enter: Bearer <your_token>", auto_error=False)
 
 # --- CRUD Operations ---
 
@@ -67,10 +67,16 @@ async def update_user_subscription(
 
 async def get_current_user(
     request: Request,
-    token: Annotated[str, Depends(oauth2_scheme)], 
     db: AsyncSession = Depends(get_db),
-    redis_client: Redis = Depends(get_redis)
+    redis_client: Redis = Depends(get_redis),
+    token: Annotated[Optional[str], Depends(oauth2_scheme)] = None, 
 ) -> User:
+    if not token:
+        token = request.cookies.get("access_token")
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
     if token.startswith("Bearer "):
         token = token.replace("Bearer ", "")
 

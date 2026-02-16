@@ -1,7 +1,7 @@
 import logging
 import hashlib
 import uuid
-from typing import Annotated
+from typing import Annotated, Optional, List
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -87,12 +87,42 @@ async def login_for_access_token(
             jti=refresh_jti
         )
         
-        return {
+        response_data = {
             "access_token": access_token, 
             "refresh_token": refresh_token,
             "token_type": "bearer",
             "userId": ajax_data.get("userId")
         }
+
+        # Set Cookies for Dashboard
+        from fastapi import Response
+        response = Response(content=None, status_code=200) # We need a Response object to set cookies
+        # But this is an async def that returns a dict. We should return a Response object instead if we want to set cookies.
+        # Actually, FastAPI allows returning a Response object.
+        
+        from fastapi.responses import JSONResponse
+        response = JSONResponse(content=response_data)
+        
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=settings.COOKIE_SECURE,
+            samesite=settings.COOKIE_SAMESITE,
+            domain=settings.COOKIE_DOMAIN,
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=settings.COOKIE_SECURE,
+            samesite=settings.COOKIE_SAMESITE,
+            domain=settings.COOKIE_DOMAIN,
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600
+        )
+        
+        return response
 
     except AjaxAuthError:
         await security_service.track_login_failure(client_ip, redis)
@@ -114,14 +144,23 @@ async def login_for_access_token(
 )
 async def refresh_token(
     request: Request,
-    body: TokenRefreshRequest,
+    body: Optional[TokenRefreshRequest] = None, # Make body optional to support cookie-only refresh
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis),
     ajax: AjaxClient = Depends(get_ajax_client)
 ):
+    refresh_token_val = None
+    if body and body.refresh_token:
+        refresh_token_val = body.refresh_token
+    else:
+        refresh_token_val = request.cookies.get("refresh_token")
+
+    if not refresh_token_val:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
     try:
         payload = jwt.decode(
-            body.refresh_token, 
+            refresh_token_val, 
             settings.SECRET_KEY.get_secret_value(), 
             algorithms=[settings.ALGORITHM]
         )
@@ -166,34 +205,72 @@ async def refresh_token(
             jti=new_refresh_jti
         )
         
-        return {
+        from fastapi.responses import JSONResponse
+        response_data = {
             "access_token": access_token, 
             "refresh_token": refresh_token,
             "token_type": "bearer",
             "userId": await ajax._get_ajax_user_id(user.email)
         }
+        response = JSONResponse(content=response_data)
+        
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=settings.COOKIE_SECURE,
+            samesite=settings.COOKIE_SAMESITE,
+            domain=settings.COOKIE_DOMAIN,
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=settings.COOKIE_SECURE,
+            samesite=settings.COOKIE_SAMESITE,
+            domain=settings.COOKIE_DOMAIN,
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600
+        )
+        
+        return response
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @router.post("/logout")
 async def logout(
-    token: Annotated[str, Depends(auth_service.oauth2_scheme)],
+    request: Request,
+    token: Annotated[Optional[str], Depends(auth_service.oauth2_scheme)] = None,
     current_user: auth_service.User = Depends(auth_service.get_current_user),
     redis_client: Redis = Depends(get_redis)
 ):
-    try:
-        payload = jwt.decode(token, options={"verify_signature": False})
-        jti = payload.get("jti")
-        exp = payload.get("exp")
-        if jti and exp:
-             from datetime import datetime as dt_datetime, timezone
-             now = dt_datetime.now(timezone.utc).timestamp()
-             ttl = int(exp - now)
-             if ttl > 0:
-                 await redis_client.set(f"token_blacklist:{jti}", "1", ex=ttl)
-        return {"detail": "Successfully logged out"}
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid token")
+    # Determine token to blacklist
+    token_to_blacklist = token
+    if not token_to_blacklist:
+        token_to_blacklist = request.cookies.get("access_token")
+
+    if token_to_blacklist:
+        if token_to_blacklist.startswith("Bearer "):
+            token_to_blacklist = token_to_blacklist.replace("Bearer ", "")
+            
+        try:
+            payload = jwt.decode(token_to_blacklist, options={"verify_signature": False})
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            if jti and exp:
+                 from datetime import datetime as dt_datetime, timezone
+                 now = dt_datetime.now(timezone.utc).timestamp()
+                 ttl = int(exp - now)
+                 if ttl > 0:
+                     await redis_client.set(f"token_blacklist:{jti}", "1", ex=ttl)
+        except Exception:
+            pass # Ignore errors if token is malformed during logout
+
+    from fastapi.responses import JSONResponse
+    response = JSONResponse(content={"detail": "Successfully logged out"})
+    response.delete_cookie("access_token", domain=settings.COOKIE_DOMAIN, samesite=settings.COOKIE_SAMESITE)
+    response.delete_cookie("refresh_token", domain=settings.COOKIE_DOMAIN, samesite=settings.COOKIE_SAMESITE)
+    return response
 @router.get("/me", response_model=UserReadMe)
 async def read_users_me(
     current_user: auth_service.User = Depends(auth_service.get_current_user),
