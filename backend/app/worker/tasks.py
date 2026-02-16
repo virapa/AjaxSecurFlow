@@ -150,8 +150,18 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
                             price_id = data.metadata.get("price_id")
                             plan_name = billing_service.get_plan_from_price_id(price_id) if price_id else data.metadata.get("plan_type", "basic")
                             
+                            # Fetch expiration date from subscription
+                            expires_at = None
+                            if subscription_id:
+                                try:
+                                    sub = stripe.Subscription.retrieve(subscription_id)
+                                    if getattr(sub, "current_period_end", None):
+                                        expires_at = dt_datetime.fromtimestamp(sub.current_period_end, tz=datetime.timezone.utc)
+                                except Exception as e:
+                                    logger.warning(f"Error fetching subscription info for {subscription_id}: {e}")
+
                             await auth_service.update_user_subscription(
-                                session, user.id, "active", plan_name, subscription_id
+                                session, user.id, "active", plan_name, subscription_id, expires_at=expires_at
                             )
                             if not user.stripe_customer_id:
                                 user.stripe_customer_id = stripe_customer_id
@@ -199,12 +209,19 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
                         logger.warning(f"Could not parse expiration date from {event_type}: {e}")
 
                     if event_type == "invoice.payment_succeeded":
-                        if data.get("billing_reason") in ["subscription_create", "subscription_cycle", "subscription_update"]:
-                            stripe_status = "active"
+                        # For invoices, 'status' is 'paid'. We map this to 'active' for our app logic.
+                        stripe_status = "active"
                     
                     user = await auth_service.get_user_by_stripe_customer_id(session, customer_id)
                     if user:
                         user_id = user.id
+                        
+                        # RACE CONDITION PROTECTION:
+                        # If the user is already ACTIVE, do not downgrade them to INCOMPLETE 
+                        # just because an 'updated' or 'created' event arrived slightly after the payment.
+                        if user.subscription_status == "active" and stripe_status == "incomplete":
+                            logger.info(f"User {user.email} is already active. Ignoring status downgrade to {stripe_status}.")
+                            stripe_status = "active"
                         price_id = None
                         try:
                             items = data.get("items", {}).get("data", []) if "items" in data else []
