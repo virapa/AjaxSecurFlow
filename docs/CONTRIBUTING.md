@@ -1,10 +1,15 @@
 # Contributing to AjaxSecurFlow
 
-Thank you for your interest in contributing! This project follows a structured approach to ensure code quality and security.
+Thank you for your interest in contributing! This project is a **Proprietary/Source-Available** repository. By contributing to this project, you agree that your contributions will be licensed under the same [Proprietary License](../LICENSE) that governs this software.
+
+## Legal Notice
+By submitting a Pull Request, you represent that:
+1. The contribution is your own original work.
+2. You grant **virapa** full, irrevocable, and perpetual rights to use, modify, and distribute your contribution as part of the AjaxSecurFlow project.
 
 ## Development Workflow
 
-1. **Fork the Repository**: Create your own fork and clone it.
+1. **Access**: If you are an external collaborator, ensure you have explicit permission to work on this codebase.
 2. **Environment Setup**: 
    - Use Docker for a consistent environment: `docker-compose -f docker/docker-compose.yml up -d`.
    - Configure your `.env` following `.env.example`.
