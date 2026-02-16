@@ -31,6 +31,12 @@ export const Sidebar: React.FC = () => {
                         active={pathname === '/dashboard'}
                     />
                     <NavItem
+                        icon="🔔"
+                        label={t.dashboard.nav.notifications}
+                        href="/notifications"
+                        active={pathname === '/notifications'}
+                    />
+                    <NavItem
                         icon="💳"
                         label={t.dashboard.nav.subscription}
                         href="/billing"

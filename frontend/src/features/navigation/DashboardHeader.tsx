@@ -147,14 +147,14 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                                 <p className="text-xs font-bold text-white">
                                     {user?.ajax_info?.firstName || user?.email || t.dashboard.profile.adminUser}
                                 </p>
-                                <div className="relative">
+                                <Link href="/notifications" className="relative hover:scale-110 transition-transform block">
                                     <span className="text-sm">🔔</span>
                                     {unreadNotificationsCount > 0 && (
                                         <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-600 border border-[#020617] flex items-center justify-center text-[7px] font-bold text-white">
                                             {unreadNotificationsCount}
                                         </span>
                                     )}
-                                </div>
+                                </Link>
                             </div>
                             <p className="text-[9px] font-medium text-gray-500 text-left">
                                 {user?.ajax_info?.login || t.dashboard.profile.role}

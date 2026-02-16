@@ -24,17 +24,19 @@ async def get_notifications_summary(
         "notifications": notifications
     }
 
-@router.get("/", response_model=List[NotificationRead])
+@router.get("", response_model=List[NotificationRead])
 async def list_notifications(
     limit: int = 50,
+    unread_only: bool = False,
     current_user: auth_service.User = Depends(auth_service.get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     List historical notifications for the user.
     """
-    return await notification_service.get_latest_notifications(db, current_user.id, limit=limit)
+    return await notification_service.get_latest_notifications(db, current_user.id, limit=limit, unread_only=unread_only)
 
+@router.patch("/{notification_id}/read", response_model=NotificationRead)
 @router.post("/{notification_id}/read", response_model=NotificationRead)
 async def mark_notification_read(
     notification_id: int,
@@ -49,6 +51,7 @@ async def mark_notification_read(
         raise HTTPException(status_code=404, detail="Notification not found")
     return notification
 
+@router.post("/mark-all-read")
 @router.post("/read-all")
 async def mark_all_read(
     current_user: auth_service.User = Depends(auth_service.get_current_user),

@@ -9,7 +9,7 @@ const PLAN_TIERS = {
     },
     basic: {
         name: 'Basic',
-        price: '$9',
+        price: '1€',
         period: '/ mes',
         description: 'Monitoreo esencial con telemetría en vivo.',
         recommended: '',
@@ -17,7 +17,7 @@ const PLAN_TIERS = {
     },
     pro: {
         name: 'Pro',
-        price: '$19',
+        price: '2€',
         period: '/ mes',
         description: 'Control total y automatización avanzada.',
         recommended: 'RECOMENDADO',
@@ -32,7 +32,7 @@ const PLAN_TIERS = {
     },
     premium: {
         name: 'Premium',
-        price: '$49',
+        price: '8€',
         period: '/ mes',
         description: 'Integración industrial y proxy total.',
         recommended: '',

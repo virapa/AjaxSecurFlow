@@ -15,22 +15,41 @@ export const NotificationInbox: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                setIsLoading(true)
-                const data = await notificationService.getNotifications()
-                setNotifications(data)
-            } catch (err: unknown) {
-                const error = err as Error
-                setError(error.message || t.dashboard.stats.systemDegraded)
-            } finally {
-                setIsLoading(false)
-            }
+    const fetchNotifications = async () => {
+        try {
+            setIsLoading(true)
+            const data = await notificationService.getNotifications()
+            setNotifications(data)
+        } catch (err: unknown) {
+            const error = err as Error
+            setError(error.message || t.dashboard.stats.systemDegraded)
+        } finally {
+            setIsLoading(false)
         }
+    }
 
+    useEffect(() => {
         fetchNotifications()
     }, [])
+
+    const handleMarkAsRead = async (id: string, isAlreadyRead: boolean) => {
+        if (isAlreadyRead) return
+        try {
+            await notificationService.markAsRead(id)
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+        } catch (err) {
+            console.error('Failed to mark as read:', err)
+        }
+    }
+
+    const handleMarkAllRead = async () => {
+        try {
+            await notificationService.markAllAsRead()
+            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+        } catch (err) {
+            console.error('Failed to mark all as read:', err)
+        }
+    }
 
     if (isLoading) {
         return (
@@ -58,25 +77,44 @@ export const NotificationInbox: React.FC = () => {
 
     return (
         <div className="space-y-4">
-            {notifications.map((notification) => (
-                <Card
-                    key={notification.id}
-                    className={`relative overflow-hidden ${!notification.is_read ? 'border-l-4 border-l-blue-500' : ''}`}
+            <div className="flex justify-end mb-4">
+                <button
+                    onClick={handleMarkAllRead}
+                    className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors"
                 >
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h3 className={`font-semibold ${!notification.is_read ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
-                                {notification.title}
-                            </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                {notification.message}
-                            </p>
+                    Marcar todo como leído
+                </button>
+            </div>
+            {notifications.map((notification) => (
+                <div
+                    key={notification.id}
+                    onClick={() => handleMarkAsRead(notification.id, notification.is_read)}
+                    className="cursor-pointer"
+                >
+                    <Card
+                        className={`relative overflow-hidden transition-all hover:bg-white/[0.04] ${!notification.is_read ? 'border-l-4 border-l-blue-500 bg-blue-500/5' : 'opacity-60'}`}
+                    >
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h3 className={`font-semibold ${!notification.is_read ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                                    {notification.title}
+                                </h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    {notification.message}
+                                </p>
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
+                                {new Date(notification.created_at).toLocaleString(undefined, {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })}
+                            </span>
                         </div>
-                        <span className="text-xs text-gray-400">
-                            {new Date(notification.created_at).toLocaleDateString()}
-                        </span>
-                    </div>
-                </Card>
+                    </Card>
+                </div>
             ))}
         </div>
     )
