@@ -18,7 +18,7 @@ class TestPlanPermissions:
         # Free tier should only have hub access
         assert can_access_feature(user, "list_hubs") == True
         
-        # Free tier should NOT have device/room/group access
+        # Free tier should NOT have device/room/group details
         assert can_access_feature(user, "read_devices") == False
         assert can_access_feature(user, "read_rooms") == False
         assert can_access_feature(user, "read_groups") == False
@@ -102,7 +102,7 @@ class TestPlanPermissions:
             subscription_expires_at=datetime.now(timezone.utc) - timedelta(days=1)
         )
         
-        # Should have free tier permissions only (hubs only)
+        # Should have free tier permissions (now strictly hubs only)
         assert can_access_feature(user, "list_hubs") == True
         assert can_access_feature(user, "read_devices") == False
         assert can_access_feature(user, "read_logs") == False

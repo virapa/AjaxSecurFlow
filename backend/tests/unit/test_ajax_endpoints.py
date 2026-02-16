@@ -34,10 +34,10 @@ async def test_get_hubs_success(async_client: AsyncClient, mock_user_subscriptio
 @pytest.mark.asyncio
 async def test_get_hubs_no_subscription(async_client: AsyncClient, mock_user_no_subscription, mock_ajax_client_override):
     """
-    Test access denied when subscription is not active.
+    Test that users with no subscription can still list hubs (Free plan).
     """
     response = await async_client.get("/api/v1/ajax/hubs")
-    assert response.status_code == 403
+    assert response.status_code == 200
 
 @pytest.mark.asyncio
 async def test_get_hub_devices_success(async_client: AsyncClient, mock_user_subscription, mock_ajax_client_override):
@@ -79,7 +79,7 @@ async def test_set_arm_state_success(async_client: AsyncClient, mock_user_subscr
         mock_log.return_value = AsyncMock()
         
         payload = {"armState": 1}
-        response = await async_client.post("/api/v1/ajax/hubs/000000/arm", json=payload)
+        response = await async_client.post("/api/v1/ajax/hubs/000000/arm-state", json=payload)
         
         assert response.status_code == 200
         data = response.json()

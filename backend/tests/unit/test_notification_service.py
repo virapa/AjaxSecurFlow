@@ -14,7 +14,7 @@ from backend.app.modules.notifications.models import Notification
 async def test_create_notification():
     mock_db = AsyncMock(spec=AsyncSession)
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = None
+    mock_result.scalars.return_value.first.return_value = None
     mock_db.execute.return_value = mock_result
     
     user_id = 1

@@ -10,3 +10,11 @@ node_modules
 .env.production.local
 docker-compose.yml
 Dockerfile
+
+# Non-essential code
+docs/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+.next/cache

@@ -7,6 +7,7 @@ from backend.app.main import app
 from unittest.mock import AsyncMock, patch
 from datetime import datetime as dt_datetime, timezone, timedelta
 from backend.app.shared.infrastructure.database.session import get_db
+from backend.app.shared.infrastructure.ajax.deps import get_ajax_client
 from backend.app.shared.infrastructure.redis.deps import get_redis
 
 @pytest_asyncio.fixture
@@ -34,10 +35,16 @@ async def test_refresh_token_rotation_success(client, mock_db):
     refresh_token = create_refresh_token(subject=user_email, jti=old_jti)
     
     # Mock Redis for blacklist check and setting
-    
     mock_redis = AsyncMock()
     mock_redis.exists.return_value = False # Not revoked yet
+    
+    # Mock Ajax for user ID lookup
+    mock_ajax = AsyncMock()
+    mock_ajax._get_ajax_user_id.return_value = "ajax_user_123"
+    
+    from backend.app.shared.infrastructure.ajax.deps import get_ajax_client
     app.dependency_overrides[get_redis] = lambda: mock_redis
+    app.dependency_overrides[get_ajax_client] = lambda: mock_ajax
     
     with patch("backend.app.modules.auth.service.get_user_by_email") as mock_get_user:
         
@@ -63,6 +70,8 @@ async def test_refresh_token_rotation_success(client, mock_db):
     
     if get_redis in app.dependency_overrides:
         del app.dependency_overrides[get_redis]
+    if get_ajax_client in app.dependency_overrides:
+        del app.dependency_overrides[get_ajax_client]
 
 @pytest.mark.asyncio
 async def test_refresh_token_revoked_fails(client, mock_db):

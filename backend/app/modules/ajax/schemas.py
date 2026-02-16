@@ -167,6 +167,13 @@ class EventLog(BaseModel):
     event_code: Optional[Any] = Field(None, validation_alias=AliasChoices("event_code", "eventCode"), serialization_alias="event_code")
     event_desc: Optional[Any] = Field(None, validation_alias=AliasChoices("event_desc", "eventTag", "eventTypeV2", "eventType"), serialization_alias="event_desc")
     
+    @field_validator("event_desc", mode="after")
+    @classmethod
+    def translate_event_desc(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return EVENT_DESC_MAP.get(v, v)
+        return v
+    
     user_name: Optional[Any] = Field(None, validation_alias=AliasChoices("user_name", "sourceObjectName"), serialization_alias="user_name")
     device_name: Optional[Any] = Field(None, validation_alias=AliasChoices("device_name", "sourceObjectName"), serialization_alias="device_name")
     

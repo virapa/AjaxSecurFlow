@@ -20,9 +20,9 @@ async def test_voucher_redemption_limit():
     mock_result.scalar.return_value = 5
     mock_db.execute.return_value = mock_result
 
-    # Should return False because limit is 5
+    # Should return None because limit is 5
     result = await voucher_service.redeem_voucher(mock_db, user, "AJAX-ANY-CODE")
-    assert result is False
+    assert result is None
 
 @pytest.mark.asyncio
 async def test_voucher_redemption_allowed_under_limit():
@@ -37,7 +37,7 @@ async def test_voucher_redemption_allowed_under_limit():
     mock_count_result.scalar.return_value = 2
     
     # Mocking the voucher search result
-    mock_voucher = Voucher(id=10, code="AJAX-VALID", is_redeemed=False, duration_days=30)
+    mock_voucher = Voucher(id=10, code="AJAX-VALID", is_redeemed=False, duration_days=30, plan="premium")
     mock_voucher_result = MagicMock()
     mock_voucher_result.scalar_one_or_none.return_value = mock_voucher
     
@@ -46,7 +46,7 @@ async def test_voucher_redemption_allowed_under_limit():
 
     result = await voucher_service.redeem_voucher(mock_db, user, "AJAX-VALID")
     
-    assert result is True
+    assert result is not None
     assert user.subscription_plan == "premium"
     assert user.subscription_status == "active"
     assert user.subscription_expires_at is not None

@@ -11,3 +11,9 @@ env
 .vscode
 Dockerfile
 docker-compose.yml
+
+# Non-essential code
+tests/
+docs/
+.coverage
+.cache/
