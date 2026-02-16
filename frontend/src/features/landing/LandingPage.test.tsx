@@ -27,7 +27,8 @@ describe('LandingPage Component (Local Scope: Landing)', () => {
     it('should render the pricing section with tiered options', () => {
         render(<LandingPage />)
         expect(screen.getByText(new RegExp(t.landing.pricing.tag, 'i'))).toBeInTheDocument()
-        expect(screen.getByText(new RegExp(t.landing.pricing.plans[0].name, 'i'))).toBeInTheDocument()
+        // Use getAllByText as "Free" might appear multiple times (plans and stats)
+        expect(screen.getAllByText(new RegExp(t.landing.pricing.plans[0].name, 'i')).length).toBeGreaterThan(0)
     })
 
     it('should render the navigation links', () => {

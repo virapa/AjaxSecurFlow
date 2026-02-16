@@ -5,18 +5,19 @@ import { Sidebar } from '@/features/navigation/Sidebar'
 import { DashboardHeader } from '@/features/navigation/DashboardHeader'
 import { NotificationInbox } from '@/features/notifications/NotificationInbox'
 import { es as t } from '@/shared/i18n/es'
+import { User } from '@/shared/types'
 import { authService } from '@/features/auth/auth.service'
 import { notificationService } from '@/features/notifications/notification.service'
 
 export default function NotificationsPage() {
-    const [user, setUser] = React.useState<any>(null)
+    const [user, setUser] = React.useState<User | null>(null)
     const [unreadCount, setUnreadCount] = React.useState(0)
 
     React.useEffect(() => {
         const load = async () => {
             try {
                 const [profile, summary] = await Promise.all([
-                    authService.getProfile(),
+                    authService.getProfile() as Promise<User>,
                     notificationService.getSummary()
                 ])
                 setUser(profile)
