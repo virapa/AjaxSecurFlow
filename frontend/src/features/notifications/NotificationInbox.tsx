@@ -80,7 +80,7 @@ export const NotificationInbox: React.FC = () => {
             <div className="flex justify-end mb-4">
                 <button
                     onClick={handleMarkAllRead}
-                    className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors"
+                    className="text-[10px] font-black uppercase tracking-widest text-cyan-500 hover:text-cyan-400 transition-colors"
                 >
                     Marcar todo como leído
                 </button>
@@ -92,7 +92,7 @@ export const NotificationInbox: React.FC = () => {
                     className="cursor-pointer"
                 >
                     <Card
-                        className={`relative overflow-hidden transition-all hover:bg-white/[0.04] ${!notification.is_read ? 'border-l-4 border-l-blue-500 bg-blue-500/5' : 'opacity-60'}`}
+                        className={`relative overflow-hidden transition-all hover:bg-white/[0.04] ${!notification.is_read ? 'border-l-4 border-l-cyan-500 bg-cyan-500/5' : 'opacity-60'}`}
                     >
                         <div className="flex justify-between items-start">
                             <div>

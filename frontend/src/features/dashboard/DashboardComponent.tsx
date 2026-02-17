@@ -102,7 +102,7 @@ export const DashboardComponent: React.FC = () => {
     const totalHubsCount = hubs.length
 
     return (
-        <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-cyan-500/30">
             <Sidebar />
 
             {/* Main Content Area */}
@@ -154,7 +154,7 @@ export const DashboardComponent: React.FC = () => {
                                     <h3 className="text-xl font-bold tracking-tight">{t.dashboard.hubs.title}</h3>
                                     <button
                                         onClick={() => setSearchQuery('')}
-                                        className="text-[11px] font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-widest"
+                                        className="text-[11px] font-bold text-cyan-500 hover:text-cyan-400 transition-colors uppercase tracking-widest"
                                     >
                                         {t.dashboard.hubs.viewAll}
                                     </button>
@@ -270,7 +270,7 @@ const StatCard = ({ label, value, trend, color, special, specialHref, progress =
         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
             <div
                 className={`h-full rounded-full animate-in slide-in-from-left duration-1000 ${color === 'green' ? 'bg-green-500' :
-                    color === 'blue' ? 'bg-blue-600' :
+                    color === 'blue' ? 'bg-cyan-600' :
                         color === 'cyan' ? 'bg-cyan-400' :
                             color === 'yellow' ? 'bg-yellow-500' : 'bg-indigo-600'
                     }`}
@@ -279,11 +279,11 @@ const StatCard = ({ label, value, trend, color, special, specialHref, progress =
         </div>
         {special && (
             specialHref ? (
-                <Link href={specialHref} className="mt-4 block text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors">
+                <Link href={specialHref} className="mt-4 block text-[9px] font-black uppercase tracking-widest text-cyan-500 hover:text-cyan-400 transition-colors">
                     {special}
                 </Link>
             ) : (
-                <button className="mt-4 text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors">{special}</button>
+                <button className="mt-4 text-[9px] font-black uppercase tracking-widest text-cyan-500 hover:text-cyan-400 transition-colors">{special}</button>
             )
         )}
     </div>

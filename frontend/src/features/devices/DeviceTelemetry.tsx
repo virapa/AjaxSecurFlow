@@ -103,7 +103,7 @@ const DeviceDetailModal: React.FC<{
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-2xl ${isOffline ? 'bg-gray-500/10 grayscale' : 'bg-blue-500/10'}`}>
+                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-2xl ${isOffline ? 'bg-gray-500/10 grayscale' : 'bg-cyan-500/10'}`}>
                             {device.device_type?.includes('Motion') || device.device_type?.includes('MotionProtect') ? '📡' :
                                 device.device_type?.includes('Door') || device.device_type?.includes('DoorProtect') ? '🚪' :
                                     device.device_type?.includes('Space') || device.device_type?.includes('Control') ? '🎮' :
@@ -299,7 +299,7 @@ export const DeviceTelemetry = forwardRef<DeviceTelemetryRef, DeviceTelemetryPro
                                     <tr key={device.id} className={`hover:bg-white/[0.02] transition-colors group ${isOffline ? 'opacity-70' : ''}`}>
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
-                                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${isOffline ? 'bg-gray-500/10 grayscale' : 'bg-blue-500/10 text-blue-400'}`}>
+                                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${isOffline ? 'bg-gray-500/10 grayscale' : 'bg-cyan-500/10 text-cyan-400'}`}>
                                                     {device.device_type?.includes('Motion') || device.device_type?.includes('MotionProtect') ? '📡' :
                                                         device.device_type?.includes('Door') || device.device_type?.includes('DoorProtect') ? '🚪' :
                                                             device.device_type?.includes('Space') || device.device_type?.includes('Control') ? '🎮' :
@@ -325,7 +325,7 @@ export const DeviceTelemetry = forwardRef<DeviceTelemetryRef, DeviceTelemetryPro
                                         <td className="px-6 py-5 text-right">
                                             <button
                                                 onClick={() => setSelectedDevice(device)}
-                                                className="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-tighter bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg"
+                                                className="text-[10px] font-bold text-cyan-400 hover:text-cyan-300 transition-colors uppercase tracking-tighter bg-cyan-500/10 hover:bg-cyan-500/20 px-3 py-1.5 rounded-lg"
                                             >
                                                 {t.dashboard.telemetry.labels.details}
                                             </button>

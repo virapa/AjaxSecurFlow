@@ -41,19 +41,21 @@ const LoginPage: React.FC = () => {
     }
 
     return (
-        <div className="relative flex min-h-screen items-center justify-center bg-[#020617] p-4 selection:bg-blue-500/30 overflow-hidden">
+        <div className="relative flex min-h-screen items-center justify-center bg-[#020617] p-4 selection:bg-cyan-500/30 overflow-hidden">
             {/* Background Decorative Gradients */}
-            <div className="absolute top-[-20%] left-[-10%] h-[600px] w-[600px] rounded-full bg-blue-600/10 blur-[120px]" />
-            <div className="absolute bottom-[-20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-blue-600/5 blur-[120px]" />
+            <div className="absolute top-[-20%] left-[-10%] h-[600px] w-[600px] rounded-full bg-cyan-600/10 blur-[120px]" />
+            <div className="absolute bottom-[-20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-cyan-600/5 blur-[120px]" />
 
             <div className="z-10 w-full max-w-md">
-                {/* Brand Header */}
-                <div className="mb-10 text-center">
-                    <Link href="/" className="inline-flex items-center gap-2 group transition-all">
-                        <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
-                            A
-                        </div>
-                        <span className="text-2xl font-bold tracking-tight text-white">AjaxSecurFlow</span>
+                <div className="mb-10 text-center flex justify-center">
+                    <Link href="/" className="group transition-all">
+                        <Image
+                            src="/assets/Full_logo.png"
+                            alt="AjaxSecurFlow"
+                            width={220}
+                            height={48}
+                            className="h-12 w-auto object-contain hover:scale-105 transition-transform"
+                        />
                     </Link>
                 </div>
 
@@ -63,13 +65,13 @@ const LoginPage: React.FC = () => {
                         <div className="text-center space-y-4 pt-4">
                             <div className="flex justify-center flex-col items-center gap-4">
                                 <Image
-                                    src="/images/ajax-logo-login.png"
-                                    alt="AJAX Systems"
-                                    width={100}
-                                    height={32}
-                                    className="h-8 w-auto object-contain brightness-200"
+                                    src="/assets/ajax-logo-login.png"
+                                    alt="AJAX Systems SSO"
+                                    width={140}
+                                    height={40}
+                                    className="h-10 w-auto object-contain brightness-200"
                                 />
-                                <div className="h-px w-12 bg-blue-500/50" />
+                                <div className="h-px w-12 bg-cyan-500/50" />
                                 <h1 className="text-lg font-bold text-white tracking-wide uppercase">
                                     {t.auth.title}
                                 </h1>
@@ -87,7 +89,7 @@ const LoginPage: React.FC = () => {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 disabled={isLoading}
-                                className="bg-white/[0.03] border-white/10 text-white placeholder:text-gray-600 focus:border-blue-500/50"
+                                className="bg-white/[0.03] border-white/10 text-white placeholder:text-gray-600 focus:border-cyan-500/50"
                             />
                             <Input
                                 label={t.auth.passwordLabel}
@@ -97,7 +99,7 @@ const LoginPage: React.FC = () => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 disabled={isLoading}
-                                className="bg-white/[0.03] border-white/10 text-white placeholder:text-gray-600 focus:border-blue-500/50"
+                                className="bg-white/[0.03] border-white/10 text-white placeholder:text-gray-600 focus:border-cyan-500/50"
                             />
                         </div>
 
@@ -110,7 +112,7 @@ const LoginPage: React.FC = () => {
                         <div className="space-y-6">
                             <Button
                                 type="submit"
-                                className="w-full h-12 font-bold shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                className="w-full h-12 font-bold shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                                 disabled={isLoading}
                             >
                                 {isLoading ? (
@@ -123,8 +125,8 @@ const LoginPage: React.FC = () => {
                                 )}
                             </Button>
 
-                            <div className="mx-auto max-w-[320px] rounded-lg bg-blue-500/5 border border-blue-500/10 p-3">
-                                <p className="text-[11px] leading-relaxed text-blue-400 font-medium text-center">
+                            <div className="mx-auto max-w-[320px] rounded-lg bg-cyan-500/5 border border-cyan-500/10 p-3">
+                                <p className="text-[11px] leading-relaxed text-cyan-400 font-medium text-center">
                                     {t.auth.instruction}
                                 </p>
                             </div>

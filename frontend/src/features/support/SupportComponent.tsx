@@ -67,7 +67,7 @@ const SupportComponent: React.FC = () => {
     ]
 
     return (
-        <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-cyan-500/30">
             <Sidebar />
 
             <main className="flex-1 bg-[#020617] overflow-y-auto">
@@ -92,7 +92,7 @@ const SupportComponent: React.FC = () => {
                         {/* Stats / Info Sidebar */}
                         <div className="md:col-span-1 space-y-6">
                             <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md">
-                                <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400 mb-4 text-2xl">
+                                <div className="w-12 h-12 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 mb-4 text-2xl">
                                     💬
                                 </div>
                                 <h3 className="text-sm font-black uppercase tracking-widest text-white mb-2">Respuesta Rápida</h3>
@@ -134,7 +134,7 @@ const SupportComponent: React.FC = () => {
                                                 type="text"
                                                 required
                                                 placeholder="Ej: Problema al conectar el Hub"
-                                                className="w-full bg-[#1e293b]/50 border border-white/5 rounded-2xl px-6 py-4 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium"
+                                                className="w-full bg-[#1e293b]/50 border border-white/5 rounded-2xl px-6 py-4 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500/50 transition-all font-medium"
                                                 value={formData.subject}
                                                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                                             />
@@ -151,7 +151,7 @@ const SupportComponent: React.FC = () => {
                                                         type="button"
                                                         onClick={() => setFormData({ ...formData, category: cat.id })}
                                                         className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border transition-all ${formData.category === cat.id
-                                                            ? 'bg-blue-500/10 border-blue-500/50 text-blue-400'
+                                                            ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400'
                                                             : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/10 hover:bg-white/10'
                                                             }`}
                                                     >
@@ -169,7 +169,7 @@ const SupportComponent: React.FC = () => {
                                             <textarea
                                                 required
                                                 rows={5}
-                                                className="w-full bg-[#1e293b]/50 border border-white/5 rounded-2xl px-6 py-4 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium resize-none"
+                                                className="w-full bg-[#1e293b]/50 border border-white/5 rounded-2xl px-6 py-4 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500/50 transition-all font-medium resize-none"
                                                 value={formData.message}
                                                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                                             />
@@ -179,7 +179,7 @@ const SupportComponent: React.FC = () => {
                                             <input
                                                 type="checkbox"
                                                 id="confirmation"
-                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 bg-[#1e293b]/50"
+                                                className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 bg-[#1e293b]/50"
                                                 checked={formData.email_confirmation}
                                                 onChange={(e) => setFormData({ ...formData, email_confirmation: e.target.checked })}
                                             />
@@ -200,7 +200,7 @@ const SupportComponent: React.FC = () => {
                                             disabled={isSubmitting}
                                             className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-3 ${isSubmitting
                                                 ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                                                : 'bg-white text-black hover:bg-blue-400 hover:text-white group'
+                                                : 'bg-white text-black hover:bg-cyan-400 hover:text-white group'
                                                 }`}
                                         >
                                             {isSubmitting ? (

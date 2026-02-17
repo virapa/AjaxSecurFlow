@@ -49,13 +49,13 @@ export const ProfileComponent: React.FC = () => {
     if (isLoading) {
         return (
             <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-                <div className="h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="h-8 w-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-cyan-500/30">
             <Sidebar />
 
             {/* Main Content */}
@@ -69,9 +69,9 @@ export const ProfileComponent: React.FC = () => {
                 <div className="p-10 max-w-4xl mx-auto space-y-10">
                     {/* Hero Section */}
                     <div className="relative px-8 py-10 rounded-[2.5rem] bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-white/5 overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
                         <div className="relative flex flex-col md:flex-row items-center gap-8">
-                            <div className="h-24 w-24 rounded-3xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center text-4xl shadow-2xl">
+                            <div className="h-24 w-24 rounded-3xl bg-cyan-600/20 border border-cyan-500/20 flex items-center justify-center text-4xl shadow-2xl">
                                 {user?.ajax_info?.imageUrls?.medium ? (
                                     <Image
                                         src={user.ajax_info.imageUrls.medium}
@@ -88,7 +88,7 @@ export const ProfileComponent: React.FC = () => {
                                 <h1 className="text-3xl font-black tracking-tight text-white uppercase italic">
                                     {user?.ajax_info?.firstName} {user?.ajax_info?.lastName}
                                 </h1>
-                                <p className="text-xs font-bold tracking-[0.2em] text-blue-400 uppercase opacity-80">
+                                <p className="text-xs font-bold tracking-[0.2em] text-cyan-400 uppercase opacity-80">
                                     {t.dashboard.profile.role}
                                 </p>
                             </div>
@@ -140,7 +140,7 @@ export const ProfileComponent: React.FC = () => {
                                     </div>
                                     <button
                                         onClick={() => setEmailNotifications(!emailNotifications)}
-                                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 outline-none ${emailNotifications ? 'bg-blue-600' : 'bg-gray-700'}`}
+                                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 outline-none ${emailNotifications ? 'bg-cyan-600' : 'bg-gray-700'}`}
                                     >
                                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${emailNotifications ? 'translate-x-[24px]' : 'translate-x-[4px]'}`} />
                                     </button>
@@ -151,7 +151,7 @@ export const ProfileComponent: React.FC = () => {
                                 <button
                                     onClick={handleSave}
                                     disabled={isSaving}
-                                    className={`w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-sm font-black uppercase tracking-widest text-white transition-all shadow-xl shadow-blue-500/20 active:scale-[0.98] ${isSaving ? 'opacity-70 cursor-not-allowed text-transparent' : ''}`}
+                                    className={`w-full py-4 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-sm font-black uppercase tracking-widest text-white transition-all shadow-xl shadow-cyan-500/20 active:scale-[0.98] ${isSaving ? 'opacity-70 cursor-not-allowed text-transparent' : ''}`}
                                 >
                                     {isSaving ? '' : t.dashboard.profilePage.saveChanges}
                                     {isSaving && (

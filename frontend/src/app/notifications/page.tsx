@@ -30,7 +30,7 @@ export default function NotificationsPage() {
     }, [])
 
     return (
-        <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-cyan-500/30">
             <Sidebar />
 
             <main className="flex-1 bg-[#020617]">

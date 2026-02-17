@@ -93,12 +93,12 @@ export const HubList: React.FC<HubListProps> = ({
                     onClick={() => onSelectHub(hub)}
                 >
                     {/* Main Hub Card */}
-                    <div className={`bg-[#0f172a]/40 border rounded-3xl overflow-hidden backdrop-blur-sm transition-all hover:border-white/20 ${selectedHubId === hub.id ? 'border-blue-500/50 shadow-lg shadow-blue-500/10' : 'border-white/10'
+                    <div className={`bg-[#0f172a]/40 border rounded-3xl overflow-hidden backdrop-blur-sm transition-all hover:border-white/20 ${selectedHubId === hub.id ? 'border-cyan-500/50 shadow-lg shadow-cyan-500/10' : 'border-white/10'
                         }`}>
                         {/* Top Section with Illustration/Image Placeholder */}
-                        <div className="h-44 relative bg-gradient-to-br from-blue-900/20 to-black/40 flex items-center justify-center overflow-hidden">
+                        <div className="h-44 relative bg-gradient-to-br from-cyan-900/20 to-black/40 flex items-center justify-center overflow-hidden">
                             {/* Mock Illustration Shape */}
-                            <div className="w-24 h-24 bg-gradient-to-tr from-blue-600/20 to-blue-400/30 rounded-3xl rotate-12 absolute -right-4 -top-4 blur-2xl" />
+                            <div className="w-24 h-24 bg-gradient-to-tr from-cyan-600/20 to-cyan-400/30 rounded-3xl rotate-12 absolute -right-4 -top-4 blur-2xl" />
 
                             <div className="relative z-10 flex flex-col items-center">
                                 <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-4xl mb-3 shadow-inner">
@@ -160,7 +160,7 @@ export const HubList: React.FC<HubListProps> = ({
                                     </span>
                                 </div>
                                 {isActionLoading === hub.id && (
-                                    <span className="text-[9px] font-bold text-blue-500 animate-pulse uppercase">{t.dashboard.hubs.telemetry.sending}</span>
+                                    <span className="text-[9px] font-bold text-cyan-500 animate-pulse uppercase">{t.dashboard.hubs.telemetry.sending}</span>
                                 )}
                             </div>
 
@@ -191,7 +191,7 @@ export const HubList: React.FC<HubListProps> = ({
                                             size="sm"
                                             disabled={isActionLoading === hub.id || !canAccessFeature(userPlan, 'send_commands')}
                                             onClick={(e) => handleArmAction(e, hub.id, 1)}
-                                            className={`rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20 ${!canAccessFeature(userPlan, 'send_commands') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            className={`rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-cyan-600 hover:bg-cyan-500 text-white border-0 shadow-lg shadow-cyan-500/20 ${!canAccessFeature(userPlan, 'send_commands') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {t.dashboard.hubs.telemetry.armTotal}
                                         </Button>
@@ -210,7 +210,7 @@ export const HubList: React.FC<HubListProps> = ({
                                             size="sm"
                                             disabled={isActionLoading === hub.id || !canAccessFeature(userPlan, 'send_commands')}
                                             onClick={(e) => handleArmAction(e, hub.id, 1)}
-                                            className={`rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20 ${!canAccessFeature(userPlan, 'send_commands') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            className={`rounded-xl font-bold text-[9px] uppercase tracking-tighter bg-cyan-600 hover:bg-cyan-500 text-white border-0 shadow-lg shadow-cyan-500/20 ${!canAccessFeature(userPlan, 'send_commands') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {t.dashboard.hubs.telemetry.armTotal}
                                         </Button>

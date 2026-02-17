@@ -3,13 +3,30 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Brand Identity - Detected automatically by Tailwind v4 */
+  --color-brand-primary: #06b6d4;
+  --color-brand-secondary: #0891b2;
+  --color-brand-glow: rgba(6, 182, 212, 0.4);
+  --color-brand-dark: #0f172a;
+
+  --animate-brand-pulse: brand-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes brand-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: .7;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

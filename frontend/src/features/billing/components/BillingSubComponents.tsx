@@ -33,7 +33,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ history }) => {
                                 <div className="flex flex-col">
                                     <span>{item.description}</span>
                                     {item.download_url && (
-                                        <a href={item.download_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline mt-1 flex items-center gap-1">
+                                        <a href={item.download_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-cyan-500 hover:underline mt-1 flex items-center gap-1">
                                             <span>📄</span> {t.dashboard.billing.history.download}
                                         </a>
                                     )}
@@ -78,7 +78,7 @@ export const BillingStats: React.FC<BillingStatsProps> = ({ user }) => {
                 <div className="flex items-start justify-between mb-4">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black uppercase tracking-widest text-gray-600 flex items-center gap-2">
-                            <span className="text-blue-500">🛡️</span> {t.dashboard.stats.planStatus}
+                            <span className="text-cyan-500">🛡️</span> {t.dashboard.stats.planStatus}
                         </p>
                         <h3 className="text-3xl font-black tracking-tight">
                             {user?.subscription_active
@@ -99,7 +99,7 @@ export const BillingStats: React.FC<BillingStatsProps> = ({ user }) => {
                 <div className="flex items-start justify-between mb-4">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black uppercase tracking-widest text-gray-600 flex items-center gap-2">
-                            <span className="text-blue-400">🕒</span> {user?.subscription_id ? t.dashboard.billing.nextRenewal : t.dashboard.billing.expiration}
+                            <span className="text-cyan-400">🕒</span> {user?.subscription_id ? t.dashboard.billing.nextRenewal : t.dashboard.billing.expiration}
                         </p>
                         <h3 className="text-3xl font-black tracking-tight font-mono">
                             {user?.subscription_expires_at
@@ -133,9 +133,9 @@ export const PricingTable: React.FC<PricingTableProps> = ({ currentPlan, onSubsc
                 const planData = tiers[plan];
 
                 return (
-                    <div key={plan} className={`relative bg-[#0f172a]/40 border ${isCurrent ? 'border-blue-500 bg-blue-500/5' : 'border-white/5'} rounded-3xl p-6 flex flex-col transition-all hover:border-white/10 group`}>
+                    <div key={plan} className={`relative bg-[#0f172a]/40 border ${isCurrent ? 'border-cyan-500 bg-cyan-500/5' : 'border-white/5'} rounded-3xl p-6 flex flex-col transition-all hover:border-white/10 group`}>
                         {isCurrent && (
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg shadow-blue-600/20">
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyan-600 text-white text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg shadow-cyan-600/20">
                                 {tiers.current}
                             </div>
                         )}
@@ -149,7 +149,7 @@ export const PricingTable: React.FC<PricingTableProps> = ({ currentPlan, onSubsc
                         <ul className="space-y-3 mb-8 flex-1">
                             {planData.features.map((feature: string, i: number) => (
                                 <li key={i} className="flex items-center gap-2 text-[11px] text-gray-400 font-medium">
-                                    <span className="text-blue-500/50">✓</span> {feature}
+                                    <span className="text-cyan-500/50">✓</span> {feature}
                                 </li>
                             ))}
                         </ul>
@@ -157,7 +157,7 @@ export const PricingTable: React.FC<PricingTableProps> = ({ currentPlan, onSubsc
                             onClick={() => plan !== 'free' && !isCurrent && onSubscribe(plan)}
                             disabled={plan === 'free' || isCurrent}
                             className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isCurrent
-                                    ? 'bg-blue-500/10 text-blue-400 cursor-default'
+                                    ? 'bg-cyan-500/10 text-cyan-400 cursor-default'
                                     : plan === 'free'
                                         ? 'bg-white/5 text-gray-500 cursor-default'
                                         : 'bg-white text-black hover:bg-gray-200 active:scale-95'

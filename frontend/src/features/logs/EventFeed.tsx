@@ -77,8 +77,8 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId, role }) => {
         <div className="bg-[#0f172a]/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white">{t.dashboard.events.title}</h3>
-                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[9px] font-bold uppercase">
-                    <span className="h-1 w-1 rounded-full bg-blue-500 animate-pulse" /> {t.dashboard.events.live}
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 text-[9px] font-bold uppercase">
+                    <span className="h-1 w-1 rounded-full bg-cyan-500 animate-pulse" /> {t.dashboard.events.live}
                 </span>
             </div>
 
@@ -102,7 +102,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ hubId, role }) => {
                     <div key={log.id} className="relative pl-10">
                         {/* Timeline Connector Dot */}
                         <div className={`absolute left-0 top-1.5 h-[22px] w-[22px] rounded-full border border-[#0f172a] flex items-center justify-center z-10 ${log.event_desc.includes('imiento') || log.event_desc.includes('Motion') ? 'bg-red-500/20 text-red-500' :
-                            log.event_desc.includes('Armado') || log.event_desc.includes('Armed') ? 'bg-blue-500/20 text-blue-500' :
+                            log.event_desc.includes('Armado') || log.event_desc.includes('Armed') ? 'bg-cyan-500/20 text-cyan-500' :
                                 log.event_desc.includes('Bater') || log.event_desc.includes('Battery') ? 'bg-orange-500/20 text-orange-500' : 'bg-gray-500/20 text-gray-400'
                             }`}>
                             <span className="text-[10px]">

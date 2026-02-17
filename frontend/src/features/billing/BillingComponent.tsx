@@ -65,13 +65,13 @@ export const BillingComponent: React.FC = () => {
         // ... (rest of loading state)
         return (
             <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-                <div className="h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="h-8 w-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-[#020617] text-white flex font-sans selection:bg-cyan-500/30">
             <Sidebar />
 
             {/* Main Content */}
@@ -104,7 +104,7 @@ export const BillingComponent: React.FC = () => {
                         </div>
                         <HistoryTable history={history} />
                         <div className="p-6 text-center">
-                            <button className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors">
+                            <button className="text-[10px] font-black uppercase tracking-widest text-cyan-500 hover:text-cyan-400 transition-colors">
                                 {t.dashboard.billing.history.viewAll}
                             </button>
                         </div>
