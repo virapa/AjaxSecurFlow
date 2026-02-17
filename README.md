@@ -1,5 +1,4 @@
 # ![AjaxSecurFlow Logo](./frontend/public/assets/Full_logo.png)
-# AjaxSecurFlow 🛡️
 
 **Industrial-Grade Proxy for Ajax Systems API.**
 
