@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 
 from backend.app.core.config import settings
-from backend.app.core.security import create_access_token, create_refresh_token
+from backend.app.core.security import create_access_token, create_refresh_token, get_client_ip
 from backend.app.modules.ajax.service import AjaxClient, AjaxAuthError
 from backend.app.shared.infrastructure.database.session import get_db
 from backend.app.shared.infrastructure.redis.deps import get_redis
@@ -39,8 +39,7 @@ async def login_for_access_token(
     redis: Redis = Depends(get_redis),
     ajax: AjaxClient = Depends(get_ajax_client)
 ):
-    forwarded = request.headers.get("x-forwarded-for")
-    client_ip = forwarded.split(",")[0].strip() if forwarded else (request.headers.get("x-real-ip") or (request.client.host if request.client else None))
+    client_ip = get_client_ip(request)
 
     if await security_service.check_ip_lockout(client_ip, redis):
         await security_service.log_request_action(
@@ -191,8 +190,7 @@ async def refresh_token(
         user_agent = request.headers.get("user-agent", "")
         uah = hashlib.sha256(user_agent.encode()).hexdigest()
         
-        forwarded = request.headers.get("x-forwarded-for")
-        client_ip = forwarded.split(",")[0].strip() if forwarded else (request.headers.get("x-real-ip") or (request.client.host if request.client else None))
+        client_ip = get_client_ip(request)
 
         access_token = create_access_token(
             subject=user.email,
@@ -294,21 +292,3 @@ async def read_users_me(
         "billing_status": current_user.subscription_status or "inactive",
         "ajax_info": ajax_profile
     }
-@router.post("/", response_model=UserRead)
-async def register_user(
-    body: UserCreate,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Registers a new user (legacy/REST registration).
-    In this project, users are also provisioned automatically on Ajax login.
-    """
-    existing = await auth_service.get_user_by_email(db, body.email)
-    if existing is not None:
-        raise HTTPException(status_code=400, detail="User already exists")
-    
-    return await auth_service.create_user(
-        db, 
-        email=body.email, 
-        password=body.password
-    )

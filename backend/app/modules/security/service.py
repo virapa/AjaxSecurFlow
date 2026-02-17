@@ -3,6 +3,7 @@ from fastapi import Request
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from backend.app.core.security import get_client_ip
 from backend.app.modules.security.models import AuditLog
 
 # Configuration for Lockout (Can move to settings later)
@@ -59,11 +60,7 @@ async def log_request_action(
     """
     Helper to log actions using data extracted from a FastAPI Request object.
     """
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        client_ip = forwarded.split(",")[0].strip()
-    else:
-        client_ip = request.headers.get("x-real-ip") or (request.client.host if request.client else None)
+    client_ip = get_client_ip(request)
 
     await log_action(
         db=db,

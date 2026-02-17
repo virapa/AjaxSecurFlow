@@ -37,6 +37,7 @@ These variables configure the primary data store for users, subscriptions, and a
 - `COOKIE_SECURE`: Boolean. Set to `True` in production (forces HTTPS).
 - `COOKIE_DOMAIN`: The domain scope for session cookies (e.g., `.ajaxsecurflow.com`).
 - `COOKIE_SAMESITE`: Policy for cross-site requests (`lax` or `strict`).
+- `TRUST_PROXIES`: Boolean (`True`/`False`). If `True`, the backend trusts `X-Forwarded-For` and `X-Real-IP` headers for client IP extraction. **Must be True if using Nginx Proxy Manager in production.**
 
 ## 👻 Ghost Admin Security
 - `ADMIN_EMAILS`: A JSON list of emails (e.g., `["admin@example.com"]`) that are authorized to perform hazardous administrative actions.
@@ -62,6 +63,6 @@ Tunable expiration times (in seconds) for Redis caching to optimize performance/
 - `CACHE_TTL_GROUPS`: 600 (10m) - Security partitions.
 
 ## 🌐 Connections & CORS
-- `FRONTEND_URL`: The public-facing URL of the Next.js app.
-- `BACKEND_CORS_ORIGINS`: A JSON list of allowed origins for the API.
-- `NEXT_PUBLIC_API_URL`: (Frontend variable) The public URL where the FastAPI backend is listening.
+- `FRONTEND_URL`: The public-facing URL of the Next.js app (e.g., `https://www.ajaxsecurflow.com`).
+- `BACKEND_CORS_ORIGINS`: A JSON list of allowed origins for the API (e.g., `["https://www.ajaxsecurflow.com"]`).
+- `NEXT_PUBLIC_API_URL`: (Frontend variable) The public URL where the FastAPI backend is listening (e.g., `https://api.ajaxsecurflow.com`).

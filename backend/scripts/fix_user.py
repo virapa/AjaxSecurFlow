@@ -1,7 +1,10 @@
 import asyncio
-import os
 import sys
-sys.path.append(os.getcwd())
+from pathlib import Path
+
+# Add project root to sys.path
+root_path = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(root_path))
 from backend.app.shared.infrastructure.database.session import async_session_factory
 from backend.app.modules.auth.models import User
 from sqlalchemy import update

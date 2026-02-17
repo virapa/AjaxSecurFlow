@@ -1,4 +1,5 @@
 import datetime
+from fastapi import Request
 from datetime import datetime as dt_datetime, timedelta, timezone
 from typing import Optional, Any, Union
 import jwt # PyJWT
@@ -65,3 +66,21 @@ def create_refresh_token(
 ) -> str:
     expires_delta = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     return _create_token(subject, expires_delta, "refresh", jti)
+
+def get_client_ip(request: Request) -> str:
+    """
+    Safely extract client IP address.
+    If TRUST_PROXIES is True, it respects X-Forwarded-For.
+    Otherwise, it uses request.client.host (the direct connection IP).
+    """
+    if settings.TRUST_PROXIES:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            # Get the first IP in the list (the actual client)
+            return forwarded.split(",")[0].strip()
+        
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip
+
+    return request.client.host if request.client else "unknown"

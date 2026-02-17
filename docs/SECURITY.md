@@ -6,14 +6,22 @@ AjaxSecurFlow is built with security as a first-class citizen. We follow OWASP 2
 
 ## Active Protections
 
-### 1. Request Shield
-Our backend and frontend include a middleware "Shield" that intercepts and blocks common malicious probes:
+### 1. Request Shield (Hardened)
+Our backend includes a middleware "Shield" that intercepts and blocks common malicious probes. This shield performs **URI Normalization** (decoding and path resolution) before validation to prevent evasion via encoding (e.g., `%2e%2e/`).
 - Legacy server extensions (`.php`, `.asp`)
 - Sensitive files (`.env`, `.git`)
 - Admin panel probes (`/wp-admin`, `/phpmyadmin`)
 - Path traversal attempts (`../etc/passwd`)
 
-### 2. Fingerprinted Sessions
+### 2. IP Spoofing Protection
+The system implements a secure- **IP Spoofing Protection**: Use a centralized utility for extracting client IPs, ensuring that headers like `X-Forwarded-For` are only trusted when a proven proxy (like Nginx Proxy Manager) is present.
+- **Request Shield**: Automated blocking of malicious path patterns and scanners across all endpoints.
+
+🌐 **Production Environments:**
+- **Frontend:** [https://www.ajaxsecurflow.com](https://www.ajaxsecurflow.com)
+- **API:** [https://api.ajaxsecurflow.com](https://api.ajaxsecurflow.com)
+
+### 3. Fingerprinted Sessions
 Every JWT issued by the system is fingerprinted with the client's `User-Agent`. If a token is stolen and used from a different browser, the system rejects it immediately.
 
 ### 3. Hardened Authentication

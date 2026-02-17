@@ -87,18 +87,18 @@ Endpoints are organized into logical groups using OpenAPI tags:
 
 ### Tag Structure
 
-| Tag | Description | Endpoints |
-|-----|-------------|-----------|
-| **Authentication** | User authentication and token management | `/auth/token`, `/auth/me` |
-| **Hubs** | Hub listing and details (Free+) | `/ajax/hubs`, `/ajax/hubs/{id}` |
-| **Devices** | Device management (Basic+) | `/ajax/hubs/{id}/devices` |
-| **Rooms** | Room organization (Basic+) | `/ajax/hubs/{id}/rooms` |
-| **Groups** | Security groups (Basic+) | `/ajax/hubs/{id}/groups` |
-| **Logs** | Event logs and history (Basic+) | `/ajax/hubs/{id}/logs` |
-| **Commands** | System control (Pro+) | `/ajax/hubs/{id}/arm-state` |
-| **Proxy** | Full Ajax API proxy (Premium) | `/ajax/*` |
-| **Billing** | Subscription management | `/billing/*` |
-| **Notifications** | In-app notifications | `/notifications/*` |
+| Tag                | Description                              | Endpoints                       |
+| ------------------ | ---------------------------------------- | ------------------------------- |
+| **Authentication** | User authentication and token management | `/auth/token`, `/auth/me`       |
+| **Hubs**           | Hub listing and details (Free+)          | `/ajax/hubs`, `/ajax/hubs/{id}` |
+| **Devices**        | Device management (Basic+)               | `/ajax/hubs/{id}/devices`       |
+| **Rooms**          | Room organization (Basic+)               | `/ajax/hubs/{id}/rooms`         |
+| **Groups**         | Security groups (Basic+)                 | `/ajax/hubs/{id}/groups`        |
+| **Logs**           | Event logs and history (Basic+)          | `/ajax/hubs/{id}/logs`          |
+| **Commands**       | System control (Pro+)                    | `/ajax/hubs/{id}/arm-state`     |
+| **Proxy**          | Full Ajax API proxy (Premium)            | `/ajax/*`                       |
+| **Billing**        | Subscription management                  | `/billing/*`                    |
+| **Notifications**  | In-app notifications                     | `/notifications/*`              |
 
 **OpenAPI Configuration:**
 ```yaml
@@ -345,17 +345,15 @@ Error:
 
 ## Server Definitions
 
-Multiple server environments are defined for different deployment stages.
+AjaxSecurFlow uses a relative server definition to ensure compatibility with different hostnames and proxies. The documentation focuses on the production path.
 
 ```yaml
 servers:
-  - url: http://localhost:8000
-    description: Local development server
-  - url: https://staging.ajaxsecurflow.com
-    description: Staging environment
-  - url: https://api.ajaxsecurflow.com
+  - url: /api/v1
     description: Production environment
 ```
+
+> **Note**: By using a relative URL as the server base, the Swagger UI remains functional regardless of whether it's accessed via `localhost`, a staging domain, or the production URL.
 
 ---
 
@@ -434,44 +432,66 @@ Raw OpenAPI specification:
 
 ## Implementation Details
 
-### Custom OpenAPI Function
+### Custom OpenAPI Configuration
 
-The OpenAPI schema is customized in `main.py`:
+The OpenAPI schema is dynamically generated and customized in `main.py` to support plan-based metadata and visual cleanup:
 
 ```python
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
     
-    openapi_schema = get_openapi(
-        title="AjaxSecurFlow Proxy API",
-        version="1.0.0",
-        description="...",
-        routes=app.routes,
-    )
-    
-    # Add security schemes
-    openapi_schema["components"]["securitySchemes"] = {
-        "BearerAuth": {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT"
+    try:
+        # 1. Generate core schema
+        openapi_schema = get_openapi(
+            title="AjaxSecurFlow Proxy API",
+            version="1.0.0",
+            description=enhanced_description,
+            routes=app.routes,
+        )
+        
+        # 2. Add Security Schemes (JWT)
+        openapi_schema["components"]["securitySchemes"] = {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
         }
-    }
-    
-    # Add global security requirement
-    openapi_schema["security"] = [{"BearerAuth": []}]
-    
-    # Add custom extensions to endpoints
-    for path, path_item in openapi_schema["paths"].items():
-        for method, operation in path_item.items():
-            if method in ["get", "post", "put", "delete"]:
-                # Add plan requirement based on endpoint
-                operation["x-required-plan"] = determine_plan(path)
-                operation["x-rate-limit"] = get_rate_limits()
-    
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
+        openapi_schema["security"] = [{"BearerAuth": []}]
+        
+        # 3. Define Servers (Relative Path)
+        openapi_schema["servers"] = [
+            {"url": settings.API_V1_STR, "description": "Production environment"}
+        ]
+        
+        # 4. Visual Cleanup: Strip /api/v1 from Swagger paths
+        new_paths = {}
+        for path, methods in openapi_schema["paths"].items():
+            if path.startswith(settings.API_V1_STR):
+                clean_path = path.replace(settings.API_V1_STR, "", 1)
+                new_paths[clean_path or "/"] = methods
+            else:
+                new_paths[clean_path or path] = methods
+        openapi_schema["paths"] = new_paths
+        
+        # 5. Add Custom Extensions (Plan Requirements)
+        for path, path_item in openapi_schema["paths"].items():
+            for method in ["get", "post", "put", "delete", "patch"]:
+                if method in path_item:
+                    operation = path_item[method]
+                    if "/ajax/" in path:
+                        if any(x in path for x in ["/devices", "/rooms", "/groups", "/logs"]):
+                            operation["x-required-plan"] = "basic"
+                        elif "/arm-state" in path:
+                            operation["x-required-plan"] = "pro"
+                        else:
+                            operation["x-required-plan"] = "free"
+                            
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+    except Exception as e:
+        return get_openapi(title="Fallback API", version="1.0.0", routes=app.routes)
 
 app.openapi = custom_openapi
 ```

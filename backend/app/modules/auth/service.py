@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 
 from backend.app.core.config import settings
-from backend.app.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token
+from backend.app.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token, get_client_ip
 from backend.app.modules.auth.models import User
 from backend.app.modules.auth.schemas import UserCreate
 from backend.app.modules.security import service as security_service
@@ -106,8 +106,7 @@ async def get_current_user(
              raise HTTPException(status_code=401, detail="Invalid credentials")
 
         # IP Shift Logging
-        forwarded = request.headers.get("x-forwarded-for")
-        current_ip = forwarded.split(",")[0].strip() if forwarded else (request.headers.get("x-real-ip") or (request.client.host if request.client else None))
+        current_ip = get_client_ip(request)
         
         if uip and current_ip and uip != current_ip:
              await security_service.log_request_action(

@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
+from urllib.parse import unquote
 from contextlib import asynccontextmanager
 from backend.app.core.config import settings
 from backend.app.modules.ajax.service import AjaxAuthError
@@ -82,7 +83,7 @@ async def request_shield_middleware(request: Request, call_next):
     Backend Request Shield:
     Intercepts and blocks malicious scanning patterns before processing.
     """
-    path = request.url.path
+    path = unquote(request.url.path)
     if MALICIOUS_REGEX.search(path):
         logger.warning(f"[SECURITY] Blocked malicious backend probe: {path} from {request.client.host if request.client else 'unknown'}")
         return JSONResponse(

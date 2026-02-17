@@ -2,6 +2,10 @@
 
 **Industrial-Grade Proxy for Ajax Systems API.**
 
+🌐 **Live Environments:**
+- **Frontend / Dashboard:** [https://www.ajaxsecurflow.com](https://www.ajaxsecurflow.com)
+- **API Server:** [https://api.ajaxsecurflow.com](https://api.ajaxsecurflow.com)
+
 AjaxSecurFlow is a high-performance, secure API Gateway designed to bridge the gap between end-users and the official Ajax Systems API. It provides a robust SaaS management layer with tiered subscriptions, global rate limiting, and proactive security shielding.
 
 [![Security: Bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)

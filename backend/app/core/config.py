@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
     ENABLE_DEVELOPER_MODE: bool = False # Bypass Stripe for dev/test
+    TRUST_PROXIES: bool = False # Trust X-Forwarded-For header
     
     # Database (Postgres)
     POSTGRES_USER: str

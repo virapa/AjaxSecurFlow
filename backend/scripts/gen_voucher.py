@@ -1,6 +1,10 @@
 import asyncio
 import sys
-sys.path.insert(0, '/app')
+from pathlib import Path
+
+# Add project root to sys.path
+root_path = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(root_path))
 
 from backend.app.shared.infrastructure.database.session import async_session_factory
 from backend.app.modules.billing.service import create_vouchers

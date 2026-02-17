@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Global Rate Limiting**: Shared Redis counter to prevent upstream API bans.
 - **Analytics Dashboard**: Real-time signal and battery charts using Recharts.
 - **Enhanced Documentation**: Created comprehensive README, Architecture, Security, Configuration, and Contributing guides.
+- **OpenAPI Sync**: Synchronized `OPENAPI_ENHANCEMENTS.md` with the latest backend server and path-handling implementation.
 - **AI Discovery**: Added `llms.txt` for better indexing by AI agents.
 
 ### Changed
