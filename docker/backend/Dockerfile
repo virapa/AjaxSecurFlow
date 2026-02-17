@@ -25,7 +25,8 @@ COPY . /app/backend
 
 # Copy entrypoint script and make it executable
 COPY entrypoint.sh /app/backend/entrypoint.sh
-RUN chmod +x /app/backend/entrypoint.sh
+RUN sed -i 's/\r$//' /app/backend/entrypoint.sh && \
+    chmod +x /app/backend/entrypoint.sh
 
 # Expose port 8000
 EXPOSE 8000
