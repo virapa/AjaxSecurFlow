@@ -8,8 +8,9 @@ AjaxSecurFlow operates as a high-security proxy between end-users and the Ajax S
 
 ```mermaid
 graph TD
-    User([End User / Client]) -->|Request| Frontend[Next.js Dashboard]
-    User -->|API Call| Backend[FastAPI Proxy]
+    User([End User / Client]) -->|HTTPS Request| NPM[Nginx Proxy Manager]
+    NPM -->|SSL Termination| Frontend[Next.js Dashboard]
+    NPM -->|API Proxy| Backend[FastAPI Proxy]
     
     subgraph "AjaxSecurFlow Backend"
         Backend -->|Middleware| Shield[Security Shield]
@@ -46,8 +47,19 @@ The system handles two session types:
 1. **Local Session**: JWT-based, managed by our FastAPI backend.
 2. **Ajax Session**: Managed by Redis, mapped to the user's email, and automatically refreshed by the backend.
 
+### 5. Edge Proxy & SSL Termination
+The production environment uses **Nginx Proxy Manager (NPM)** as the entry point. 
+
+> [!NOTE]
+> **External Component:** Nginx Proxy Manager is an external infrastructure component managed independently. It is not included in this project's codebase or Docker Compose orchestration; it must be configured separately to point to the `frontend` and `backend` containers.
+
+NPM handles:
+- **Automatic HTTPS**: Automated Let's Encrypt certificate issuance and renewal.
+- **Reverse Proxying**: Routing traffic between the frontend (Port 3000) and API (Port 8000).
+- **Network Shielding**: Acting as the first layer of defense against volumetric attacks and malformed requests.
+
 ## Deployment Strategy
-The system is fully containerized via Docker.
+The system is fully containerized via Docker and orchestrated with an **external reverse proxy**.
 - `backend`: FastAPI server.
 - `worker`: Celery worker for background synchronization and Stripe webhooks.
 - `frontend`: Next.js optimized build.

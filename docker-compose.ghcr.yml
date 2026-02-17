@@ -13,8 +13,8 @@ services:
       - db
       - redis
     networks:
-      - external_net
-      - internal_net
+      - ajaxsecurflow_srv_net
+      - ajaxsecurflow_net
     restart: always
 
   # Celery Worker
@@ -30,7 +30,7 @@ services:
       - redis
     command: celery -A backend.app.worker.celery_app worker --loglevel=info -B
     networks:
-      - internal_net
+      - ajaxsecurflow_net
     restart: always
 
   # Frontend (Next.js)
@@ -44,7 +44,7 @@ services:
     depends_on:
       - backend
     networks:
-      - external_net
+      - ajaxsecurflow_srv_net
     restart: always
 
   # Database (PostgreSQL)
@@ -56,7 +56,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - internal_net
+      - ajaxsecurflow_net
     restart: always
 
   # Cache & Message Broker (Redis)
@@ -66,13 +66,13 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - internal_net
+      - ajaxsecurflow_net
     restart: always
 
 networks:
-  external_net:
+  ajaxsecurflow_srv_net:
     driver: bridge
-  internal_net:
+  ajaxsecurflow_net:
     driver: bridge
 
 volumes:
