@@ -6,13 +6,13 @@ This guide explains how to migrate between AjaxSecurFlow subscription plans, inc
 
 ## Quick Reference
 
-| Migration Type | Takes Effect | Billing Impact | Feature Access |
-|---------------|--------------|----------------|----------------|
-| **Upgrade** | Immediately | Prorated charge | Instant access to new features |
-| **Downgrade** | End of billing period | No refund | Keep current features until period ends |
-| **Voucher Redemption** | Immediately | Extends subscription | Based on voucher plan |
-| **Trial to Paid** | Immediately | Full charge | No interruption |
-| **Trial Expiration** | At trial end | No charge | Downgrade to Free |
+| Migration Type         | Takes Effect          | Billing Impact       | Feature Access                          |
+| ---------------------- | --------------------- | -------------------- | --------------------------------------- |
+| **Upgrade**            | Immediately           | Prorated charge      | Instant access to new features          |
+| **Downgrade**          | End of billing period | No refund            | Keep current features until period ends |
+| **Voucher Redemption** | Immediately           | Extends subscription | Based on voucher plan                   |
+| **Trial to Paid**      | Immediately           | Full charge          | No interruption                         |
+| **Trial Expiration**   | At trial end          | No charge            | Downgrade to Free                       |
 
 ---
 
@@ -26,7 +26,7 @@ This guide explains how to migrate between AjaxSecurFlow subscription plans, inc
 - ✅ Real-time monitoring
 
 **Billing:**
-- Charged €9.99/month (or €99.99/year)
+- Charged according to the standard Basic rate
 - First charge is immediate
 - Subsequent charges on the same day each month
 
@@ -58,11 +58,11 @@ GET /api/v1/ajax/hubs/{hub_id}/devices
 
 **Billing:**
 - Prorated credit for unused Basic time
-- Charged difference: €10/month (€19.99 - €9.99)
+- Charged the difference between the two plan tiers
 - Example: Upgrade 15 days into Basic billing cycle
-  - Basic unused: €5 credit (15 days × €9.99/30)
-  - Pro charge: €19.99 - €5 = €14.99 immediate charge
-  - Next full charge: €19.99 on renewal date
+  - Basic unused credit is applied
+  - Pro charge: Immediate charge for the calculated difference
+  - Next full charge: Standard Pro rate on renewal date
 
 **Process:**
 1. Go to `/billing`
@@ -93,7 +93,7 @@ POST /api/v1/ajax/hubs/{hub_id}/arm-state
 
 **Billing:**
 - Prorated credit for unused Pro time
-- Charged difference: €30/month (€49.99 - €19.99)
+- Charged the difference between the two plan tiers
 - Same prorating logic as Basic → Pro
 
 **Process:**
@@ -127,7 +127,7 @@ GET /api/v1/ajax/custom-endpoint
 - No immediate refund
 - Premium access continues until current period ends
 - Pro billing starts at next renewal date
-- Saves €30/month going forward
+- Saves the difference in tier pricing going forward
 
 **Process:**
 1. Go to `/billing`
@@ -142,7 +142,7 @@ Today (Feb 1): Request downgrade to Pro
 Current period ends: Feb 28
 Feb 1-28: Still have Premium access
 Feb 28: Automatically downgrade to Pro
-Mar 1: First Pro billing (€19.99)
+Mar 1: First Pro billing (Standard rate)
 ```
 
 **API Impact:**
@@ -168,7 +168,7 @@ GET /api/v1/ajax/custom-endpoint
 - No refund for unused Pro time
 - Pro access until period ends
 - Basic billing starts at renewal
-- Saves €10/month
+- Saves the tier price difference
 
 **Process:**
 Same as Premium → Pro downgrade via Stripe portal
@@ -286,7 +286,7 @@ Result: ERROR - Cannot downgrade via voucher
 Day 0: Sign up → Premium trial starts
 Day 1-13: Full Premium access
 Day 14: Trial expires
-  - If payment method added: Convert to paid Premium (€49.99/month)
+  - If payment method added: Convert to paid Premium
   - If no payment: Downgrade to Free
 ```
 
@@ -303,7 +303,7 @@ Day 14: Trial expires
 ```
 Feb 1: Start trial (14 days Premium)
 Feb 10: Add payment, select Pro plan
-Feb 15: Trial ends, Pro subscription starts (€19.99 charged)
+Feb 15: Trial ends, Pro subscription starts (Standard rate charged)
 ```
 
 ---
@@ -316,10 +316,9 @@ Feb 15: Trial ends, Pro subscription starts (€19.99 charged)
 - Charged on the same day each month
 - Example: Subscribe on Feb 5 → Renews Mar 5, Apr 5, etc.
 
-**Annual Subscriptions:**
 - Charged once per year
-- 2 months free (10 months price for 12 months access)
-- Example: €99.99/year for Basic (vs €119.88 monthly)
+- Discounted rate for annual commitment
+- Example: Annual Basic vs Monthly Basic total
 
 ### Mid-Cycle Changes
 
@@ -409,12 +408,12 @@ POST /api/v1/ajax/hubs/{hub_id}/arm-state
 
 ### Plan-Specific Data Retention
 
-| Plan | Event Logs | Telemetry History | API Access Logs |
-|------|-----------|-------------------|-----------------|
-| **Free** | N/A (no access) | N/A | 7 days |
-| **Basic** | 30 days | 30 days | 30 days |
-| **Pro** | 90 days | 90 days | 90 days |
-| **Premium** | 365 days | 365 days | 365 days |
+| Plan        | Event Logs      | Telemetry History | API Access Logs |
+| ----------- | --------------- | ----------------- | --------------- |
+| **Free**    | N/A (no access) | N/A               | 7 days          |
+| **Basic**   | 30 days         | 30 days           | 30 days         |
+| **Pro**     | 90 days         | 90 days           | 90 days         |
+| **Premium** | 365 days        | 365 days          | 365 days        |
 
 ### What Happens When You Downgrade
 

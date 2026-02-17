@@ -6,12 +6,12 @@ AjaxSecurFlow uses a tiered subscription model. Each endpoint requires a specifi
 
 ## Plan Tiers
 
-| Plan | Monthly Price | Annual Price | Features |
-|------|--------------|--------------|----------|
-| **Free** | €0 | €0 | Read-only access to hubs only |
-| **Basic** | €9.99 | €99.99 | Free + Devices, rooms, groups + Event logs & telemetry |
-| **Pro** | €19.99 | €199.99 | Basic + Send commands (arm/disarm) |
-| **Premium** | €29.99 | €299.99 | Pro + Full API proxy access |
+| Plan        | Features                                               |
+| ----------- | ------------------------------------------------------ |
+| **Free**    | Read-only access to hubs only                          |
+| **Basic**   | Free + Devices, rooms, groups + Event logs & telemetry |
+| **Pro**     | Basic + Send commands (arm/disarm)                     |
+| **Premium** | Pro + Full API proxy access                            |
 
 ## Permission Matrix
 
@@ -19,46 +19,46 @@ AjaxSecurFlow uses a tiered subscription model. Each endpoint requires a specifi
 
 Free tier users can access hub information only:
 
-| Endpoint | Method | Feature | Description |
-|----------|--------|---------|-------------|
-| `/api/v1/ajax/hubs` | GET | `list_hubs` | List all hubs accessible to user |
-| `/api/v1/ajax/hubs/{hub_id}` | GET | `list_hubs` | Get detailed information for specific hub |
+| Endpoint                     | Method | Feature     | Description                               |
+| ---------------------------- | ------ | ----------- | ----------------------------------------- |
+| `/api/v1/ajax/hubs`          | GET    | `list_hubs` | List all hubs accessible to user          |
+| `/api/v1/ajax/hubs/{hub_id}` | GET    | `list_hubs` | Get detailed information for specific hub |
 
 ### Device/Room/Group Endpoints (Basic+)
 
 Requires **Basic** plan or higher:
 
-| Endpoint | Method | Feature | Description |
-|----------|--------|---------|-------------|
-| `/api/v1/ajax/hubs/{hub_id}/devices` | GET | `read_devices` | List all devices in a hub |
-| `/api/v1/ajax/hubs/{hub_id}/devices/{device_id}` | GET | `read_devices` | Get detailed information for specific device |
-| `/api/v1/ajax/hubs/{hub_id}/rooms` | GET | `read_rooms` | List all rooms in a hub |
-| `/api/v1/ajax/hubs/{hub_id}/rooms/{room_id}` | GET | `read_rooms` | Get detailed information for specific room |
-| `/api/v1/ajax/hubs/{hub_id}/groups` | GET | `read_groups` | List all groups in a hub |
+| Endpoint                                         | Method | Feature        | Description                                  |
+| ------------------------------------------------ | ------ | -------------- | -------------------------------------------- |
+| `/api/v1/ajax/hubs/{hub_id}/devices`             | GET    | `read_devices` | List all devices in a hub                    |
+| `/api/v1/ajax/hubs/{hub_id}/devices/{device_id}` | GET    | `read_devices` | Get detailed information for specific device |
+| `/api/v1/ajax/hubs/{hub_id}/rooms`               | GET    | `read_rooms`   | List all rooms in a hub                      |
+| `/api/v1/ajax/hubs/{hub_id}/rooms/{room_id}`     | GET    | `read_rooms`   | Get detailed information for specific room   |
+| `/api/v1/ajax/hubs/{hub_id}/groups`              | GET    | `read_groups`  | List all groups in a hub                     |
 
 ### Monitoring Endpoints (Basic+)
 
 Requires **Basic** plan or higher (in addition to devices/rooms/groups):
 
-| Endpoint | Method | Feature | Description |
-|----------|--------|---------|-------------|
-| `/api/v1/ajax/hubs/{hub_id}/logs` | GET | `read_logs` | Get event logs with pagination |
+| Endpoint                          | Method | Feature     | Description                    |
+| --------------------------------- | ------ | ----------- | ------------------------------ |
+| `/api/v1/ajax/hubs/{hub_id}/logs` | GET    | `read_logs` | Get event logs with pagination |
 
 ### Control Endpoints (Pro+)
 
 Requires **Pro** plan or higher:
 
-| Endpoint | Method | Feature | Description |
-|----------|--------|---------|-------------|
-| `/api/v1/ajax/hubs/{hub_id}/arm-state` | POST | `send_commands` | Set hub arm/disarm state |
+| Endpoint                               | Method | Feature         | Description              |
+| -------------------------------------- | ------ | --------------- | ------------------------ |
+| `/api/v1/ajax/hubs/{hub_id}/arm-state` | POST   | `send_commands` | Set hub arm/disarm state |
 
 ### Advanced Endpoints (Premium Only)
 
 Requires **Premium** plan:
 
-| Endpoint | Method | Feature | Description |
-|----------|--------|---------|-------------|
-| `/api/v1/ajax/*` | ALL | `access_proxy` | Full Ajax API proxy - access any Ajax endpoint |
+| Endpoint         | Method | Feature        | Description                                    |
+| ---------------- | ------ | -------------- | ---------------------------------------------- |
+| `/api/v1/ajax/*` | ALL    | `access_proxy` | Full Ajax API proxy - access any Ajax endpoint |
 
 ## Feature Breakdown by Plan
 
@@ -76,7 +76,7 @@ Requires **Premium** plan:
 
 ---
 
-### Basic Plan (€9.99/month)
+### Basic Plan
 ✅ **Included Features:**
 - All Free features (hubs)
 - `read_devices` - View all devices and their status
@@ -93,7 +93,7 @@ Requires **Premium** plan:
 
 ---
 
-### Pro Plan (€19.99/month)
+### Pro Plan
 ✅ **Included Features:**
 - All Basic features (hubs, devices, rooms, groups, logs, telemetry)
 - `send_commands` - Arm/disarm your system remotely
@@ -105,7 +105,7 @@ Requires **Premium** plan:
 
 ---
 
-### Premium Plan (€29.99/month)
+### Premium Plan
 ✅ **Included Features:**
 - All Pro features (hubs, devices, rooms, groups, logs, telemetry, commands)
 - `access_proxy` - Direct access to entire Ajax API
