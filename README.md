@@ -21,24 +21,39 @@ AjaxSecurFlow is a high-performance, secure API Gateway designed to bridge the g
 - Docker & Docker Compose
 - Ajax Systems Developer Credentials
 
-### 2. Installation
+### 2. Recommended Deployment (Pre-built Images)
+This is the fastest way to get started using our verified images from GitHub Container Registry.
+
 ```bash
-# Clone the repository
-git clone https://github.com/virapa/AjaxSecurFlow.git
-cd AjaxSecurFlow
+# Download the production compose file
+curl -O https://raw.githubusercontent.com/virapa/AjaxSecurFlow/main/docker-compose.ghcr.yml
 
 # Setup environment
+curl -O https://raw.githubusercontent.com/virapa/AjaxSecurFlow/main/.env.example
 cp .env.example .env
-# Edit .env with your Ajax API keys and Database secrets
+# Edit .env with your keys
+
+# Launch using pre-built images
+docker-compose -f docker-compose.ghcr.yml up -d
 ```
 
-### 3. Launch
-```bash
-# Start all services
-docker-compose --env-file .env -f docker/docker-compose.yml up -d --build
+### 3. Build from Source (Alternative)
+Use this if you want to modify the code or contribute to the project.
 
-# Run database migrations
-docker compose -f docker/docker-compose.yml run --rm backend alembic upgrade head
+```bash
+git clone https://github.com/virapa/AjaxSecurFlow.git
+cd AjaxSecurFlow
+cp .env.example .env
+# Edit .env with your keys
+
+# Build and launch locally
+docker-compose up -d --build
+```
+
+### 4. Initialization
+Regardless of the method chosen, run the migrations:
+```bash
+docker compose exec backend alembic upgrade head
 ```
 The API will be available at `http://localhost:8000` and the Dashboard at `http://localhost:3000`.
 
