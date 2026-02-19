@@ -88,11 +88,11 @@ export const es = {
             title: 'Seguridad y',
             titleHighlight: 'Cumplimiento',
             titleSuffix: 'en cada Capa',
-            description: 'Nuestra plataforma está diseñada para cumplir con los estándares más exigentes, asegurando que tus datos de seguridad más sensibles se gestionen con integridad criptográfica.',
+            description: 'Nuestra arquitectura de proxy está diseñada para ofrecer una capa de seguridad adicional sobre los sistemas Ajax, garantizando que el acceso a tu infraestructura esté siempre auditado y protegido.',
             items: [
-                { title: 'Registros de Auditoría Detallados', desc: 'Historial completo y evidente ante manipulaciones de cada acción realizada en tu red de seguridad.' },
-                { title: 'Autenticación JWT', desc: 'Sesión de autenticación segura basada en tokens que garantiza un acceso estrictamente autorizado a tus endpoints.' },
-                { title: 'Cumplimiento GDPR e ISO', desc: 'Marcos de privacidad de datos integrados para mantener los datos de tus clientes gestionados y legalmente conformes.' }
+                { title: 'Auditoría Corporativa Robusta', desc: 'Historial detallado y centralizado de cada acción, comando o consulta de telemetría realizada a través del gateway.' },
+                { title: 'Persistencia de Identidad Ajax', desc: 'Sistema avanzado de Doble Token que permite gestionar sesiones seguras y duraderas sin exponer credenciales críticas.' },
+                { title: 'Aislamiento de Infraestructura', desc: 'Tu hardware permanece invisible en la red pública gracias a nuestra capa de abstracción de seguridad industrial.' }
             ]
         },
         pricing: {
@@ -341,6 +341,44 @@ export const es = {
         Loss: 'Pérdida de Conexión',
         Restored: 'Conexión Restaurada',
         Dureza: 'Coacción Desactivada'
+    },
+    legal: {
+        privacy: {
+            title: 'Política de Privacidad',
+            lastUpdated: 'Última actualización: 19 de Febrero, 2026',
+            introduction: 'En AjaxSecurFlow, la privacidad y la seguridad de tu infraestructura industrial son nuestra máxima prioridad. Esta política detalla cómo gestionamos la información técnica necesaria para operar nuestro gateway y cómo protegemos la integridad de tus datos de seguridad.',
+            sections: [
+                { title: '1. Tratamiento de Datos de Identidad y Dual Token', content: 'Nuestra arquitectura está diseñada para minimizar el contacto con tus credenciales. Utilizamos un sistema de Dual Token cifrado: el token de acceso oficial de Ajax nunca se almacena en texto plano en nuestra base de datos. Solo almacenamos los tokens de sesión necesarios para mantener la persistencia funcional, garantizando que el acceso a la nube de Ajax sea siempre legítimo y seguro.' },
+                { title: '2. Telemetría Transient vs. Auditoría Persistente', content: 'Diferenciamos entre dos tipos de datos: la telemetría en tiempo real (estado de sensores, temperatura, señal) es transitoria y solo se procesa para su visualización inmediata. Sin embargo, las acciones críticas y los cambios de estado (armado, desarmado, alarmas) se registran en nuestra infraestructura de Auditoría Corporativa para proporcionar un rastro de cumplimiento inmutable para tu organización.' },
+                { title: '3. Integraciones con Terceros (Ajax y Stripe)', content: 'AjaxSecurFlow interactúa estrictamente con dos entidades externas: Ajax Systems Ltd, para la sincronización de hardware mediante su API oficial, y Stripe Inc, para la gestión segura de suscripciones y facturación. Tus datos financieros nunca tocan nuestros servidores; son procesados íntegramente por la infraestructura de Stripe, certificada con el nivel más alto de seguridad bancaria.' },
+                { title: '4. Almacenamiento y Jurisdicción', content: 'Toda nuestra infraestructura tecnológica está desplegada en centros de datos ubicados en el Espacio Económico Europeo (EEE), cumpliendo rigurosamente con el Reglamento General de Protección de Datos (GDPR). Implementamos aislamiento de datos a nivel de base de datos para asegurar que la información de una organización sea técnica e lógicamente inaccesible para otras.' },
+                { title: '5. Tus Derechos y Control', content: 'Como usuario de AjaxSecurFlow, mantienes el control total sobre tus datos. Puedes solicitar la exportación de tus logs de auditoría en cualquier momento (según tu plan) o la eliminación total de tu historial y tokens de persistencia. La desconexión de tu cuenta Ajax del gateway borra de forma irreversible todos los secretos criptográficos asociados a tu sesión.' }
+            ]
+        },
+        terms: {
+            title: 'Términos de Servicio',
+            lastUpdated: 'Última actualización: 19 de Febrero, 2026',
+            sections: [
+                { title: '1. Alcance y Naturaleza del Servicio', content: 'AjaxSecurFlow proporciona una plataforma SaaS que actúa como gateway y proxy industrial para sistemas de seguridad Ajax. Este servicio es independiente y no está afiliado, patrocinado ni aprobado por Ajax Systems Ltd. El uso de este gateway requiere un equipo Ajax compatible y una cuenta activa en su ecosistema oficial.' },
+                { title: '2. Modelos de Suscripción y Facturación', content: 'El acceso a las funcionalidades avanzadas (Telemetría, Comandos, Proxy API) se rige por planes de suscripción. Las suscripciones se renuevan automáticamente al final de cada periodo de facturación a través de Stripe. El usuario puede cancelar la renovación en cualquier momento desde el panel de facturación, manteniendo el acceso hasta el final del ciclo pagado.' },
+                { title: '3. Uso Profesional y Prohibiciones', content: 'El servicio está diseñado para uso profesional e industrial. Queda terminantemente prohibido el uso del gateway para realizar ataques de denegación de servicio (DoS), ingeniería inversa del proxy, o cualquier actividad que pueda degradar la estabilidad de la plataforma para otros usuarios. El incumplimiento de estas normas resultará en la suspensión inmediata de la cuenta sin derecho a reembolso.' },
+                { title: '4. Compromiso de Disponibilidad (SLA)', content: 'Nos esforzamos por mantener una disponibilidad (uptime) del 99.9%. Las ventanas de mantenimiento programado se comunicarán con antelación y se realizarán preferentemente en horarios de baja actividad para minimizar el impacto. AjaxSecurFlow no se responsabiliza de interrupciones causadas por fallos en los servidores de Ajax Systems o problemas de conectividad local del hardware del usuario.' },
+                { title: '5. Propiedad Intelectual y Limitaciones', content: 'Todo el software, diseños y algoritmos propios del gateway AjaxSecurFlow son propiedad exclusiva de sus desarrolladores. El usuario es responsable de asegurar que el uso de este gateway cumple con las políticas locales de seguridad privada y normativas vigentes en su jurisdicción geográfica.' },
+                { title: '6. Modificaciones de las Condiciones', content: 'Nos reservamos el derecho de actualizar estos términos para reflejar cambios tecnológicos o regulatorios. El uso continuado del servicio tras un cambio en los términos implica la aceptación de las nuevas condiciones.' }
+            ]
+        },
+        security: {
+            title: 'Divulgación de Seguridad',
+            lastUpdated: 'Última actualización: 19 de Febrero, 2026',
+            introduction: 'Nuestra arquitectura se basa en el principio de "Seguridad por Diseño". Implementamos múltiples capas de protección para asegurar que cada bit que pasa por el proxy sea gestionado con integridad.',
+            contact: 'Si crees haber encontrado una vulnerabilidad, por favor contáctanos de forma responsable en: security@ajaxsecurflow.com',
+            measures: [
+                'Arquitectura de sesiones aisladas (Session Isolation).',
+                'Validación estricta de esquemas en todas las peticiones proxy.',
+                'Rotación automática de claves de infraestructura cada 24 horas.',
+                'Protección de fuerza bruta y limitación de tasa (Rate Limiting) industrial.'
+            ]
+        }
     }
 }
 

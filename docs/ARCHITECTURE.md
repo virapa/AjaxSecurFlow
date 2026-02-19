@@ -37,7 +37,7 @@ The project is structured into vertical modules (`backend/app/modules`) to ensur
 - **Security**: Auditing and Request Shielding.
 
 ### 2. Identity Synchronization
-Instead of maintaining a separate user database for credentials, AjaxSecurFlow validates credentials against Ajax Systems on first login and auto-provisions the local user profile. This ensures a "Single Sign-On" experience for users familiar with the official Ajax app.
+Instead of maintaining a separate user database for credentials, AjaxSecurFlow validates credentials against Ajax Systems on first login and auto-provisions the local user profile. This ensures a "Single Sign-On" experience: the same credentials are valid and operational both in this gateway and in the official **Ajax Security System** app.
 
 ### 3. Shared Global Rate Limiter
 To prevent being banned by the official Ajax API, all requests from all tenants are throttled through a shared Redis counter. If the limit (100 req/min) is reached, requests are queued in an asynchronous buffer rather than simply dropped.

@@ -32,4 +32,5 @@ current_logs.txt
 ajax_client_container.py
 diag*
 debug*
+!debugger.md
 *.log

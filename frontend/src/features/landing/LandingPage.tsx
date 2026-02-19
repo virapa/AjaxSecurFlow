@@ -111,10 +111,10 @@ export const LandingPage: React.FC = () => {
             <section id="security" className="max-w-7xl mx-auto py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent via-cyan-600/5 to-transparent">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="h-48 rounded-2xl bg-gradient-to-br from-cyan-600/20 to-transparent border border-white/5 flex items-center justify-center text-4xl">📁</div>
-                        <div className="h-64 rounded-2xl bg-gradient-to-tr from-white/5 to-transparent border border-white/5 mt-8 flex items-center justify-center text-4xl">🔒</div>
-                        <div className="h-64 rounded-2xl bg-gradient-to-bl from-white/5 to-transparent border border-white/5 -mt-8 flex items-center justify-center text-4xl">🌍</div>
-                        <div className="h-48 rounded-2xl bg-gradient-to-tl from-cyan-600/20 to-transparent border border-white/5 flex items-center justify-center text-4xl">🛡️</div>
+                        <div className="h-48 rounded-2xl bg-gradient-to-br from-cyan-600/20 to-transparent border border-white/5 flex items-center justify-center text-4xl" title="Auditoría">📜</div>
+                        <div className="h-64 rounded-2xl bg-gradient-to-tr from-white/5 to-transparent border border-white/5 mt-8 flex items-center justify-center text-4xl" title="Identidad">🔐</div>
+                        <div className="h-64 rounded-2xl bg-gradient-to-bl from-white/5 to-transparent border border-white/5 -mt-8 flex items-center justify-center text-4xl" title="Infraestructura">🏭</div>
+                        <div className="h-48 rounded-2xl bg-gradient-to-tl from-cyan-600/20 to-transparent border border-white/5 flex items-center justify-center text-4xl" title="Seguridad">🛡️</div>
                     </div>
 
                     <div>
@@ -213,9 +213,16 @@ export const LandingPage: React.FC = () => {
                                 {t.landing.footer.resources.map((item, idx) => (
                                     <li key={idx}>
                                         <Link
-                                            href={item === 'Documentación API' ? 'https://api.ajaxsecurflow.com/docs' : '#'}
-                                            target={item === 'Documentación API' ? '_blank' : undefined}
-                                            rel={item === 'Documentación API' ? 'noopener noreferrer' : undefined}
+                                            href={
+                                                item === t.landing.footer.resources[0] ? 'https://api.ajaxsecurflow.com/docs' :
+                                                    item === t.landing.footer.resources[1] ? 'https://uptime.domoopen.es/status/ajaxsecurflow' : '/support'
+                                            }
+                                            target={
+                                                (item === t.landing.footer.resources[0] || item === t.landing.footer.resources[1])
+                                                    ? '_blank'
+                                                    : undefined
+                                            }
+                                            rel="noopener noreferrer"
                                         >
                                             {item}
                                         </Link>
@@ -226,9 +233,14 @@ export const LandingPage: React.FC = () => {
                         <div>
                             <h6 className="text-xs font-bold uppercase tracking-widest text-white mb-4">{t.common.legal}</h6>
                             <ul className="text-xs text-gray-500 space-y-2">
-                                {t.landing.footer.legal.map((item, idx) => (
-                                    <li key={idx}><Link href="#">{item}</Link></li>
-                                ))}
+                                {t.landing.footer.legal.map((item, idx) => {
+                                    const hrefs = ['/privacy', '/terms', '/security-disclosure'];
+                                    return (
+                                        <li key={idx}>
+                                            <Link href={hrefs[idx] || '#'}>{item}</Link>
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         </div>
                     </div>
