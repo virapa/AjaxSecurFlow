@@ -8,6 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  # lowercase image name to avoided issues with case sensitivity in Docker
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
@@ -21,6 +22,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Lowercase IMAGE_NAME
+        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -33,6 +37,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          flavor: |
+            latest=true
 
       - name: Build and push Backend image
         uses: docker/build-push-action@v5
@@ -48,6 +54,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/worker
+          flavor: |
+            latest=true
 
       - name: Build and push Worker image
         uses: docker/build-push-action@v5
@@ -65,6 +73,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend
+          flavor: |
+            latest=true
 
       - name: Build and push Frontend image
         uses: docker/build-push-action@v5
