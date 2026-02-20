@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AjaxSecurFlow",
   description: "Advanced Industrial Security Proxy for Ajax Systems",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
