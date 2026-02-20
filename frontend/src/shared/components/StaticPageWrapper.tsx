@@ -90,7 +90,7 @@ export const StaticPageWrapper: React.FC<StaticPageWrapperProps> = ({ children, 
                                         <Link
                                             href={
                                                 item === t.landing.footer.resources[0] ? 'https://api.ajaxsecurflow.com/docs' :
-                                                    item === t.landing.footer.resources[1] ? 'https://uptime.domoopen.es/status/ajaxsecurflow' : '#'
+                                                    item === t.landing.footer.resources[1] ? 'https://uptime.domoopen.es/status/ajaxsecurflow' : '/support'
                                             }
                                             target={
                                                 (item === t.landing.footer.resources[0] || item === t.landing.footer.resources[1])

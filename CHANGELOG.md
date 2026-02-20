@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-20
+
+### Added
+- **Legal Infrastructure**: Implemented dedicated pages for Privacy Policy, Terms of Service, and Security Disclosure.
+- **Shared UI Wrapper**: Created `StaticPageWrapper` for design consistency across legal and public content.
+- **Public Support Channel**: Added a landing-accessible support page with industrial category filtering.
+- **Visual Branding**: Configured official browser favicon and updated global page metadata.
+
+### Changed
+- **Content Realignment**: Updated Security & Compliance section on the landing page with technical details about Auditing, Identity Persistence, and Infrastructure Isolation.
+- **UI Cleanup**: Removed non-functional elements including the "View Demo" button and legacy billing portal sections.
+- **Footer Navigation**: Fully mapped footer links to new internal pages and external status/docs URLs.
+- **Price Consistency**: Synchronized pricing displays between i18n files and the upgrade prompts.
+
+### Fixed
+- **API Documentation**: Corrected external links to the production API documentation.
+- **Pricing Logic**: Fixed button routing on plan cards to ensure all landing page CTA's point to the registration flow.
+- **OpenAPI Schema**: Removed deprecated features and mentions from the auto-generated documentation.
+
 ## [1.1.0] - 2026-02-17
 
 ### Added
