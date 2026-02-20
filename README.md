@@ -4,7 +4,7 @@
 
 🌐 **Live Environments:**
 - **Frontend / Dashboard:** [https://www.ajaxsecurflow.com](https://www.ajaxsecurflow.com)
-- **API Server:** [https://api.ajaxsecurflow.com](https://api.ajaxsecurflow.com)
+- **API Server:** [https://api.ajaxsecurflow.com/docs](https://api.ajaxsecurflow.com)
 
 AjaxSecurFlow is a high-performance, secure API Gateway designed to bridge the gap between end-users and the official Ajax Systems API. It provides a robust SaaS management layer with tiered subscriptions, global rate limiting, and proactive security shielding.
 
@@ -21,7 +21,10 @@ AjaxSecurFlow is a high-performance, secure API Gateway designed to bridge the g
 - Docker & Docker Compose
 - Ajax Systems Developer Credentials
 
-### 2. Recommended Deployment (Pre-built Images)
+### 2. Deployment
+Choose **one** of the following methods:
+
+#### 2.1 Recommended (Pre-built Images)
 This is the fastest way to get started using our verified images from GitHub Container Registry.
 
 ```bash
@@ -37,7 +40,7 @@ cp .env.example .env
 docker-compose -f docker-compose.ghcr.yml up -d
 ```
 
-### 3. Build from Source (Alternative)
+#### 2.2 Alternative (Build from Source)
 Use this if you want to modify the code or contribute to the project.
 
 ```bash
@@ -50,11 +53,6 @@ cp .env.example .env
 docker-compose up -d --build
 ```
 
-### 4. Initialization
-Regardless of the method chosen, run the migrations:
-```bash
-docker compose exec backend alembic upgrade head
-```
 The API will be available at `http://localhost:8000` and the Dashboard at `http://localhost:3000`.
 
 ---
