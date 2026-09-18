@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - Unreleased
+
+### Added
+- **Integration Tokens**: `POST/GET/DELETE /api/v1/auth/api-tokens` issue revocable `asf_` tokens for external clients (Home Assistant). Validated by hash, not bound to IP/User-Agent. Basic plan or higher, max 10 active per user.
+- **Dashboard → Integraciones**: create, copy once, and revoke integration tokens from the profile page.
+- **Device sensor state**: device list and detail now expose `reed_closed`, `motion_detected`, `glass_break_detected`, `leak_detected`, `smoke_alarm_detected`, `humidity`, `co2`, `malfunctions`; hub detail exposes `groups_enabled`.
+- **Docs**: SSE envelope contract for integrations in `backend/docs/INTEGRATION_EXAMPLES.md`.
+
 ## [1.2.0] - 2026-02-20
 
 ### Added

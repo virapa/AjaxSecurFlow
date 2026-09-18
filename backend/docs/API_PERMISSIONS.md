@@ -36,6 +36,18 @@ Requires **Basic** plan or higher:
 | `/api/v1/ajax/hubs/{hub_id}/rooms/{room_id}`     | GET    | `read_rooms`   | Get detailed information for specific room   |
 | `/api/v1/ajax/hubs/{hub_id}/groups`              | GET    | `read_groups`  | List all groups in a hub                     |
 
+### Integration Tokens (Basic+)
+
+Long-lived tokens for external clients such as the Home Assistant integration. The token inherits the plan of its owner.
+
+| Endpoint                          | Method | Feature        | Description                                        |
+| --------------------------------- | ------ | -------------- | -------------------------------------------------- |
+| `/api/v1/auth/api-tokens`         | POST   | `read_devices` | Create a token (raw value returned once). Max 10   |
+| `/api/v1/auth/api-tokens`         | GET    | `read_devices` | List active tokens (prefix only)                   |
+| `/api/v1/auth/api-tokens/{id}`    | DELETE | `read_devices` | Revoke a token                                     |
+
+Use the token as `Authorization: Bearer asf_...`. Unlike session JWTs, integration tokens are not bound to IP or User-Agent and never expire unless `expires_in_days` was set or the token is revoked.
+
 ### Monitoring Endpoints (Basic+)
 
 Requires **Basic** plan or higher (in addition to devices/rooms/groups):
