@@ -55,6 +55,7 @@ class HubDetail(HubBase):
     online: Optional[bool] = None
     state: Optional[str] = None
     hub_subtype: Optional[str] = Field(None, validation_alias="hubSubtype")
+    groups_enabled: Optional[bool] = Field(None, validation_alias=AliasChoices("groups_enabled", "groupsEnabled"), serialization_alias="groups_enabled")
     timeZone: Optional[str] = None
     color: Optional[str] = None
     externallyPowered: Optional[bool] = None
@@ -76,27 +77,45 @@ class DeviceBase(BaseModel):
     room_id: Optional[str] = Field(None, validation_alias=AliasChoices("roomId", "room_id"), serialization_alias="roomId")
     group_id: Optional[str] = Field(None, validation_alias=AliasChoices("groupId", "group_id"), serialization_alias="groupId")
 
-class DeviceListItem(DeviceBase):
+class DeviceTelemetry(BaseModel):
+    """
+    Telemetry and sensor state shared by list and detail views.
+    Ajax returns these inside `properties`; AjaxClient flattens them for the list (enrich=true).
+    All optional: a field is None when the device type does not report it.
+    """
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    battery_level: Optional[int] = Field(None, validation_alias=AliasChoices("battery_level", "batteryChargeLevelPercentage"), serialization_alias="battery_level")
+    signal_level: Optional[str] = Field(None, validation_alias=AliasChoices("signal_level", "signalLevel"), serialization_alias="signal_level")
+    temperature: Optional[float] = Field(None, serialization_alias="temperature")
+    humidity: Optional[float] = Field(None, serialization_alias="humidity")
+    co2: Optional[float] = Field(None, serialization_alias="co2")
+    tampered: Optional[bool] = Field(None, serialization_alias="tampered")
+    state: Optional[str] = Field(None, serialization_alias="state")
+    malfunctions: List[str] = Field(default_factory=list, serialization_alias="malfunctions")
+    # Sensor flags
+    reed_closed: Optional[bool] = Field(None, validation_alias=AliasChoices("reed_closed", "reedClosed"), serialization_alias="reed_closed")
+    extra_contact_aware: Optional[bool] = Field(None, validation_alias=AliasChoices("extra_contact_aware", "extraContactAware"), serialization_alias="extra_contact_aware")
+    extra_contact_closed: Optional[bool] = Field(None, validation_alias=AliasChoices("extra_contact_closed", "extraContactClosed"), serialization_alias="extra_contact_closed")
+    motion_detected: Optional[bool] = Field(None, validation_alias=AliasChoices("motion_detected", "motionDetected"), serialization_alias="motion_detected")
+    glass_break_detected: Optional[bool] = Field(None, validation_alias=AliasChoices("glass_break_detected", "glassBreakDetected"), serialization_alias="glass_break_detected")
+    leak_detected: Optional[bool] = Field(None, validation_alias=AliasChoices("leak_detected", "leakDetected"), serialization_alias="leak_detected")
+    smoke_alarm_detected: Optional[bool] = Field(None, validation_alias=AliasChoices("smoke_alarm_detected", "smokeAlarmDetected"), serialization_alias="smoke_alarm_detected")
+
+class DeviceListItem(DeviceBase, DeviceTelemetry):
     online: Optional[bool] = Field(None, validation_alias=AliasChoices("online", "isOnline"), serialization_alias="online")
 
-class DeviceDetail(DeviceBase):
+class DeviceDetail(DeviceBase, DeviceTelemetry):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
     online: Optional[bool] = Field(True, serialization_alias="online")
-    state: Optional[str] = Field(None, serialization_alias="state")
     color: Optional[str] = Field(None, serialization_alias="color")
-    battery_level: Optional[int] = Field(None, validation_alias=AliasChoices("battery_level", "batteryChargeLevelPercentage"), serialization_alias="battery_level")
     firmware_version: Optional[str] = Field(None, validation_alias=AliasChoices("firmware_version", "firmwareVersion"), serialization_alias="firmware_version")
-    temperature: Optional[float] = Field(None, serialization_alias="temperature")
-    signal_level: Optional[str] = Field(None, validation_alias=AliasChoices("signal_level", "signalLevel"), serialization_alias="signal_level")
-    tampered: Optional[bool] = Field(None, serialization_alias="tampered")
     night_mode_arm: Optional[bool] = Field(None, validation_alias=AliasChoices("night_mode_arm", "nightModeArm"), serialization_alias="night_mode_arm")
-    
+
     arm_delay: Optional[int] = Field(None, validation_alias=AliasChoices("arm_delay", "armDelaySeconds"))
     alarm_delay: Optional[int] = Field(None, validation_alias=AliasChoices("alarm_delay", "alarmDelaySeconds"))
-    
+
     cms_index: Optional[int] = Field(None, validation_alias=AliasChoices("cms_index", "cmsDeviceIndex"))
     bypassState: Optional[List[str]] = None
-    malfunctions: List[str] = []
 
 # --- Groups ---
 class GroupBase(BaseModel):
