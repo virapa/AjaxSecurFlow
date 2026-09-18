@@ -47,3 +47,16 @@ async def test_jwt_path_untouched_for_non_prefixed_tokens(async_client: AsyncCli
         response = await async_client.get(PROBE, headers={"Authorization": "Bearer not.a.jwt"})
     assert response.status_code == 401
     m.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_invalid_api_token_audit_is_throttled(async_client: AsyncClient, mock_db, mock_redis):
+    # Redis NX key already exists for this IP -> audit write must be skipped
+    mock_redis.set.return_value = None
+    with patch("backend.app.modules.auth.service.api_token_service.authenticate_api_token",
+               AsyncMock(return_value=None)), \
+         patch("backend.app.modules.auth.service.security_service.log_request_action", AsyncMock()) as audit:
+        response = await async_client.get(PROBE, headers={"Authorization": "Bearer asf_revoked"})
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid credentials"
+    audit.assert_not_awaited()

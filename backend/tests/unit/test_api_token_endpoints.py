@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient
 
-from backend.app.modules.auth.models import ApiToken
+from backend.app.modules.auth.models import ApiToken, User
 from backend.app.modules.auth.api_token_service import TokenLimitExceeded
 
 
@@ -73,3 +73,59 @@ async def test_revoke_unknown_token_404(async_client: AsyncClient, mock_user_sub
     with patch("backend.app.modules.auth.api_token_service.revoke_api_token", AsyncMock(return_value=False)):
         response = await async_client.delete("/api/v1/auth/api-tokens/99")
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_create_token_rejects_whitespace_name(async_client: AsyncClient, mock_user_subscription):
+    response = await async_client.post("/api/v1/auth/api-tokens", json={"name": "   "})
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_list_tokens_forbidden_for_free_plan(async_client: AsyncClient, mock_user_no_subscription):
+    response = await async_client.get("/api/v1/auth/api-tokens")
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_revoke_forbidden_for_free_plan(async_client: AsyncClient, mock_user_no_subscription):
+    response = await async_client.delete("/api/v1/auth/api-tokens/7")
+    assert response.status_code == 403
+
+
+# --- Integration tokens must not manage tokens (real get_current_user, no user fixture) ---
+
+def _api_token_user():
+    return User(id=1, email="ha@example.com", hashed_password="x", is_active=True,
+                subscription_plan="pro", subscription_status="active")
+
+
+_AUTH_API_TOKEN = "backend.app.modules.auth.service.api_token_service.authenticate_api_token"
+
+
+@pytest.mark.asyncio
+async def test_api_token_cannot_create_tokens(async_client: AsyncClient):
+    with patch(_AUTH_API_TOKEN, AsyncMock(return_value=_api_token_user())):
+        response = await async_client.post(
+            "/api/v1/auth/api-tokens", json={"name": "HA"},
+            headers={"Authorization": "Bearer asf_valid"},
+        )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_api_token_cannot_list_tokens(async_client: AsyncClient):
+    with patch(_AUTH_API_TOKEN, AsyncMock(return_value=_api_token_user())):
+        response = await async_client.get(
+            "/api/v1/auth/api-tokens", headers={"Authorization": "Bearer asf_valid"},
+        )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_api_token_cannot_revoke_tokens(async_client: AsyncClient):
+    with patch(_AUTH_API_TOKEN, AsyncMock(return_value=_api_token_user())):
+        response = await async_client.delete(
+            "/api/v1/auth/api-tokens/7", headers={"Authorization": "Bearer asf_valid"},
+        )
+    assert response.status_code == 403

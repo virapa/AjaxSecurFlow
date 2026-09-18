@@ -41,7 +41,7 @@ def _require_plan(user: auth_service.User):
 async def create_token(
     body: ApiTokenCreate,
     request: Request,
-    current_user: auth_service.User = Depends(auth_service.get_current_user),
+    current_user: auth_service.User = Depends(auth_service.get_current_session_user),
     db: AsyncSession = Depends(get_db),
 ):
     _require_plan(current_user)
@@ -74,7 +74,7 @@ async def create_token(
     description="List active (non-revoked) integration tokens. Raw tokens are never returned.",
 )
 async def list_tokens(
-    current_user: auth_service.User = Depends(auth_service.get_current_user),
+    current_user: auth_service.User = Depends(auth_service.get_current_session_user),
     db: AsyncSession = Depends(get_db),
 ):
     _require_plan(current_user)
@@ -85,12 +85,12 @@ async def list_tokens(
     "/{token_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Revoke an integration token",
-    description="Revoke a token. Any client using it gets 401 immediately.",
+    description="Revoke a token. Any client using it is rejected on its next request. An already-open SSE stream ends when it reconnects.",
 )
 async def revoke_token(
     token_id: int,
     request: Request,
-    current_user: auth_service.User = Depends(auth_service.get_current_user),
+    current_user: auth_service.User = Depends(auth_service.get_current_session_user),
     db: AsyncSession = Depends(get_db),
 ):
     _require_plan(current_user)

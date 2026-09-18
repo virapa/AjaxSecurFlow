@@ -120,3 +120,13 @@ async def test_authenticate_rejects_inactive_user():
     db = _db_returning(scalar_one_or_none=token)
     db.get = AsyncMock(return_value=user)
     assert await svc.authenticate_api_token(db, "asf_whatever") is None
+
+
+@pytest.mark.asyncio
+async def test_authenticate_survives_last_used_commit_failure():
+    user = User(id=1, email="u@x.com", hashed_password="x", is_active=True)
+    token = ApiToken(id=5, user_id=1, name="HA", token_hash="h", prefix="asf_12345678")
+    db = _db_returning(scalar_one_or_none=token)
+    db.get = AsyncMock(return_value=user)
+    db.commit = AsyncMock(side_effect=RuntimeError("db down"))
+    assert await svc.authenticate_api_token(db, "asf_whatever") is user

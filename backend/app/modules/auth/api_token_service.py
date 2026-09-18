@@ -3,14 +3,17 @@ Long-lived integration tokens (Home Assistant and other external clients).
 Tokens are opaque strings 'asf_<random>' validated by SHA-256 hash in the database.
 """
 import hashlib
+import logging
 import secrets
 from datetime import datetime as dt_datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.modules.auth.models import ApiToken, User
+
+logger = logging.getLogger(__name__)
 
 TOKEN_PREFIX = "asf_"
 PREFIX_LENGTH = 12
@@ -30,11 +33,17 @@ def hash_token(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
 
+def _not_expired(now: dt_datetime):
+    return or_(ApiToken.expires_at.is_(None), ApiToken.expires_at > now)
+
+
 async def count_active_tokens(db: AsyncSession, user_id: int) -> int:
+    now = dt_datetime.now(timezone.utc)
     result = await db.execute(
         select(func.count(ApiToken.id)).where(
             ApiToken.user_id == user_id,
-            ApiToken.revoked_at.is_(None)
+            ApiToken.revoked_at.is_(None),
+            _not_expired(now),
         )
     )
     return int(result.scalar() or 0)
@@ -65,9 +74,10 @@ async def create_api_token(
 
 
 async def list_api_tokens(db: AsyncSession, user_id: int) -> List[ApiToken]:
+    now = dt_datetime.now(timezone.utc)
     result = await db.execute(
         select(ApiToken)
-        .where(ApiToken.user_id == user_id, ApiToken.revoked_at.is_(None))
+        .where(ApiToken.user_id == user_id, ApiToken.revoked_at.is_(None), _not_expired(now))
         .order_by(ApiToken.created_at.desc())
     )
     return list(result.scalars().all())
@@ -113,7 +123,11 @@ async def authenticate_api_token(db: AsyncSession, raw_token: str) -> Optional[U
         return None
 
     if token.last_used_at is None or (now - token.last_used_at).total_seconds() > LAST_USED_THROTTLE_SECONDS:
-        token.last_used_at = now
-        await db.commit()
+        # Best effort: a failed bookkeeping write must not reject a valid token.
+        try:
+            token.last_used_at = now
+            await db.commit()
+        except Exception as exc:
+            logger.debug("Could not update last_used_at for token %s: %s", token.id, exc)
 
     return user

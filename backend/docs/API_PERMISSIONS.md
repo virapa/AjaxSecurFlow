@@ -46,7 +46,7 @@ Long-lived tokens for external clients such as the Home Assistant integration. T
 | `/api/v1/auth/api-tokens`         | GET    | `read_devices` | List active tokens (prefix only)                   |
 | `/api/v1/auth/api-tokens/{id}`    | DELETE | `read_devices` | Revoke a token                                     |
 
-Use the token as `Authorization: Bearer asf_...`. Unlike session JWTs, integration tokens are not bound to IP or User-Agent and never expire unless `expires_in_days` was set or the token is revoked.
+Use the token as `Authorization: Bearer asf_...`. Unlike session JWTs, integration tokens are not bound to IP or User-Agent and never expire unless `expires_in_days` was set or the token is revoked. Revoking a token rejects the client on its next request; an already-open SSE stream ends when it reconnects. Integration tokens cannot create, list or revoke tokens (403); those endpoints require an interactive session.
 
 ### Monitoring Endpoints (Basic+)
 

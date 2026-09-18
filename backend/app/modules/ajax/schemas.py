@@ -53,7 +53,7 @@ class HubBase(BaseModel):
 
 class HubDetail(HubBase):
     online: Optional[bool] = None
-    state: Optional[str] = None
+    state: Optional[str] = Field(None, description="DISARMED | ARMED | NIGHT_MODE | ARMED_NIGHT_MODE_ON/OFF | DISARMED_NIGHT_MODE_ON/OFF | PARTIALLY_ARMED_NIGHT_MODE_ON/OFF")
     hub_subtype: Optional[str] = Field(None, validation_alias="hubSubtype")
     groups_enabled: Optional[bool] = Field(None, validation_alias=AliasChoices("groups_enabled", "groupsEnabled"), serialization_alias="groups_enabled")
     timeZone: Optional[str] = None

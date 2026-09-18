@@ -88,12 +88,21 @@ async def get_current_user(
     if token.startswith(api_token_service.TOKEN_PREFIX):
         api_user = await api_token_service.authenticate_api_token(db, token)
         if api_user is None:
-            await security_service.log_request_action(
-                db=db, request=request, user_id=None,
-                action="API_TOKEN_INVALID", status_code=401, severity="WARNING",
-                payload={"prefix": token[:api_token_service.PREFIX_LENGTH]}
+            # Throttle audit writes per IP so a brute-force attempt cannot flood audit_logs.
+            client_ip = get_client_ip(request)
+            should_audit = await redis_client.set(
+                f"api_token_invalid_audit:{client_ip}", "1", ex=60, nx=True
             )
+            if should_audit:
+                await security_service.log_request_action(
+                    db=db, request=request, user_id=None,
+                    action="API_TOKEN_INVALID", status_code=401, severity="WARNING",
+                    payload={"prefix": token[:api_token_service.PREFIX_LENGTH]}
+                )
+            else:
+                logger.warning("Invalid integration token from %s (audit throttled)", client_ip)
             raise HTTPException(status_code=401, detail="Invalid credentials")
+        request.state.auth_method = "api_token"
         return api_user
 
     try:
@@ -151,7 +160,23 @@ async def get_current_user(
              notification_type="warning"
          )
 
+    request.state.auth_method = "jwt"
     return user
+
+async def get_current_session_user(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Like get_current_user, but rejects integration (asf_) tokens.
+    Use it for account-management endpoints that must require an interactive session.
+    """
+    if getattr(request.state, "auth_method", None) == "api_token":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This action requires an interactive session, not an integration token.",
+        )
+    return current_user
 
 async def check_admin(
     request: Request,
