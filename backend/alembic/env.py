@@ -7,10 +7,11 @@ from alembic import context
 from backend.app.core.config import settings
 from backend.app.shared.infrastructure.database.models import Base
 # Import all models to ensure they are registered with Base.metadata for autogenerate
-from backend.app.modules.auth.models import User
+from backend.app.modules.auth.models import User, ApiToken
 from backend.app.modules.billing.models import ProcessedStripeEvent, Voucher
 from backend.app.modules.security.models import AuditLog
 from backend.app.modules.notifications.models import Notification
+from backend.app.modules.ajax.models import AjaxSQSEvent, AjaxHubState, UserHub
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
