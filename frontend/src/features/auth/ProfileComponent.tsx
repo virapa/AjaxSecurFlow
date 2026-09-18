@@ -170,7 +170,7 @@ export const ProfileComponent: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <ApiTokensSection plan={user?.subscription_plan} />
+                    <ApiTokensSection plan={user?.subscription_plan} active={user?.subscription_active} />
                 </div>
             </main>
         </div>

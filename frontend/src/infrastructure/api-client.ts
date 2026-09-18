@@ -67,8 +67,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
                 // If JSON parsing fails, use the default message
             }
 
-            const error = new Error(errorMessage);
-            (error as any).status = response.status;
+            const error = new Error(errorMessage) as Error & { status?: number };
+            error.status = response.status;
             throw error;
         }
 

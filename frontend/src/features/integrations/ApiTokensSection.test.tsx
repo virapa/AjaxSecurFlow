@@ -18,7 +18,7 @@ describe('ApiTokensSection (Local Scope: Integrations)', () => {
     })
 
     it('lists active tokens with prefix, never the raw token', async () => {
-        render(<ApiTokensSection plan="pro" />)
+        render(<ApiTokensSection plan="pro" active />)
         await waitFor(() => expect(screen.getByText('HA Casa')).toBeInTheDocument())
         expect(screen.getByText('asf_abcdefgh')).toBeInTheDocument()
         expect(screen.getByText(i18n.never)).toBeInTheDocument()
@@ -26,7 +26,7 @@ describe('ApiTokensSection (Local Scope: Integrations)', () => {
 
     it('creates a token and shows the raw value once', async () => {
         vi.mocked(apiTokenService.create).mockResolvedValue({ ...existing, id: 2, name: 'Nuevo', token: 'asf_abcdefghRAWVALUE' })
-        render(<ApiTokensSection plan="pro" />)
+        render(<ApiTokensSection plan="pro" active />)
         await waitFor(() => expect(apiTokenService.list).toHaveBeenCalled())
 
         fireEvent.click(screen.getByText(i18n.createButton))
@@ -44,7 +44,7 @@ describe('ApiTokensSection (Local Scope: Integrations)', () => {
 
     it('revokes after confirmation', async () => {
         vi.mocked(apiTokenService.revoke).mockResolvedValue(undefined)
-        render(<ApiTokensSection plan="pro" />)
+        render(<ApiTokensSection plan="pro" active />)
         await waitFor(() => expect(screen.getByText('HA Casa')).toBeInTheDocument())
 
         fireEvent.click(screen.getByText(i18n.revoke))
@@ -56,19 +56,40 @@ describe('ApiTokensSection (Local Scope: Integrations)', () => {
     })
 
     it('disables creation for the free plan', async () => {
-        render(<ApiTokensSection plan="free" />)
+        render(<ApiTokensSection plan="free" active />)
+        expect(screen.getByText(i18n.planRequired)).toBeInTheDocument()
+        expect(screen.getByText(i18n.createButton)).toBeDisabled()
+        expect(apiTokenService.list).not.toHaveBeenCalled()
+    })
+
+    it('disables creation when the subscription is inactive', async () => {
+        render(<ApiTokensSection plan="pro" active={false} />)
         expect(screen.getByText(i18n.planRequired)).toBeInTheDocument()
         expect(screen.getByText(i18n.createButton)).toBeDisabled()
         expect(apiTokenService.list).not.toHaveBeenCalled()
     })
 
     it('shows the limit message on a 400 from the backend', async () => {
-        vi.mocked(apiTokenService.create).mockRejectedValue(new Error('API Error: 400 Maximum of 10 active tokens reached'))
-        render(<ApiTokensSection plan="pro" />)
+        vi.mocked(apiTokenService.create).mockRejectedValue(
+            Object.assign(new Error('Maximum of 10 active tokens reached. Revoke one first.'), { status: 400 })
+        )
+        render(<ApiTokensSection plan="pro" active />)
         await waitFor(() => expect(apiTokenService.list).toHaveBeenCalled())
         fireEvent.click(screen.getByText(i18n.createButton))
         fireEvent.change(screen.getByPlaceholderText(i18n.namePlaceholder), { target: { value: 'X' } })
         fireEvent.click(screen.getByText(i18n.confirmCreate))
         await waitFor(() => expect(screen.getByText(i18n.limitReached)).toBeInTheDocument())
+    })
+
+    it('shows the plan message on a 403', async () => {
+        vi.mocked(apiTokenService.create).mockRejectedValue(
+            Object.assign(new Error('Integration tokens require the Basic plan or higher.'), { status: 403 })
+        )
+        render(<ApiTokensSection plan="pro" active />)
+        await waitFor(() => expect(apiTokenService.list).toHaveBeenCalled())
+        fireEvent.click(screen.getByText(i18n.createButton))
+        fireEvent.change(screen.getByPlaceholderText(i18n.namePlaceholder), { target: { value: 'X' } })
+        fireEvent.click(screen.getByText(i18n.confirmCreate))
+        await waitFor(() => expect(screen.getByText(i18n.planRequired)).toBeInTheDocument())
     })
 })

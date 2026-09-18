@@ -10,6 +10,7 @@ const PLANS_WITH_TOKENS = ['basic', 'pro', 'premium']
 
 interface ApiTokensSectionProps {
     plan?: string
+    active?: boolean
 }
 
 const formatDate = (iso?: string | null) =>
@@ -19,8 +20,8 @@ const formatDate = (iso?: string | null) =>
  * Integration Tokens Section (Local Scope: features/integrations)
  * Lists, creates and revokes long-lived API tokens. The raw token is shown once, right after creation.
  */
-export const ApiTokensSection: React.FC<ApiTokensSectionProps> = ({ plan }) => {
-    const allowed = PLANS_WITH_TOKENS.includes(plan || '')
+export const ApiTokensSection: React.FC<ApiTokensSectionProps> = ({ plan, active }) => {
+    const allowed = active === true && PLANS_WITH_TOKENS.includes(plan || '')
     const [tokens, setTokens] = useState<ApiToken[]>([])
     const [isCreating, setIsCreating] = useState(false)
     const [newName, setNewName] = useState('')
@@ -33,6 +34,7 @@ export const ApiTokensSection: React.FC<ApiTokensSectionProps> = ({ plan }) => {
     const load = useCallback(async () => {
         try {
             setTokens(await apiTokenService.list())
+            setError(null)
         } catch {
             setError(i18n.error)
         }
@@ -52,8 +54,8 @@ export const ApiTokensSection: React.FC<ApiTokensSectionProps> = ({ plan }) => {
             setIsCreating(false)
             setNewName('')
         } catch (err) {
-            const message = err instanceof Error ? err.message : ''
-            setError(message.includes('400') ? i18n.limitReached : i18n.error)
+            const status = (err as { status?: number }).status
+            setError(status === 400 ? i18n.limitReached : status === 403 ? i18n.planRequired : i18n.error)
         } finally {
             setBusy(false)
         }
@@ -82,8 +84,9 @@ export const ApiTokensSection: React.FC<ApiTokensSectionProps> = ({ plan }) => {
             await apiTokenService.revoke(id)
             setPendingRevoke(null)
             await load()
-        } catch {
-            setError(i18n.error)
+        } catch (err) {
+            const status = (err as { status?: number }).status
+            setError(status === 403 ? i18n.planRequired : i18n.error)
         } finally {
             setBusy(false)
         }
@@ -106,13 +109,13 @@ export const ApiTokensSection: React.FC<ApiTokensSectionProps> = ({ plan }) => {
             )}
 
             {error && (
-                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold text-center">
+                <div role="alert" className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold text-center">
                     {error}
                 </div>
             )}
 
             {created && (
-                <div className="p-5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 space-y-3">
+                <div aria-live="polite" className="p-5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 space-y-3">
                     <p className="text-xs font-black uppercase tracking-widest text-cyan-400">{i18n.createdTitle}</p>
                     <p className="text-[10px] text-gray-400">{i18n.createdWarning}</p>
                     <code data-testid="raw-token" className="block w-full break-all bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-cyan-300">
@@ -136,6 +139,7 @@ export const ApiTokensSection: React.FC<ApiTokensSectionProps> = ({ plan }) => {
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             placeholder={i18n.namePlaceholder}
+                            aria-label={i18n.namePlaceholder}
                             maxLength={64}
                             className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-medium outline-none focus:border-cyan-500/50"
                         />
