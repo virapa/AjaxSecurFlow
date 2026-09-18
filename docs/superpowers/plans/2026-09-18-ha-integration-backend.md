@@ -52,9 +52,13 @@
 
 - [ ] **Step 1: Create the branch**
 
+The SQS work this feature depends on (SSE stream, webhooks, migration `e7f1a9b2c3d4`) lives uncommitted on `feat/sqs`, so branch from there, not from `dev`:
+
 ```bash
-git checkout dev && git pull && git checkout -b feat/ha-integration
+git checkout feat/sqs && git checkout -b feat/ha-integration
 ```
+
+Only `git add` the paths named in each commit step; the pre-existing uncommitted SQS files stay in the working tree for the user to commit separately.
 
 - [ ] **Step 2: Write the failing test**
 
