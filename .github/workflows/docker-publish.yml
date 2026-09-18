@@ -68,6 +68,25 @@ jobs:
           build-args: |
             COMMAND=celery -A backend.app.worker.celery_app worker --loglevel=info -B
 
+      - name: Extract metadata (tags, labels) for SQS Worker
+        id: meta-sqs-worker
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/sqs-worker
+          flavor: |
+            latest=true
+
+      - name: Build and push SQS Worker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./docker/backend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-sqs-worker.outputs.tags }}
+          labels: ${{ steps.meta-sqs-worker.outputs.labels }}
+          build-args: |
+            COMMAND=python backend/app/sqs_worker.py
+
       - name: Extract metadata (tags, labels) for Frontend
         id: meta-frontend
         uses: docker/metadata-action@v5

@@ -218,6 +218,12 @@ export const es = {
             },
             empty: 'No se han detectado dispositivos activos'
         },
+        lastState: {
+            title: 'Último Estado',
+            empty: 'Sin eventos registrados',
+            updated: 'Actualizado',
+            offline: 'Mostrando último estado guardado'
+        },
         events: {
             title: 'Flujo de Eventos',
             live: 'En Vivo',
@@ -341,6 +347,16 @@ export const es = {
         Loss: 'Pérdida de Conexión',
         Restored: 'Conexión Restaurada',
         Dureza: 'Coacción Desactivada'
+    },
+    sqsEvents: {
+        ALARM: 'Alarma Detectada',
+        ARMED: 'Sistema Armado',
+        DISARMED: 'Sistema Desarmado',
+        NIGHT_MODE_ON: 'Modo Noche Activado',
+        NIGHT_MODE_OFF: 'Modo Noche Desactivado',
+        POWER_LOSS: 'Corte de Energía',
+        POWER_RESTORED: 'Energía Restaurada',
+        UNKNOWN: 'Evento Técnico'
     },
     legal: {
         privacy: {

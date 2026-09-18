@@ -27,6 +27,10 @@ celery_app.conf.update(
             "task": "tasks.cleanup_expired_subscriptions",
             "schedule": 86400.0, # Every 24 hours (86400 seconds)
         },
+        "cleanup-old-sqs-events-weekly": {
+            "task": "tasks.cleanup_old_sqs_events",
+            "schedule": 604800.0, # Every 7 days
+        },
     }
 )
 

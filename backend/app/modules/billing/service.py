@@ -67,12 +67,14 @@ def can_access_feature(user: User, feature: str) -> bool:
         "pro": [
             "list_hubs", "read_devices", "read_rooms", "read_groups",
             "read_telemetry", "read_logs",
-            "send_commands"   # Send arm/disarm commands
+            "send_commands",   # Send arm/disarm commands
+            "manage_webhooks"  # Configure external webhooks (e.g. Home Assistant)
         ],
         "premium": [
             "list_hubs", "read_devices", "read_rooms", "read_groups",
             "read_telemetry", "read_logs", "send_commands",
-            "access_proxy"    # Full API proxy access
+            "access_proxy",    # Full API proxy access
+            "manage_webhooks"  # Configure external webhooks (e.g. Home Assistant)
         ]
     }
     allowed = permissions.get(plan, [])

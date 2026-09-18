@@ -184,6 +184,7 @@ class EventLog(BaseModel):
     sourceRoomName: Optional[Any] = None
     additionalData: Optional[Any] = None
     additionalDataV2: Optional[Any] = None
+    media_urls: List[str] = Field(default_factory=list)
 
 class EventLogResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
@@ -212,3 +213,68 @@ class HubCommandRequest(BaseModel):
 class CommandResponse(BaseModel):
     success: bool
     message: Optional[str] = None
+
+# --- SQS Events / Last Known Hub State ---
+from datetime import datetime as dt_datetime
+
+class HubLastState(BaseModel):
+    """Last known state of a hub, fed by the SQS events consumer."""
+    model_config = ConfigDict(from_attributes=True)
+    hub_id: str
+    hub_name: Optional[str] = None
+    last_event_type: str
+    updated_at: Optional[dt_datetime] = None
+
+class SQSEventItem(BaseModel):
+    """A stored Ajax event received via SQS (payload intentionally omitted)."""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    event_type: str
+    hub_id: str
+    received_at: Optional[dt_datetime] = None
+    processed_at: Optional[dt_datetime] = None
+
+class SQSEventListResponse(BaseModel):
+    events: List[SQSEventItem] = []
+    total_count: int = 0
+
+# --- Hybrid Envelope & Webhooks ---
+class HybridEventLog(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    id: str
+    hub_id: str
+    event_type: str
+    title: str
+    description: str
+    severity: str = "info"
+    timestamp: str
+    media_urls: List[str] = Field(default_factory=list)
+    source: str = "sqs"
+    data: Optional[Dict[str, Any]] = None
+
+class HybridEventListResponse(BaseModel):
+    events: List[HybridEventLog] = []
+    total_count: int = 0
+
+class SyncLogsResponse(BaseModel):
+    success: bool
+    imported_count: int
+    message: str
+
+class WebhookCreate(BaseModel):
+    hub_id: Optional[str] = Field(None, description="Hub ID to restrict to. If null, applies to all user hubs.")
+    target_url: str = Field(..., description="Target destination URL for POST requests (e.g. Home Assistant webhook URL)")
+    secret_token: Optional[str] = Field(None, description="Secret token for HMAC SHA256 signature verification")
+    description: Optional[str] = Field(None, description="Optional label or note for this webhook")
+
+class WebhookResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    user_id: int
+    hub_id: Optional[str] = None
+    target_url: str
+    secret_token: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool
+    created_at: dt_datetime
+

@@ -26,6 +26,13 @@ export interface Hub {
     role?: 'MASTER' | 'PRO' | 'USER'
 }
 
+export interface HubLastState {
+    hub_id: string
+    hub_name?: string
+    last_event_type: string
+    updated_at?: string
+}
+
 /**
  * Hub Service (Local Scope: features/hubs)
  * Interacts with the backend proxy to communicate with Ajax Systems API.
@@ -50,5 +57,12 @@ export const hubService = {
      */
     setArmState: async (hubId: string, armState: 0 | 1 | 2): Promise<{ success: boolean }> => {
         return apiClient.post(`/ajax/hubs/${hubId}/arm-state`, { armState })
+    },
+
+    /**
+     * Fetches the last known state of every hub, fed by the SQS events consumer.
+     */
+    getHubStates: async (): Promise<HubLastState[]> => {
+        return apiClient.get<HubLastState[]>('/ajax/events/state')
     }
 }

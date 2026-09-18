@@ -1,7 +1,8 @@
 FROM node:20-alpine AS base
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm (pinned: pnpm@latest can resolve to a major requiring a newer
+# Node than this base image, e.g. pnpm 11 needs Node >=22.13 for node:sqlite)
+RUN corepack enable && corepack prepare pnpm@10.34.4 --activate
 
 # 1. Install dependencies only when needed
 FROM base AS deps

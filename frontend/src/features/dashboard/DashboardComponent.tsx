@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { Sidebar } from '@/features/navigation/Sidebar'
 import { useRouter } from 'next/navigation'
 import { HubList } from '@/features/hubs/HubList'
+import { HubLastState } from '@/features/hubs/HubLastState'
 import { DeviceTelemetry, DeviceTelemetryRef } from '@/features/devices/DeviceTelemetry'
 import { EventFeed } from '@/features/logs/EventFeed'
 import { AnalyticsDashboard } from './AnalyticsDashboard'
@@ -215,11 +216,12 @@ export const DashboardComponent: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Right Section: Event Feed */}
+                        {/* Right Section: Last Known State + Event Feed */}
                         <div className="col-span-12 lg:col-span-4 h-full">
+                            {selectedHub && <HubLastState hubId={selectedHub.id} />}
                             {selectedHub ? (
                                 canAccessFeature(userPlan, 'read_logs') ? (
-                                    <EventFeed hubId={selectedHub.id} role={selectedHub.role} />
+                                    <EventFeed hubId={selectedHub.id} role={selectedHub.role} userPlan={userPlan} />
                                 ) : (
                                     <div
                                         data-testid="restricted-events"

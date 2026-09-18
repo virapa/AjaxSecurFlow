@@ -37,6 +37,15 @@ class Settings(BaseSettings):
     # Ajax Systems API
     AJAX_API_BASE_URL: str = "https://api.ajax.systems/api/"
     AJAX_API_KEY: SecretStr
+    # Ajax SQS / Amazon SQS integration
+    AJAX_INTEGRATION_ID: Optional[str] = None
+    AWS_KEY_ID: Optional[SecretStr] = None
+    AWS_SECRET_KEY: Optional[SecretStr] = None
+    AWS_EVENTS_QUEUE: Optional[str] = None # Queue name or full QueueUrl
+    AWS_REGION: str = "eu-west-1" # Region of the Ajax-provisioned SQS events queue (verify per integration)
+    SQS_MAX_MESSAGES: int = 10          # Max messages per receive (1-10)
+    SQS_WAIT_TIME_SECONDS: int = 20     # Long polling wait time (0-20)
+    
     #Solo para dev y test
     AJAX_LOGIN: Optional[str] = None
     AJAX_PASSWORD: Optional[SecretStr] = None

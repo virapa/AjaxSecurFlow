@@ -70,6 +70,15 @@ async def test_get_hub_logs_success(async_client: AsyncClient, mock_user_subscri
     )
 
 @pytest.mark.asyncio
+async def test_get_hub_logs_no_subscription_forbidden(async_client: AsyncClient, mock_user_no_subscription):
+    """
+    Test that users with no subscription (free plan) cannot view logs or event media (403).
+    """
+    response = await async_client.get("/api/v1/ajax/hubs/000000/logs")
+    assert response.status_code == 403
+    assert "Logs access not included in your plan" in response.json()["detail"]
+
+@pytest.mark.asyncio
 async def test_set_arm_state_success(async_client: AsyncClient, mock_user_subscription, mock_ajax_client_override):
     """
     Test setting arm state successfully.

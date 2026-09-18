@@ -318,3 +318,72 @@ def process_stripe_webhook(event_dict: dict, correlation_id: str = "internal") -
     except Exception as e:
         logger.error(f"Error processing webhook {event_id}: {str(e)}")
         raise e
+
+@celery_app.task(name="tasks.dispatch_webhook_event", bind=True, max_retries=3, default_retry_delay=5)
+def dispatch_webhook_event(self, webhook_id: int, event_payload: dict) -> dict:
+    """
+    Dispatches a normalized event to a user's external webhook (e.g. Home Assistant).
+    Uses HMAC-SHA256 signature if secret_token is set.
+    """
+    return asyncio.run(_dispatch_webhook_logic(self, webhook_id, event_payload))
+
+async def _dispatch_webhook_logic(task_instance, webhook_id: int, event_payload: dict) -> dict:
+    import hmac
+    import hashlib
+    import json
+    import httpx
+    from backend.app.modules.ajax.models import UserWebhook
+
+    async with async_session_factory() as session:
+        webhook = await session.get(UserWebhook, webhook_id)
+        if not webhook or not webhook.is_active:
+            logger.info(f"Webhook {webhook_id} not found or inactive. Skipping dispatch.")
+            return {"status": "skipped", "reason": "inactive_or_not_found"}
+
+        body_str = json.dumps(event_payload, default=str)
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "AjaxSecurFlow-Webhook/1.0",
+            "X-AjaxSecurFlow-Event": str(event_payload.get("event_type", "UNKNOWN")),
+        }
+        if webhook.secret_token:
+            sig = hmac.new(
+                webhook.secret_token.encode("utf-8"),
+                body_str.encode("utf-8"),
+                hashlib.sha256
+            ).hexdigest()
+            headers["X-AjaxSecurFlow-Signature"] = f"sha256={sig}"
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(webhook.target_url, content=body_str, headers=headers)
+                response.raise_for_status()
+                logger.info(f"Webhook {webhook_id} dispatched successfully: HTTP {response.status_code}")
+                return {"status": "success", "status_code": response.status_code}
+        except Exception as exc:
+            logger.warning(f"Webhook {webhook_id} delivery failed: {exc}. Retrying...")
+            if task_instance:
+                raise task_instance.retry(exc=exc)
+            raise exc
+
+@celery_app.task(name="tasks.cleanup_old_sqs_events")
+def cleanup_old_sqs_events(days: int = 90) -> int:
+    """
+    Retention policy: removes raw SQS events older than `days` (default 90).
+    """
+    return asyncio.run(_cleanup_old_sqs_events_logic(days))
+
+async def _cleanup_old_sqs_events_logic(days: int = 90) -> int:
+    from datetime import datetime as dt_datetime, timezone, timedelta
+    from sqlalchemy import delete
+    from backend.app.modules.ajax.models import AjaxSQSEvent
+
+    threshold = dt_datetime.now(timezone.utc) - timedelta(days=days)
+    async with async_session_factory() as session:
+        stmt = delete(AjaxSQSEvent).where(AjaxSQSEvent.received_at < threshold)
+        result = await session.execute(stmt)
+        await session.commit()
+        deleted = result.rowcount
+        logger.info(f"Purged {deleted} SQS events older than {days} days.")
+        return deleted
+

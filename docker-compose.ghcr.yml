@@ -33,6 +33,22 @@ services:
       - ajaxsecurflow_net
     restart: always
 
+  # Ajax SQS Consumer (Dedicated Worker)
+  sqs-worker:
+    image: ghcr.io/virapa/ajaxsecurflow/sqs-worker:latest
+    container_name: ajax_proxy_sqs_worker
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=db
+    depends_on:
+      - db
+      - redis
+    command: python backend/app/sqs_worker.py
+    networks:
+      - ajaxsecurflow_net
+    restart: always
+
   # Frontend (Next.js)
   frontend:
     image: ghcr.io/virapa/ajaxsecurflow/frontend:latest
