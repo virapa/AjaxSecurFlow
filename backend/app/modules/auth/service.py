@@ -14,6 +14,7 @@ from redis.asyncio import Redis
 
 from backend.app.core.config import settings
 from backend.app.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token, get_client_ip
+from backend.app.modules.auth import api_token_service
 from backend.app.modules.auth.models import User
 from backend.app.modules.auth.schemas import UserCreate
 from backend.app.modules.security import service as security_service
@@ -82,6 +83,18 @@ async def get_current_user(
 
     if token.startswith("Bearer "):
         token = token.replace("Bearer ", "")
+
+    # Integration tokens (asf_...): opaque, validated by hash; no UA/IP binding.
+    if token.startswith(api_token_service.TOKEN_PREFIX):
+        api_user = await api_token_service.authenticate_api_token(db, token)
+        if api_user is None:
+            await security_service.log_request_action(
+                db=db, request=request, user_id=None,
+                action="API_TOKEN_INVALID", status_code=401, severity="WARNING",
+                payload={"prefix": token[:api_token_service.PREFIX_LENGTH]}
+            )
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        return api_user
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY.get_secret_value(), algorithms=[settings.ALGORITHM])
