@@ -29,6 +29,9 @@ from backend.app.modules.ajax.sqs_service import normalize_ajax_event
 
 logger = logging.getLogger(__name__)
 
+# Max idle time on the SSE stream before a keepalive comment is sent
+SSE_KEEPALIVE_SECONDS = 15.0
+
 router = APIRouter(
     tags=["AjaxSecurFlow API"],
     responses={
@@ -654,14 +657,18 @@ async def stream_events(
                     logger.debug(f"Client disconnected from SSE stream: {current_user.email}")
                     break
 
-                try:
-                    message = await asyncio.wait_for(pubsub.get_message(ignore_subscribe_messages=True), timeout=15.0)
-                    if message and message.get("type") == "message":
-                        data_str = message.get("data")
-                        if isinstance(data_str, bytes):
-                            data_str = data_str.decode("utf-8")
-                        yield f"event: ajax_event\ndata: {data_str}\n\n"
-                except asyncio.TimeoutError:
+                # Block on Redis for up to the keepalive interval. Without a timeout,
+                # get_message returns None immediately and the loop spins at 100% CPU
+                # without ever sending pings.
+                message = await pubsub.get_message(
+                    ignore_subscribe_messages=True, timeout=SSE_KEEPALIVE_SECONDS
+                )
+                if message and message.get("type") == "message":
+                    data_str = message.get("data")
+                    if isinstance(data_str, bytes):
+                        data_str = data_str.decode("utf-8")
+                    yield f"event: ajax_event\ndata: {data_str}\n\n"
+                else:
                     yield ": ping\n\n"
         finally:
             await pubsub.unsubscribe(*channels)
