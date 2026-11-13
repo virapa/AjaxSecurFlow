@@ -94,6 +94,44 @@ async def test_process_message_alarm_event(mock_sqs_client, mock_db):
         )
 
 @pytest.mark.asyncio
+async def test_process_message_security_event_uses_event_tag_and_no_text_dedupe(mock_sqs_client, mock_db):
+    """
+    Arm/disarm arrive as eventType SECURITY; the text must come from eventTag,
+    and the notification must not be merged into an earlier unread one with the
+    same text (each Ajax event is already deduped by eventId).
+    """
+    consumer = _build_consumer(mock_db)
+    mock_db.execute = AsyncMock(side_effect=[_result_returning(None), _result_returning(None), _result_returning(None)])
+
+    msg = _message("msg_disarm", "receipt_disarm", "SECURITY", "0004C602")
+    body = json.loads(msg["Body"])
+    body["event"].update({"eventTag": "Disarm", "sourceObjectType": "USER", "sourceObjectName": "Raul Palacios"})
+    msg["Body"] = json.dumps(body)
+
+    with patch("backend.app.modules.notifications.service.create_notification", new_callable=AsyncMock) as mock_notify:
+        consumer._find_active_users_for_hub = AsyncMock(return_value=[MagicMock(id=1, email="u@test.com")])
+        await consumer._process_message(msg)
+
+        mock_notify.assert_called_once()
+        _, kwargs = mock_notify.call_args
+        assert kwargs["title"] == "🔓 Sistema desarmado"
+        assert kwargs["message"] == "Test Hub: desarmado por Raul Palacios"
+        assert kwargs["dedupe"] is False
+
+@pytest.mark.asyncio
+async def test_process_message_relay_event_does_not_notify(mock_sqs_client, mock_db):
+    """COMMON relay automations are stored and streamed but do not create notifications."""
+    consumer = _build_consumer(mock_db)
+    mock_db.execute = AsyncMock(side_effect=[_result_returning(None), _result_returning(None), _result_returning(None)])
+
+    with patch("backend.app.modules.notifications.service.create_notification", new_callable=AsyncMock) as mock_notify:
+        consumer._find_active_users_for_hub = AsyncMock(return_value=[MagicMock(id=1, email="u@test.com")])
+        await consumer._process_message(_message("msg_relay", "receipt_relay", "COMMON", "0004C602"))
+
+        mock_notify.assert_not_called()
+        mock_sqs_client.delete_message.assert_called_once()
+
+@pytest.mark.asyncio
 async def test_process_message_idempotency(mock_sqs_client, mock_db):
     """
     An already processed message (duplicate MessageId with processed_at set)
@@ -133,11 +171,12 @@ async def test_process_message_retry_of_unprocessed_event(mock_sqs_client, mock_
     with patch("backend.app.modules.notifications.service.create_notification", new_callable=AsyncMock) as mock_notify:
         consumer._find_active_users_for_hub = AsyncMock(return_value=[MagicMock(id=2, email="u@test.com")])
 
-        await consumer._process_message(_message("msg_retry", "receipt_retry", "ARMED", "hub_retry"))
+        # Real Ajax shape for arming: eventType SECURITY (+ eventTag Arm)
+        await consumer._process_message(_message("msg_retry", "receipt_retry", "SECURITY", "hub_retry"))
 
         # No new audit row; existing state mutated in place
         assert mock_db.add.call_count == 0
-        assert existing_state.last_event_type == "ARMED"
+        assert existing_state.last_event_type == "SECURITY"
         assert existing_event.processed_at is not None
 
         mock_notify.assert_called_once()

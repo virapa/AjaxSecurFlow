@@ -1,3 +1,4 @@
+import html
 import json
 import logging
 import asyncio
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from backend.app.core.config import settings
 from backend.app.modules.ajax.models import AjaxSQSEvent, AjaxHubState, UserHub, UserWebhook
+from backend.app.modules.ajax.notification_content import build_event_notification
 from backend.app.modules.auth.models import User
 from backend.app.modules.notifications import service as notification_service
 
@@ -272,13 +274,15 @@ class AjaxEventsConsumer:
                 # (shared ajax_event_id), so skip if another message already
                 # triggered the notification for this exact event.
                 users = await self._find_active_users_for_hub(session, hub_id)
+                duplicate = False
                 if users and ajax_event_id and await self._already_notified(session, hub_id, ajax_event_id, event.id):
                     logger.info(f"Event {ajax_event_id} for hub {hub_id} already notified via another recipient message. Skipping duplicate.")
                     users = []
+                    duplicate = True
 
                 if users:
                     for user in users:
-                        await self._dispatch_notification(session, user, event_type, hub_id, body)
+                        await self._dispatch_notification(session, user, event_type, hub_id, event_data)
 
                     # External integrations (e.g. Home Assistant): dispatch to active webhooks
                     webhooks = await self._find_webhooks_for_hub(session, hub_id, [u.id for u in users])
@@ -288,7 +292,7 @@ class AjaxEventsConsumer:
                             dispatch_webhook_event.delay(wh.id, normalized_event)
                         except Exception as wh_err:
                             logger.warning(f"Failed to enqueue webhook {wh.id}: {wh_err}")
-                else:
+                elif not duplicate:
                     logger.info(f"Event {event_type} for hub {hub_id} has no active subscribers.")
 
                 # 4. Mark processed
@@ -397,32 +401,25 @@ class AjaxEventsConsumer:
         except Exception as e:
             logger.warning(f"Cache invalidation failed for hub {hub_id}: {e}")
 
-    async def _dispatch_notification(self, session: AsyncSession, user: User, event_type: str, hub_id: str, payload: Dict[str, Any]):
+    async def _dispatch_notification(self, session: AsyncSession, user: User, event_type: str, hub_id: str, event_data: Dict[str, Any]):
         """
-        Translates Ajax events to human-readable notifications.
+        Translates an Ajax event (the `event` object of the SQS body) into an
+        in-app notification, and emails alarms.
         """
-        title = "Evento de Seguridad"
-        severity = "info"
+        content = build_event_notification(event_type, event_data)
+        if content is None:
+            return
+        display_title, message, n_type = content
 
-        # Basic mapping (Should be expanded)
-        content_map = {
-            "ALARM": ("🛑 ALARMA DETECTADA", "Se ha disparado una alarma en el hub {hub_id}. Por favor, verifique el estado.", "error"),
-            "ARMED": ("🔐 Sistema Armado", "El sistema ha sido armado correctamente.", "success"),
-            "DISARMED": ("🔓 Sistema Desarmado", "El sistema ha sido desarmado.", "info"),
-            "POWER_LOSS": ("⚠️ Corte de Energía", "Se ha detectado una pérdida de alimentación externa en el hub.", "warning"),
-        }
-
-        display_title, message_template, n_type = content_map.get(event_type.upper(), (title, f"Nuevo evento técnico: {event_type}", severity))
-
-        message = message_template.format(hub_id=hub_id)
-
+        # Already deduped per Ajax eventId upstream; identical text != same event
         await notification_service.create_notification(
             db=session,
             user_id=user.id,
             title=display_title,
             message=message,
             notification_type=n_type,
-            link=f"/hubs/{hub_id}"
+            link=f"/hubs/{hub_id}",
+            dedupe=False
         )
 
         # If it's an alarm, we might also want to send an email (Celery background)
@@ -432,7 +429,8 @@ class AjaxEventsConsumer:
                 send_transactional_email.delay(
                     user.email,
                     f"URGENTE: {display_title}",
-                    f"<h1>{display_title}</h1><p>{message}</p>",
+                    # Device/room names are user-defined in Ajax: escape for HTML
+                    f"<h1>{html.escape(display_title)}</h1><p>{html.escape(message)}</p>",
                     message
                 )
             except Exception as e:

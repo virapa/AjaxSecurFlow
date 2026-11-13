@@ -41,6 +41,20 @@ async def test_create_notification():
     mock_db.refresh.assert_called_once()
 
 @pytest.mark.asyncio
+async def test_create_notification_without_dedupe_skips_existing_lookup():
+    """Distinct device events with identical text must each get their own notification."""
+    mock_db = AsyncMock(spec=AsyncSession)
+
+    result = await create_notification(
+        db=mock_db, user_id=1, title="🔓 Sistema desarmado",
+        message="Hub: desarmado por Raul", dedupe=False
+    )
+
+    mock_db.execute.assert_not_called()
+    mock_db.add.assert_called_once()
+    assert result.title == "🔓 Sistema desarmado"
+
+@pytest.mark.asyncio
 async def test_get_latest_notifications():
     mock_db = AsyncMock(spec=AsyncSession)
     mock_result = MagicMock()

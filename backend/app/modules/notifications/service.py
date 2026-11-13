@@ -9,22 +9,29 @@ async def create_notification(
     title: str,
     message: str,
     notification_type: str = "info",
-    link: Optional[str] = None
+    link: Optional[str] = None,
+    dedupe: bool = True
 ) -> Notification:
     """
     Creates a new in-app notification for a user.
+
+    With `dedupe` (default), an unread notification with the same title and
+    message is reused instead (e.g. repeated IP-shift warnings). Callers that
+    already dedupe per source event (Ajax events by eventId) pass dedupe=False
+    so distinct events with identical text are not merged.
     """
-    stmt = select(Notification).where(
-        Notification.user_id == user_id,
-        Notification.title == title,
-        Notification.message == message,
-        Notification.is_read == False
-    )
-    existing = await db.execute(stmt)
-    existing_notification = existing.scalars().first()
-    
-    if existing_notification:
-        return existing_notification
+    if dedupe:
+        stmt = select(Notification).where(
+            Notification.user_id == user_id,
+            Notification.title == title,
+            Notification.message == message,
+            Notification.is_read == False
+        )
+        existing = await db.execute(stmt)
+        existing_notification = existing.scalars().first()
+
+        if existing_notification:
+            return existing_notification
 
     notification = Notification(
         user_id=user_id,
