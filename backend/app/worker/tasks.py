@@ -3,9 +3,11 @@ import logging
 import stripe
 import datetime
 from datetime import datetime as dt_datetime
+from contextlib import asynccontextmanager
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.pool import NullPool
 from backend.app.worker.celery_app import celery_app
 from backend.app.modules.ajax.service import AjaxClient
-from backend.app.shared.infrastructure.database.session import async_session_factory
 from backend.app.modules.auth.models import User
 from backend.app.modules.billing.models import ProcessedStripeEvent
 from backend.app.modules.auth import service as auth_service
@@ -14,6 +16,25 @@ from backend.app.modules.notifications import service as notification_service
 from backend.app.modules.billing import service as billing_service
 from backend.app.core.config import settings
 from sqlalchemy import select
+
+@asynccontextmanager
+async def async_session_factory():
+    """
+    Creates an isolated async session for Celery tasks using NullPool,
+    ensuring event loop isolation across multiple task executions.
+    """
+    engine = create_async_engine(
+        settings.SQLALCHEMY_DATABASE_URI,
+        poolclass=NullPool,
+        echo=False,
+        future=True,
+    )
+    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with session_maker() as session:
+        try:
+            yield session
+        finally:
+            await engine.dispose()
 
 @celery_app.task(name="tasks.send_transactional_email")
 def send_transactional_email(to_email: str, subject: str, html_content: str, text_content: str = "") -> bool:
