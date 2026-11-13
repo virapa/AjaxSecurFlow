@@ -199,6 +199,33 @@ export const es = {
                 email: 'Correo Electrónico',
                 phone: 'Teléfono',
                 role: 'Rol de Sistema'
+            },
+            integrations: {
+                title: 'Integraciones',
+                description: 'Tokens de acceso para Home Assistant y otros clientes externos. Cada token hereda tu plan.',
+                docsLink: 'Guía de instalación en Home Assistant',
+                createButton: 'Crear token',
+                namePlaceholder: 'Nombre (p. ej. Home Assistant)',
+                confirmCreate: 'Generar',
+                cancel: 'Cancelar',
+                createdTitle: 'Token creado',
+                createdWarning: 'Cópialo ahora. No se volverá a mostrar.',
+                copy: 'Copiar',
+                copied: 'Copiado',
+                done: 'Hecho',
+                empty: 'No tienes tokens activos.',
+                columns: {
+                    name: 'Nombre',
+                    prefix: 'Prefijo',
+                    created: 'Creado',
+                    lastUsed: 'Último uso'
+                },
+                never: 'Nunca',
+                revoke: 'Revocar',
+                revokeConfirm: '¿Revocar este token? Los clientes que lo usen dejarán de funcionar.',
+                planRequired: 'Los tokens de integración requieren el plan Basic o superior.',
+                limitReached: 'Has alcanzado el máximo de 10 tokens activos.',
+                error: 'No se pudo completar la operación. Inténtalo de nuevo.'
             }
         },
         notifications: {
@@ -217,6 +244,12 @@ export const es = {
                 details: 'Detalles'
             },
             empty: 'No se han detectado dispositivos activos'
+        },
+        lastState: {
+            title: 'Último Estado',
+            empty: 'Sin eventos registrados',
+            updated: 'Actualizado',
+            offline: 'Mostrando último estado guardado'
         },
         events: {
             title: 'Flujo de Eventos',
@@ -341,6 +374,16 @@ export const es = {
         Loss: 'Pérdida de Conexión',
         Restored: 'Conexión Restaurada',
         Dureza: 'Coacción Desactivada'
+    },
+    sqsEvents: {
+        ALARM: 'Alarma Detectada',
+        ARMED: 'Sistema Armado',
+        DISARMED: 'Sistema Desarmado',
+        NIGHT_MODE_ON: 'Modo Noche Activado',
+        NIGHT_MODE_OFF: 'Modo Noche Desactivado',
+        POWER_LOSS: 'Corte de Energía',
+        POWER_RESTORED: 'Energía Restaurada',
+        UNKNOWN: 'Evento Técnico'
     },
     legal: {
         privacy: {

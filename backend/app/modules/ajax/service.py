@@ -8,6 +8,9 @@ from typing import Optional, Dict, Any, List, Callable
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from backend.app.core.config import settings
+from backend.app.modules.ajax.models import UserHub
+from backend.app.shared.infrastructure.database import session as db_session
+from sqlalchemy import select, delete
 
 logger = logging.getLogger(__name__)
 
@@ -403,3 +406,31 @@ class AjaxClient:
             if e.response.status_code == 404:
                 return None
             raise e
+
+    async def sync_user_hubs(self, internal_user_id: int, user_email: str):
+        """
+        Syncs the user's hubs from Ajax API to the local UserHub table.
+        """
+        try:
+            hubs = await self.get_hubs(user_email)
+            # Resolved lazily via the module so tests can patch the factory
+            async with db_session.async_session_factory() as session:
+                # 1. Clear existing mappings for this user
+                await session.execute(delete(UserHub).where(UserHub.user_id == internal_user_id))
+                
+                # 2. Add new mappings
+                for h in hubs:
+                    hub_id = h.get("hubId")
+                    hub_name = h.get("name") or h.get("hubName")
+                    if hub_id:
+                        mapping = UserHub(
+                            user_id=internal_user_id,
+                            hub_id=hub_id,
+                            hub_name=hub_name
+                        )
+                        session.add(mapping)
+                
+                await session.commit()
+                logger.info(f"Synced {len(hubs)} hubs for user {internal_user_id}")
+        except Exception as e:
+            logger.error(f"Failed to sync hubs for user {internal_user_id}: {e}")

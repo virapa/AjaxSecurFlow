@@ -41,6 +41,26 @@ services:
       - internal_net
     restart: always
 
+  # Ajax SQS Consumer (Dedicated Worker)
+  sqs-worker:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: ajax_proxy_sqs_worker
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=db
+    depends_on:
+      - db
+      - redis
+    command: python backend/app/sqs_worker.py
+    volumes:
+      - ./backend:/app/backend
+    networks:
+      - internal_net
+    restart: always
+
   # Frontend (Next.js)
   frontend:
     build:

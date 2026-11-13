@@ -18,7 +18,7 @@ describe('Sidebar Component (Local Scope: Navigation)', () => {
 
     it('should render the brand name or logo', () => {
         render(<Sidebar />)
-        expect(screen.getByText(/ajaxsecurflow/i)).toBeInTheDocument()
+        expect(screen.getByAltText(/ajaxsecurflow/i)).toBeInTheDocument()
     })
 
     it('should NOT contain a logout button (moved to header)', () => {

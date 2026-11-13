@@ -8,6 +8,7 @@ import { notificationService } from '@/features/notifications/notification.servi
 import { es as t } from '@/shared/i18n/es'
 import { User } from '@/shared/types'
 import { DashboardHeader } from '@/features/navigation/DashboardHeader'
+import { ApiTokensSection } from '@/features/integrations/ApiTokensSection'
 
 export const ProfileComponent: React.FC = () => {
     const [user, setUser] = useState<User | null>(null)
@@ -169,6 +170,7 @@ export const ProfileComponent: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                    <ApiTokensSection plan={user?.subscription_plan} active={user?.subscription_active} />
                 </div>
             </main>
         </div>

@@ -2,6 +2,8 @@ import { User, Hub, Device, LogEntry } from '@/shared/types'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 const API_VERSION = '/api/v1'
+// Pre-cookie dashboards stored the JWT here; it is only purged now.
+const LEGACY_TOKEN_KEY = 'ajax_access_token'
 
 if (!BASE_URL) {
     console.warn('⚠️ NEXT_PUBLIC_API_URL is not defined in environment variables. API requests may fail.')
@@ -12,21 +14,15 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
     console.log(`[API] Requesting: ${endpoint} (${options.method})`)
 
-    // Token management is now handled by HTTPOnly cookies.
-    // No need to manually inject the Authorization header for the Dashboard.
-    // However, we keep the header injection IF a token is found in localStorage 
-    // to maintain compatibility during the transition or for specific use cases.
-    let token = null
+    // Auth is handled exclusively by HttpOnly cookies. Never send a token from
+    // localStorage: the backend prefers the Authorization header over the cookie,
+    // so a stale legacy token would cause 401s right after a valid login.
     if (typeof window !== 'undefined') {
-        token = localStorage.getItem('ajax_access_token')
+        localStorage.removeItem(LEGACY_TOKEN_KEY)
     }
 
     const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
-    }
-
-    if (token) {
-        defaultHeaders['Authorization'] = `Bearer ${token}`
     }
 
     try {
@@ -41,20 +37,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
         console.log(`[API] Response status: ${response.status} for ${endpoint}`)
 
-        // Special handling for Logout: clear state regardless of outcome
-        if (endpoint === '/auth/logout' && typeof window !== 'undefined') {
-            console.log('[API] Clearing local auth state (Logout)')
-            localStorage.removeItem('ajax_access_token')
-            // Cookies will be cleared by the backend response
-        }
-
         if (!response.ok) {
             console.error(`[API] Request failed with status ${response.status} at ${endpoint}`)
-            // If 401, clear local state. Cookies should be cleared by backend if possible,
-            // but we can also trigger a manual logout or redirect.
-            if (response.status === 401 && typeof window !== 'undefined') {
-                localStorage.removeItem('ajax_access_token')
-            }
 
             // Try to extract error detail from response body
             let errorMessage = `API Error: ${response.status} ${response.statusText}`;
@@ -67,9 +51,14 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
                 // If JSON parsing fails, use the default message
             }
 
-            const error = new Error(errorMessage);
-            (error as any).status = response.status;
+            const error = new Error(errorMessage) as Error & { status?: number };
+            error.status = response.status;
             throw error;
+        }
+
+        // 204 No Content (e.g. DELETE) has no body; parsing it would throw.
+        if (response.status === 204) {
+            return undefined as T
         }
 
         const data = await response.json()

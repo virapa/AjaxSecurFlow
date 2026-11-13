@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from backend.app.modules.auth.router import router as auth_router
+from backend.app.modules.auth.api_token_router import router as api_token_router
 from backend.app.modules.billing.router import router as billing_router
 from backend.app.modules.ajax.router import router as ajax_router
 from backend.app.modules.security.router import router as security_router
@@ -8,6 +9,7 @@ from backend.app.modules.support.router import router as support_router
 
 api_router = APIRouter()
 
+api_router.include_router(api_token_router, prefix="/auth/api-tokens")
 api_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(auth_router, prefix="/users", tags=["Users Profile"], include_in_schema=False)
 api_router.include_router(billing_router, prefix="/billing", tags=["Billing & Subscriptions"], include_in_schema=False)

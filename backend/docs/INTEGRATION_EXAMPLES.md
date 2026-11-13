@@ -880,3 +880,42 @@ client.monitor("00022777", interval=300)  # Monitor every 5 minutes
 - [API Permissions](./API_PERMISSIONS.md) - Detailed permission matrix
 - [Plan Migration Guide](./PLAN_MIGRATION_GUIDE.md) - Upgrading/downgrading plans
 - [OpenAPI Documentation](http://localhost:8000/docs) - Interactive API explorer
+
+## Home Assistant: integration token + SSE contract
+
+1. Create a token in the dashboard (Profile → Integraciones) or via `POST /api/v1/auth/api-tokens`.
+2. Install the `ajaxsecurflow` custom integration through HACS and paste the token.
+
+### Real-time stream
+
+`GET /api/v1/ajax/events/stream` (Basic+) emits `event: ajax_event` lines whose `data` is the hybrid envelope:
+
+```json
+{
+  "id": "12345",
+  "hub_id": "0004C602",
+  "event_type": "ALARM",
+  "title": "🛑 ALARMA DETECTADA",
+  "description": "Movimiento detectado, Salón en Planta baja",
+  "severity": "critical",
+  "timestamp": "2026-09-18T10:15:00+00:00",
+  "media_urls": [],
+  "source": "sqs",
+  "data": {
+    "recipient": {"id": "…", "type": "USER"},
+    "event": {
+      "eventId": "…", "hubId": "0004C602", "eventType": "ALARM", "eventTypeV2": "ALARM",
+      "eventCode": "…", "eventTag": "MotionDetected", "transition": "TRIGGERED",
+      "sourceObjectId": "AABB0002", "sourceObjectType": "MOTION_PROTECT",
+      "sourceObjectName": "Salón", "sourceRoomName": "Planta baja",
+      "timestamp": 1789999900000, "additionalData": {}
+    }
+  }
+}
+```
+
+`event_type` values seen in production: `ALARM`, `SECURITY`, `COMMON`, `MALFUNCTION`, `FUNCTION_RECOVERED`. `transition` is `TRIGGERED` or `RECOVERED`. Comment lines (`: ping`) are keep-alives and must be ignored.
+
+### Device state fields
+
+`GET /api/v1/ajax/hubs/{hub_id}/devices` returns, per device, the telemetry Ajax reports with `enrich=true`: `battery_level`, `signal_level`, `temperature`, `humidity`, `co2`, `tampered`, `malfunctions`, and the sensor flags `reed_closed`, `extra_contact_aware`, `extra_contact_closed`, `motion_detected`, `glass_break_detected`, `leak_detected`, `smoke_alarm_detected`. A field is `null` when the device type does not report it.

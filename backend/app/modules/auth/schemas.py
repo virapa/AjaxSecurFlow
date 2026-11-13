@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator
 from typing import Optional
 from enum import Enum
 from datetime import datetime as dt_datetime
@@ -61,3 +61,25 @@ class UserUpdate(BaseModel):
     
 class ErrorMessage(BaseModel):
     detail: str = Field(..., description="Details regarding the error")
+
+# Integration (API) Tokens
+class ApiTokenCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=64, description="Label for this token, e.g. 'Home Assistant'")
+    expires_in_days: Optional[int] = Field(None, ge=1, le=3650, description="Optional expiry in days. Null = never expires")
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, v):
+        return v.strip() if isinstance(v, str) else v
+
+class ApiTokenRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    prefix: str = Field(..., description="First 12 characters, to identify the token in the UI")
+    last_used_at: Optional[dt_datetime] = None
+    expires_at: Optional[dt_datetime] = None
+    created_at: dt_datetime
+
+class ApiTokenCreated(ApiTokenRead):
+    token: str = Field(..., description="Raw token. Shown only once at creation")

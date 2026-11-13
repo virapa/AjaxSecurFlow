@@ -47,6 +47,30 @@ describe('API Client Infrastructure', () => {
         )
     })
 
+    it('should not send a stale legacy localStorage token and should purge it', async () => {
+        // A leftover token from an older dashboard version must not override the
+        // HttpOnly session cookie (the backend prefers the Authorization header).
+        localStorage.setItem('ajax_access_token', 'stale.jwt.token')
+            ; (fetch as Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({}),
+            })
+
+        await apiClient.get('/users/me')
+
+        const [, init] = (fetch as Mock).mock.calls[0]
+        expect(init.headers).not.toHaveProperty('Authorization')
+        expect(localStorage.getItem('ajax_access_token')).toBeNull()
+    })
+
+    it('should resolve without parsing the body on 204 No Content', async () => {
+        const json = vi.fn().mockRejectedValue(new SyntaxError('Unexpected end of JSON input'))
+            ; (fetch as Mock).mockResolvedValue({ ok: true, status: 204, json })
+
+        await expect(apiClient.delete('/auth/api-tokens/1')).resolves.toBeUndefined()
+        expect(json).not.toHaveBeenCalled()
+    })
+
     it('should throw an error if the response is not ok', async () => {
         ; (fetch as any).mockResolvedValue({
             ok: false,
