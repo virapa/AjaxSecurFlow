@@ -182,7 +182,7 @@ export const ApiTokensSection: React.FC<ApiTokensSectionProps> = ({ plan, active
                                 {tokens.map((token) => (
                                     <tr key={token.id} className="border-b border-white/5 last:border-0">
                                         <td className="py-3 pr-4 text-sm font-bold text-white">{token.name}</td>
-                                        <td className="py-3 pr-4"><code className="px-2 py-1 rounded-lg bg-white/5 text-xs font-mono text-cyan-300">{token.prefix}</code></td>
+                                        <td className="py-3 pr-4"><code className="px-2 py-1 rounded-lg bg-white/5 text-xs font-mono text-cyan-300">{`${token.prefix}…`}</code></td>
                                         <td className="py-3 pr-4 text-xs text-gray-400">{formatDate(token.created_at)}</td>
                                         <td className="py-3 pr-4 text-xs text-gray-400">{formatDate(token.last_used_at)}</td>
                                         <td className="py-3 text-right">

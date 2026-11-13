@@ -20,7 +20,8 @@ describe('ApiTokensSection (Local Scope: Integrations)', () => {
     it('lists active tokens with prefix, never the raw token', async () => {
         render(<ApiTokensSection plan="pro" active />)
         await waitFor(() => expect(screen.getByText('HA Casa')).toBeInTheDocument())
-        expect(screen.getByText('asf_abcdefgh')).toBeInTheDocument()
+        // Shown with an ellipsis so it does not look like the full token
+        expect(screen.getByText('asf_abcdefgh…')).toBeInTheDocument()
         expect(screen.getByText(i18n.never)).toBeInTheDocument()
     })
 
